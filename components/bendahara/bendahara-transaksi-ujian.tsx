@@ -35,6 +35,8 @@ const JENIS_UJIAN_OPTIONS = [
   { value: "UJIAN_NASIONAL", label: "Ujian Nasional" },
   { value: "UJIAN_SEKOLAH", label: "Ujian Sekolah" },
   { value: "UJIAN_PRAKTIK", label: "Ujian Praktik" },
+  { value: "ANBK", label: "ANBK (Asesmen Nasional Berbasis Komputer)" },
+  { value: "TKA", label: "TKA (Tes Kompetensi Akademik)" },
   { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
 ] as const;
 

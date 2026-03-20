@@ -77,7 +77,6 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
           { href: "syahriah", label: "Syahriah", icon: Receipt },
           { href: "ujian", label: "Ujian", icon: FileCheck },
           { href: "buku-pendamping", label: "Buku Pendamping", icon: BookOpen },
-          { href: "tka", label: "TKA", icon: BookMarked },
         ]
       case "pondok":
         return [

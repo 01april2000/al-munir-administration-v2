@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id;
     const santri = await prisma.santri.findUnique({
       where: { userId },
-      select: { id: true, jenisSantri: true },
+      select: { id: true, jenisSantri: true, nama: true },
     });
 
     if (!santri) {
@@ -97,6 +97,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       tagihan,
       transaksi,
+      santri: {
+        nama: santri.nama,
+      },
     });
   } catch (error) {
     console.error("Error fetching SMP santri data:", error);

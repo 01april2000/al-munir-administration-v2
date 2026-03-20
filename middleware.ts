@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 // Role-based route access configuration
 const roleAccess: Record<string, string[]> = {
   ADMIN: [
+    "/",
     "/dashboard",
     "/dashboard/admin",
     "/dashboard/bendahara/smk",
@@ -12,18 +13,22 @@ const roleAccess: Record<string, string[]> = {
     "/dashboard/bendahara/pondok",
   ],
   BENDAHARA_SMK: [
+    "/",
     "/dashboard",
     "/dashboard/bendahara/smk",
   ],
   BENDAHARA_SMP: [
+    "/",
     "/dashboard",
     "/dashboard/bendahara/smp",
   ],
   BENDAHARA_PONDOK: [
+    "/",
     "/dashboard",
     "/dashboard/bendahara/pondok",
   ],
   SANTRI: [
+    "/",
     "/dashboard",
   ],
 };

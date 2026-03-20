@@ -23,10 +23,15 @@ import {
   formatCurrency,
   STATUS_TRANSAKSI_OPTIONS,
   JENIS_LAUNDRY_OPTIONS,
+  BULAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, Shirt, Search, Filter } from "lucide-react";
+import { Plus, RefreshCw, Loader2, Shirt, Search, Filter, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+const currentYear = new Date().getFullYear();
+const currentMonthIndex = new Date().getMonth();
+const bulanList = BULAN_OPTIONS.map((b) => b.value) as string[];
 
 interface Santri {
   id: string;
@@ -80,7 +85,6 @@ export function BendaharaTransaksiLaundry() {
   const [santriList, setSantriList] = useState<Santri[]>([]);
   const [santriSearch, setSantriSearch] = useState("");
   const [loadingSantri, setLoadingSantri] = useState(false);
-  const [showSantriDropdown, setShowSantriDropdown] = useState(false);
 
   // Fetch santri for dropdown (PONDOK only)
   const fetchSantri = useCallback(async (search: string = "") => {
@@ -155,7 +159,6 @@ export function BendaharaTransaksiLaundry() {
       tanggalBayar: "",
     });
     setSantriSearch("");
-    setShowSantriDropdown(false);
   };
 
   // Build request body
@@ -216,7 +219,7 @@ export function BendaharaTransaksiLaundry() {
     try {
       setIsSubmitting(true);
       const response = await fetch(`/api/transaksi/${selectedTransaksi.id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildRequestBody(formData, true)),
       });
@@ -270,11 +273,11 @@ export function BendaharaTransaksiLaundry() {
       jenisLaundry: transaksi.jenisLaundry || "REGULAR",
       keterangan: transaksi.keterangan || "",
       status: transaksi.status,
-      tanggalBayar: transaksi.tanggalBayar 
-        ? new Date(transaksi.tanggalBayar).toISOString().split('T')[0]
+      tanggalBayar: transaksi.tanggalBayar
+        ? new Date(transaksi.tanggalBayar).toISOString().split("T")[0]
         : "",
     });
-    setSantriSearch(transaksi.santri.nama);
+    setSantriSearch("");
     setIsEditDialogOpen(true);
   };
 
@@ -285,28 +288,152 @@ export function BendaharaTransaksiLaundry() {
   };
 
   // Calculate statistics
-  const totalPendapatan = transaksiList.reduce((sum, t) => sum + t.jumlah, 0);
+  const totalJumlah = transaksiList.reduce((sum, t) => sum + t.jumlah, 0);
   const totalLunas = transaksiList.filter(t => t.status === "LUNAS").length;
-  const totalBelumBayar = transaksiList.filter(t => t.status === "BELUM_BAYAR").length;
   const totalPending = transaksiList.filter(t => t.status === "PENDING").length;
+  const totalBelumBayar = transaksiList.filter(t => t.status === "BELUM_BAYAR").length;
+
+  // Render form fields based on edit mode
+  const getFormFields = (isEdit: boolean = false) => {
+    return (
+      <>
+        {!isEdit && (
+          <div>
+            <Label htmlFor="santri">Santri</Label>
+            <div className="relative">
+              <Input
+                id="santri-search"
+                placeholder="Cari santri..."
+                value={santriSearch}
+                onChange={(e) => {
+                  setSantriSearch(e.target.value);
+                  fetchSantri(e.target.value);
+                }}
+              />
+              {loadingSantri && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
+            </div>
+            <select
+              id="santri"
+              className="flex h-10 w-full mt-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={formData.santriId}
+              onChange={(e) => handleFormChange("santriId", e.target.value)}
+            >
+              <option value="">Pilih Santri</option>
+              {santriList.map((santri) => (
+                <option key={santri.id} value={santri.id}>
+                  {santri.nama} - {santri.nis} ({santri.kelas})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {isEdit && selectedTransaksi && (
+          <div className="text-sm text-muted-foreground mb-2">
+            <strong>{selectedTransaksi.santri.nama}</strong> ({selectedTransaksi.santri.nis})
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor={isEdit ? "edit-jenis-laundry" : "jenis-laundry"}>Jenis Laundry</Label>
+            <select
+              id={isEdit ? "edit-jenis-laundry" : "jenis-laundry"}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={formData.jenisLaundry}
+              onChange={(e) => handleFormChange("jenisLaundry", e.target.value)}
+            >
+              {JENIS_LAUNDRY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor={isEdit ? "edit-jumlah" : "jumlah"}>Jumlah (Rp)</Label>
+            <Input
+              id={isEdit ? "edit-jumlah" : "jumlah"}
+              type="number"
+              value={formData.jumlah}
+              onChange={(e) => handleFormChange("jumlah", e.target.value)}
+              placeholder="Masukkan jumlah"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor={isEdit ? "edit-status" : "status"}>Status</Label>
+            <select
+              id={isEdit ? "edit-status" : "status"}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={formData.status}
+              onChange={(e) => handleFormChange("status", e.target.value)}
+            >
+              {STATUS_TRANSAKSI_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}>Tanggal Bayar</Label>
+            <Input
+              id={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}
+              type="date"
+              value={formData.tanggalBayar}
+              onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
+            />
+          </div>
+        </div>
+        <div>
+          <Label htmlFor={isEdit ? "edit-keterangan" : "keterangan"}>Keterangan</Label>
+          <Input
+            id={isEdit ? "edit-keterangan" : "keterangan"}
+            value={formData.keterangan}
+            onChange={(e) => handleFormChange("keterangan", e.target.value)}
+            placeholder="Keterangan (opsional)"
+          />
+        </div>
+      </>
+    );
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-6">
+      {/* Header with Add Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Transaksi Laundry</h2>
+          <p className="text-sm text-muted-foreground">Kelola transaksi laundry santri pondok</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Transaksi
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
             <Shirt className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalPendapatan)}</div>
+            <div className="text-2xl font-bold">{total}</div>
+            <p className="text-xs text-muted-foreground">{formatCurrency(totalJumlah)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Lunas</CardTitle>
-            <Badge variant="default">LUNAS</Badge>
+            <Badge variant="default">{totalLunas}</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalLunas}</div>
@@ -314,103 +441,91 @@ export function BendaharaTransaksiLaundry() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Belum Bayar</CardTitle>
-            <Badge variant="destructive">BELUM</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBelumBayar}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Badge variant="secondary">PENDING</Badge>
+            <Badge variant="secondary">{totalPending}</Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPending}</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Belum Bayar</CardTitle>
+            <Badge variant="destructive">{totalBelumBayar}</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalBelumBayar}</div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Content */}
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Daftar Transaksi Laundry</CardTitle>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={fetchTransaksi}
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              </Button>
-              <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah
-              </Button>
-            </div>
-          </div>
+          <CardTitle>Filter</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Filters */}
-          <div className="flex flex-col gap-4 mb-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cari santri..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Filter className="h-4 w-4 mt-3 text-muted-foreground" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="">Semua Status</option>
-                  {STATUS_TRANSAKSI_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-2">
-                <Shirt className="h-4 w-4 mt-3 text-muted-foreground" />
-                <select
-                  value={filterJenisLaundry}
-                  onChange={(e) => setFilterJenisLaundry(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="">Semua Jenis Laundry</option>
-                  {JENIS_LAUNDRY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div>
+              <Label htmlFor="filter-status">Status</Label>
+              <select
+                id="filter-status"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="">Semua</option>
+                {STATUS_TRANSAKSI_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="filter-jenis-laundry">Jenis Laundry</Label>
+              <select
+                id="filter-jenis-laundry"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={filterJenisLaundry}
+                onChange={(e) => setFilterJenisLaundry(e.target.value)}
+              >
+                <option value="">Semua</option>
+                {JENIS_LAUNDRY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="search">Cari Santri</Label>
+              <Input
+                id="search"
+                placeholder="Nama atau NIS..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button variant="outline" onClick={fetchTransaksi}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Error Display */}
-          {error && (
-            <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
-              {error}
-            </div>
-          )}
-
-          {/* Data Table */}
+      {/* Data Table */}
+      <Card>
+        <CardContent className="pt-6">
           {loading ? (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+          ) : error ? (
+            <div className="text-center text-destructive py-8">{error}</div>
           ) : (
             <DataTable
               columns={getTransaksiColumns("LAUNDRY", {
@@ -430,114 +545,16 @@ export function BendaharaTransaksiLaundry() {
             <DialogTitle>Tambah Transaksi Laundry</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="santri">Santri *</Label>
-              <div className="relative">
-                <Input
-                  id="santri"
-                  placeholder="Cari nama santri..."
-                  value={santriSearch}
-                  onChange={(e) => {
-                    setSantriSearch(e.target.value);
-                    fetchSantri(e.target.value);
-                    setShowSantriDropdown(true);
-                  }}
-                  onFocus={() => {
-                    if (santriSearch) fetchSantri(santriSearch);
-                    setShowSantriDropdown(true);
-                  }}
-                />
-                {showSantriDropdown && santriList.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
-                    {santriList.map((santri) => (
-                      <button
-                        key={santri.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
-                        onClick={() => {
-                          setFormData((prev) => ({ ...prev, santriId: santri.id }));
-                          setSantriSearch(`${santri.nama} (${santri.nis})`);
-                          setShowSantriDropdown(false);
-                        }}
-                      >
-                        {santri.nama} ({santri.nis}) - {santri.asrama}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="jumlah">Jumlah (Rp) *</Label>
-              <Input
-                id="jumlah"
-                type="number"
-                placeholder="Masukkan jumlah"
-                value={formData.jumlah}
-                onChange={(e) => handleFormChange("jumlah", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="jenisLaundry">Jenis Laundry *</Label>
-              <select
-                id="jenisLaundry"
-                value={formData.jenisLaundry}
-                onChange={(e) => handleFormChange("jenisLaundry", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {JENIS_LAUNDRY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
-              <select
-                id="status"
-                value={formData.status}
-                onChange={(e) => handleFormChange("status", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {STATUS_TRANSAKSI_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tanggalBayar">Tanggal Bayar</Label>
-              <Input
-                id="tanggalBayar"
-                type="date"
-                value={formData.tanggalBayar}
-                onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="keterangan">Keterangan</Label>
-              <Input
-                id="keterangan"
-                placeholder="Masukkan keterangan (opsional)"
-                value={formData.keterangan}
-                onChange={(e) => handleFormChange("keterangan", e.target.value)}
-              />
-            </div>
+            {getFormFields(false)}
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddDialogOpen(false)}
-              disabled={isSubmitting}
-            >
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Batal
             </Button>
             <Button onClick={handleAdd} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Menyimpan...
                 </>
               ) : (
@@ -555,86 +572,16 @@ export function BendaharaTransaksiLaundry() {
             <DialogTitle>Edit Transaksi Laundry</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-santri">Santri</Label>
-              <Input
-                id="edit-santri"
-                value={santriSearch}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-jumlah">Jumlah (Rp) *</Label>
-              <Input
-                id="edit-jumlah"
-                type="number"
-                placeholder="Masukkan jumlah"
-                value={formData.jumlah}
-                onChange={(e) => handleFormChange("jumlah", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-jenisLaundry">Jenis Laundry *</Label>
-              <select
-                id="edit-jenisLaundry"
-                value={formData.jenisLaundry}
-                onChange={(e) => handleFormChange("jenisLaundry", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {JENIS_LAUNDRY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Status *</Label>
-              <select
-                id="edit-status"
-                value={formData.status}
-                onChange={(e) => handleFormChange("status", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {STATUS_TRANSAKSI_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-tanggalBayar">Tanggal Bayar</Label>
-              <Input
-                id="edit-tanggalBayar"
-                type="date"
-                value={formData.tanggalBayar}
-                onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-keterangan">Keterangan</Label>
-              <Input
-                id="edit-keterangan"
-                placeholder="Masukkan keterangan (opsional)"
-                value={formData.keterangan}
-                onChange={(e) => handleFormChange("keterangan", e.target.value)}
-              />
-            </div>
+            {getFormFields(true)}
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-              disabled={isSubmitting}
-            >
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Batal
             </Button>
             <Button onClick={handleEdit} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Menyimpan...
                 </>
               ) : (
@@ -645,39 +592,32 @@ export function BendaharaTransaksiLaundry() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Hapus Transaksi</DialogTitle>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              Apakah Anda yakin ingin menghapus transaksi ini? Tindakan ini tidak dapat dibatalkan.
+            <p>
+              Apakah Anda yakin ingin menghapus transaksi ini?
             </p>
             {selectedTransaksi && (
-              <div className="mt-4 p-4 bg-muted rounded-md">
-                <p className="font-medium">{selectedTransaksi.santri.nama}</p>
-                <p className="text-sm text-muted-foreground">{formatCurrency(selectedTransaksi.jumlah)}</p>
+              <div className="mt-2 p-3 bg-muted rounded-md text-sm">
+                <p><strong>Kode:</strong> {selectedTransaksi.kode}</p>
+                <p><strong>Santri:</strong> {selectedTransaksi.santri.nama}</p>
+                <p><strong>Jumlah:</strong> {formatCurrency(selectedTransaksi.jumlah)}</p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              disabled={isSubmitting}
-            >
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Batal
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isSubmitting}
-            >
+            <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Menghapus...
                 </>
               ) : (

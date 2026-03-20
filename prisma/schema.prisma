@@ -1,0 +1,254 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  BENDAHARA_SMK
+  BENDAHARA_SMP
+  BENDAHARA_PONDOK
+  SANTRI
+}
+
+enum JenisTagihan {
+  SPP
+  SYAHRIAH
+}
+
+enum StatusTagihan {
+  BELUM_LUNAS
+  LUNAS
+  OVERDUE
+}
+
+enum JenisTransaksi {
+  SPP
+  SYAHRIAH
+  UANG_SAKU
+  LAUNDRY
+  UJIAN
+  PKL
+  LKS
+  BUKU_PENDAMPING
+  TKA
+}
+
+enum StatusTransaksi {
+  LUNAS
+  PENDING
+  BELUM_BAYAR
+  DITOLAK
+}
+
+enum StatusUangSaku {
+  DITAMBAH
+  DIAMBIL
+}
+
+enum JenisBeasiswa {
+  FULL
+  SYAHRIAH
+  SPP
+  UANG_SAKU
+}
+
+enum JenisSantri {
+  SMK
+  SMP
+  PONDOK
+}
+
+enum PeriodePembayaran {
+  BULANAN
+  TAHUNAN
+}
+
+enum StatusSantri {
+  AKTIF
+  NON_AKTIF
+  LULUS
+  KELUAR
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(SANTRI)
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  santri        Santri?
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Santri {
+  id            String           @id @default(cuid())
+  nis           String           @unique
+  nama          String
+  kelas         String
+  asrama        String
+  wali          String
+  status        StatusSantri     @default(AKTIF)
+  beasiswa      Boolean          @default(false)
+  jenisBeasiswa JenisBeasiswa?
+  jenisSantri   JenisSantri      @default(PONDOK)
+  userId        String?          @unique
+  user          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaksi     Transaksi[]
+  tagihan       Tagihan[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([kelas])
+  @@index([asrama])
+  @@index([status])
+  @@index([beasiswa])
+  @@index([jenisSantri])
+  @@index([userId])
+  @@map("santri")
+}
+
+model Tagihan {
+  id              String              @id @default(cuid())
+  kode            String              @unique
+  santriId        String
+  santri          Santri              @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  jenis           JenisTagihan
+  bulan           String
+  tahun           Int
+  jumlah          Int
+  status          StatusTagihan       @default(BELUM_LUNAS)
+  jatuhTempo      DateTime
+  transaksiId     String?
+  transaksi       Transaksi?          @relation(fields: [transaksiId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@unique([santriId, jenis, bulan, tahun])
+  @@index([santriId])
+  @@index([status])
+  @@index([tahun, bulan])
+  @@index([jenis])
+  @@map("tagihan")
+}
+
+model Transaksi {
+  id                    String                @id @default(cuid())
+  kode                  String                @unique
+  santriId              String
+  santri                Santri                @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  jenis                 JenisTransaksi
+  bulan                 String?
+  periodePembayaran     PeriodePembayaran?
+  tahun                 Int?
+  jumlah                Int
+  tanggalBayar          DateTime?
+  status                StatusTransaksi       @default(BELUM_BAYAR)
+  statusUangSaku        StatusUangSaku?
+  jenisLaundry          String?
+  keterangan            String?
+  managedBy             Role?                 @default(ADMIN)
+  midtransTransactions  MidtransTransaction[]
+  tagihan               Tagihan[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([santriId])
+  @@index([jenis])
+  @@index([status])
+  @@index([createdAt])
+  @@index([periodePembayaran])
+  @@index([tahun])
+  @@index([managedBy])
+  @@map("transaksi")
+}
+
+model MidtransTransaction {
+  id                String   @id @default(cuid())
+  orderId           String   @unique
+  transactionId     String?  @unique
+  transaksiId       String
+  transaksi         Transaksi @relation(fields: [transaksiId], references: [id], onDelete: Cascade)
+  grossAmount       Int
+  paymentType       String?
+  transactionStatus String
+  fraudStatus       String?
+  transactionTime   DateTime?
+  settlementTime    DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([transactionId])
+  @@index([transaksiId])
+  @@map("midtrans_transaction")
+}

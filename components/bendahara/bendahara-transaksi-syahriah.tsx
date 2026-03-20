@@ -53,6 +53,10 @@ interface FormData {
   tanggalBayar: string;
 }
 
+interface BendaharaTransaksiSyahriahProps {
+  jenisSantri: "SMK" | "SMP" | "PONDOK";
+}
+
 const getDefaultFormData = (): FormData => ({
   santriId: "",
   bulan: bulanList[currentMonthIndex],
@@ -63,7 +67,7 @@ const getDefaultFormData = (): FormData => ({
   tanggalBayar: "",
 });
 
-export function BendaharaTransaksiSyahriah() {
+export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSyahriahProps) {
   const [transaksiList, setTransaksiList] = useState<Transaksi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,12 +96,12 @@ export function BendaharaTransaksiSyahriah() {
   const [santriSearch, setSantriSearch] = useState("");
   const [loadingSantri, setLoadingSantri] = useState(false);
 
-  // Fetch santri for dropdown (SMK only)
+  // Fetch santri for dropdown (based on jenisSantri prop)
   const fetchSantri = useCallback(async (search: string = "") => {
     try {
       setLoadingSantri(true);
       const params = new URLSearchParams();
-      params.append("jenisSantri", "SMK"); // Filter to SMK only
+      params.append("jenisSantri", jenisSantri);
       if (search) params.append("search", search);
       params.append("limit", "20");
 
@@ -111,7 +115,7 @@ export function BendaharaTransaksiSyahriah() {
     } finally {
       setLoadingSantri(false);
     }
-  }, []);
+  }, [jenisSantri]);
 
   // Fetch transaksi (SYAHRIAH only, filtered by user role in API)
   const fetchTransaksi = useCallback(async () => {
@@ -357,7 +361,7 @@ export function BendaharaTransaksiSyahriah() {
             <div className="relative">
               <Input
                 id="santri-search"
-                placeholder="Cari santri SMK..."
+                placeholder={`Cari santri ${jenisSantri}...`}
                 value={santriSearch}
                 onChange={(e) => {
                   setSantriSearch(e.target.value);
@@ -481,7 +485,7 @@ export function BendaharaTransaksiSyahriah() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Syahriah</h2>
-          <p className="text-sm text-muted-foreground">Kelola pembayaran syahriah santri SMK</p>
+          <p className="text-sm text-muted-foreground">Kelola pembayaran syahriah santri {jenisSantri}</p>
         </div>
         <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />

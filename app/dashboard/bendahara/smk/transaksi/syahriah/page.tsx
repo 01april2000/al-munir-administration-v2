@@ -14,7 +14,7 @@ export default function SyahriahPage() {
         </div>
       </div>
 
-      <BendaharaTransaksiSyahriah />
+      <BendaharaTransaksiSyahriah jenisSantri="SMK" />
     </div>
   );
 }

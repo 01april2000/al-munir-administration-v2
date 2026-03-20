@@ -15,7 +15,7 @@ export default function SantriPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link href="/dashboard/santri/smk">
+          <Link href="/santri/smk">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
               <CardHeader>
                 <CardTitle className="text-2xl">Santri SMK</CardTitle>
@@ -29,7 +29,7 @@ export default function SantriPage() {
             </Card>
           </Link>
 
-          <Link href="/dashboard/santri/smp">
+          <Link href="/santri/smp">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
               <CardHeader>
                 <CardTitle className="text-2xl">Santri SMP</CardTitle>

@@ -17,7 +17,7 @@ import {
   DollarSign,
 } from "lucide-react"
 
-type SantriRole = "smk" | "smp"
+type SantriRole = "smk" | "smp" | "pondok"
 
 interface MobileBottomNavProps {
   role: SantriRole
@@ -35,6 +35,12 @@ const navItems = {
     { href: "/santri/smp?tab=spp", label: "SPP", icon: Receipt },
     { href: "/santri/smp?tab=uang-saku", label: "Uang Saku", icon: Wallet },
     { href: "/santri/smp?tab=laundry", label: "Laundry", icon: Shirt },
+  ],
+  pondok: [
+    { href: "/santri/pondok", label: "Beranda", icon: LayoutDashboard },
+    { href: "/santri/pondok?tab=syahriah", label: "Syahriah", icon: Receipt },
+    { href: "/santri/pondok?tab=uang-saku", label: "Uang Saku", icon: Wallet },
+    { href: "/santri/pondok?tab=laundry", label: "Laundry", icon: Shirt },
   ],
 }
 

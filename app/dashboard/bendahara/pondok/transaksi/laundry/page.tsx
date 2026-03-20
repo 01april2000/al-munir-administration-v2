@@ -1,3 +1,5 @@
+import { BendaharaTransaksiLaundry } from "@/components/bendahara/bendahara-transaksi-laundry";
+
 export default function LaundryPage() {
   return (
     <div className="space-y-6">
@@ -8,11 +10,7 @@ export default function LaundryPage() {
         </p>
       </div>
 
-      <div className="rounded-lg border p-6">
-        <p className="text-center text-muted-foreground">
-          Halaman transaksi laundry sedang dalam pengembangan
-        </p>
-      </div>
+      <BendaharaTransaksiLaundry />
     </div>
   )
 }

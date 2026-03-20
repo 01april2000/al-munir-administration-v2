@@ -9,7 +9,7 @@ The Midtrans integration allows santri (students) to pay their bills (tagihan) t
 - GoPay
 - ShopeePay
 - Bank Transfer (BCA, BNI, BRI, Mandiri)ii
-- QRIS
+- QRISs
 
 ## Architecture
 

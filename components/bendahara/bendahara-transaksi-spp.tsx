@@ -52,6 +52,10 @@ interface FormData {
   tanggalBayar: string;
 }
 
+interface BendaharaTransaksiSPPProps {
+  jenisSantri: "SMK" | "SMP" | "PONDOK";
+}
+
 const getDefaultFormData = (): FormData => ({
   santriId: "",
   bulan: bulanList[currentMonthIndex],
@@ -62,7 +66,7 @@ const getDefaultFormData = (): FormData => ({
   tanggalBayar: "",
 });
 
-export function BendaharaTransaksiSPP() {
+export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProps) {
   const [transaksiList, setTransaksiList] = useState<Transaksi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,14 +95,14 @@ export function BendaharaTransaksiSPP() {
   const [santriSearch, setSantriSearch] = useState("");
   const [loadingSantri, setLoadingSantri] = useState(false);
 
-  // Fetch santri for dropdown (only SMK santri)
+  // Fetch santri for dropdown (based on jenisSantri prop)
   const fetchSantri = useCallback(async (search: string = "") => {
     try {
       setLoadingSantri(true);
       const params = new URLSearchParams();
       if (search) params.append("search", search);
       params.append("limit", "20");
-      params.append("jenisSantri", "SMK");
+      params.append("jenisSantri", jenisSantri);
 
       const response = await fetch(`/api/santri?${params.toString()}`);
       if (response.ok) {
@@ -110,7 +114,7 @@ export function BendaharaTransaksiSPP() {
     } finally {
       setLoadingSantri(false);
     }
-  }, []);
+  }, [jenisSantri]);
 
   // Fetch transaksi
   const fetchTransaksi = useCallback(async () => {
@@ -418,7 +422,7 @@ export function BendaharaTransaksiSPP() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Pembayaran SPP</h2>
-          <p className="text-sm text-muted-foreground">Kelola pembayaran SPP santri SMK</p>
+          <p className="text-sm text-muted-foreground">Kelola pembayaran SPP santri {jenisSantri}</p>
         </div>
         <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />

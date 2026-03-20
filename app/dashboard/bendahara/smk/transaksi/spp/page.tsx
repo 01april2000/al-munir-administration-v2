@@ -5,7 +5,7 @@ import { BendaharaTransaksiSPP } from "@/components/bendahara/bendahara-transaks
 export default function SppPage() {
   return (
     <div className="p-6">
-      <BendaharaTransaksiSPP />
+      <BendaharaTransaksiSPP jenisSantri="SMK" />
     </div>
   );
 }

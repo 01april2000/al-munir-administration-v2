@@ -142,9 +142,17 @@ export async function POST(request: NextRequest) {
       password,
     } = body;
 
-    if (!nis || !nama || !kelas || !asrama || !wali || !email || !password) {
+    // Kelas is not required for PONDOK santri
+    const isPondok = jenisSantri === "PONDOK";
+    if (!nis || !nama || !asrama || !wali || !email || !password) {
       return NextResponse.json(
-        { error: "NIS, nama, kelas, asrama, wali, email, dan password wajib diisi" },
+        { error: "NIS, nama, asrama, wali, email, dan password wajib diisi" },
+        { status: 400 }
+      );
+    }
+    if (!isPondok && !kelas) {
+      return NextResponse.json(
+        { error: "Kelas wajib diisi untuk santri SMK dan SMP" },
         { status: 400 }
       );
     }
@@ -194,11 +202,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create santri linked to user
+    // Kelas is optional for PONDOK santri, default to empty string
     const santri = await prisma.santri.create({
       data: {
         nis,
         nama,
-        kelas,
+        kelas: kelas || "",
         asrama,
         wali,
         status: status || "AKTIF",

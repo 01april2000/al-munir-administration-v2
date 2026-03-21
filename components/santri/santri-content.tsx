@@ -259,9 +259,13 @@ function useProcessedData(data: any, role: SantriRole) {
     })
 
     // Process transaksi
+    // IMPORTANT: Skip SPP and SYAHRIAH transaksi since they are already handled via tagihan
+    // This prevents duplicates where the same transaction appears in both tagihan and transaksi
     const transaksiByType: Record<string, any[]> = {}
     transaksi.forEach((t: any) => {
       const type = t.jenis.toLowerCase().replace("_", "-")
+      // Skip SPP and SYAHRIAH as they are processed via tagihan
+      if (type === "spp" || type === "syahriah") return
       if (!transaksiByType[type]) transaksiByType[type] = []
       transaksiByType[type].push(t)
     })

@@ -11,7 +11,7 @@ import {
   Receipt, Wallet, Shirt, FileCheck, Briefcase, Trophy, BookOpen, BookMarked,
   CheckCircle2, Clock, XCircle, ArrowDown, ArrowUp, TrendingUp, AlertCircle,
   Calendar, Bell, User, MoreHorizontal, Sparkles, History, Settings, School,
-  Mail, Phone, MapPin
+  Mail, Phone, MapPin, RefreshCw
 } from "lucide-react"
 import { ModeToggle } from "@/components/theme-toggle"
 import { TopupButton } from "@/components/santri/topup-button"
@@ -435,7 +435,15 @@ function StatusIcon({ status }: { status: string }) {
 
 export function SantriContent({ role }: { role: SantriRole }) {
   const { activeTab, data, isLoading, mutate } = useSantriTabContext()
+  const [isRefreshing, setIsRefreshing] = React.useState(false)
   const processed = useProcessedData(data, role)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await mutate()
+    // Add a small delay to show the loading state
+    setTimeout(() => setIsRefreshing(false), 500)
+  }
 
   if (isLoading || !processed) {
     return <LoadingSkeleton />
@@ -461,6 +469,16 @@ export function SantriContent({ role }: { role: SantriRole }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              title="Refresh halaman"
+            >
+              <RefreshCw className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
+            </Button>
             <ModeToggle />
             <Button variant="ghost" size="icon" className="rounded-full md:hidden">
               <Bell className="h-5 w-5" />

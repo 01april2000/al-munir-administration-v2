@@ -139,7 +139,8 @@ export function RealtimeTagihan({
         const { tagihan: newTagihan, transaksi } = data
 
         // Process tagihan data based on endpoint type
-        const processedTransactions: TransactionData[] = []
+        // Use a map to prevent duplicate keys
+        const processedTransactionsMap: Record<string, TransactionData> = {}
 
         // Process tagihan based on jenis
         const tagihanByJenis: Record<string, TransactionItem[]> = {}
@@ -175,11 +176,17 @@ export function RealtimeTagihan({
         for (const [jenis, items] of Object.entries(tagihanByJenis)) {
           const type = jenisToType[jenis]
           if (type && transactionConfig[type]) {
-            processedTransactions.push({
-              type,
-              ...transactionConfig[type],
-              items,
-            })
+            if (processedTransactionsMap[type]) {
+              // Merge items if type already exists
+              processedTransactionsMap[type].items.push(...items)
+            } else {
+              // Create new entry if type doesn't exist
+              processedTransactionsMap[type] = {
+                type,
+                ...transactionConfig[type],
+                items,
+              }
+            }
           }
         }
 
@@ -195,13 +202,22 @@ export function RealtimeTagihan({
               transaksiId: t.id,
               rawAmount: t.jumlah,
             }))
-            processedTransactions.push({
-              type: "laundry",
-              ...transactionConfig.laundry,
-              items: laundryItems,
-            })
+            if (processedTransactionsMap.laundry) {
+              // Merge items if laundry already exists
+              processedTransactionsMap.laundry.items.push(...laundryItems)
+            } else {
+              // Create new entry if laundry doesn't exist
+              processedTransactionsMap.laundry = {
+                type: "laundry",
+                ...transactionConfig.laundry,
+                items: laundryItems,
+              }
+            }
           }
         }
+
+        // Convert map to array
+        const processedTransactions = Object.values(processedTransactionsMap)
 
         // Filter for unpaid bills only
         const tagihanOnly = processedTransactions

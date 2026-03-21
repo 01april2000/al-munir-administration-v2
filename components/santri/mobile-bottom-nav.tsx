@@ -1,67 +1,60 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
   Receipt,
   History,
   User,
 } from "lucide-react"
-
-type SantriRole = "smk" | "smp" | "pondok"
+import { cn } from "@/lib/utils"
+import { useSantriTabContext, TabType } from "./santri-tab-context"
 
 interface MobileBottomNavProps {
-  role: SantriRole
+  role: "smk" | "smp" | "pondok"
 }
 
-const navItems = {
-  smk: [
-    { href: "/santri/smk", label: "Beranda", icon: LayoutDashboard },
-    { href: "/santri/smk?tab=tagihan", label: "Tagihan", icon: Receipt },
-    { href: "/santri/smk?tab=aktivitas", label: "Aktivitas", icon: History },
-    { href: "/santri/smk?tab=akun", label: "Akun", icon: User },
-  ],
-  smp: [
-    { href: "/santri/smp", label: "Beranda", icon: LayoutDashboard },
-    { href: "/santri/smp?tab=tagihan", label: "Tagihan", icon: Receipt },
-    { href: "/santri/smp?tab=aktivitas", label: "Aktivitas", icon: History },
-    { href: "/santri/smp?tab=akun", label: "Akun", icon: User },
-  ],
-  pondok: [
-    { href: "/santri/pondok", label: "Beranda", icon: LayoutDashboard },
-    { href: "/santri/pondok?tab=tagihan", label: "Tagihan", icon: Receipt },
-    { href: "/santri/pondok?tab=aktivitas", label: "Aktivitas", icon: History },
-    { href: "/santri/pondok?tab=akun", label: "Akun", icon: User },
-  ],
-}
+const navItems: { id: TabType; label: string; icon: React.ElementType }[] = [
+  { id: "beranda", label: "Beranda", icon: LayoutDashboard },
+  { id: "tagihan", label: "Tagihan", icon: Receipt },
+  { id: "aktivitas", label: "Aktivitas", icon: History },
+  { id: "akun", label: "Akun", icon: User },
+]
 
 export function MobileBottomNav({ role }: MobileBottomNavProps) {
-  const pathname = usePathname()
-  const items = navItems[role]
+  const { activeTab, setActiveTab } = useSantriTabContext()
+
+  const handleTabClick = React.useCallback(
+    (tabId: TabType) => {
+      // Instant tab switch - no navigation needed
+      setActiveTab(tabId)
+    },
+    [setActiveTab]
+  )
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border/50 md:hidden">
       <div className="flex items-center justify-around h-16 safe-area-bottom">
-        {items.map((item) => {
-          const isActive = pathname === item.href
+        {navItems.map((item) => {
+          const isActive = activeTab === item.id
           const Icon = item.icon
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
+            <button
+              key={item.id}
+              onClick={() => handleTabClick(item.id)}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full transition-all duration-300 relative",
-                isActive ? "text-primary" : "text-muted-foreground"
+                "flex flex-col items-center justify-center w-full h-full transition-all duration-200 relative touch-manipulation",
+                isActive ? "text-primary" : "text-muted-foreground",
+                "active:scale-95"
               )}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
             >
               <div className="relative">
                 <Icon
                   className={cn(
-                    "h-5 w-5 transition-all duration-300",
+                    "h-5 w-5 transition-transform duration-200",
                     isActive ? "scale-110" : "scale-100"
                   )}
                 />
@@ -70,7 +63,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 )}
               </div>
               <span className="text-[10px] font-medium mt-1">{item.label}</span>
-            </Link>
+            </button>
           )
         })}
       </div>

@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle } from "lucide-react";
 import * as XLSX from "xlsx";
+import { JenisSantri } from "@/lib/generated/prisma";
 
 interface ImportSantriDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  defaultJenisSantri?: JenisSantri; // If set, all imported santri will use this jenis
 }
 
 interface ImportResult {
@@ -30,7 +32,7 @@ interface ImportResult {
   };
 }
 
-export function ImportSantriDialog({ open, onOpenChange, onSuccess }: ImportSantriDialogProps) {
+export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenisSantri }: ImportSantriDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState<Record<string, unknown>[] | null>(null);
@@ -116,11 +118,12 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess }: ImportSant
             asrama: String(row["Asrama"] || row["asrama"] || row["ASRAMA"] || ""),
             wali: String(row["Wali"] || row["wali"] || row["WALI"] || ""),
             status: String(row["Status"] || row["status"] || row["STATUS"] || "AKTIF"),
-            beasiswa: String(row["Beasiswa"] || row["beasiswa"] || row["BEASISWA"] || "").toLowerCase() === "ya" || 
+            beasiswa: String(row["Beasiswa"] || row["beasiswa"] || row["BEASISWA"] || "").toLowerCase() === "ya" ||
                       String(row["Beasiswa"] || row["beasiswa"] || row["BEASISWA"] || "").toLowerCase() === "true" ||
                       String(row["Beasiswa"] || row["beasiswa"] || row["BEASISWA"] || "") === "1",
             jenisBeasiswa: String(row["Jenis Beasiswa"] || row["jenisBeasiswa"] || row["jenis_beasiswa"] || row["JENIS_BEASISWA"] || "") || null,
-            jenisSantri: String(row["Jenis Santri"] || row["jenisSantri"] || row["jenis_santri"] || row["JENIS_SANTRI"] || "PONDOK"),
+            // Use defaultJenisSantri if provided, otherwise use value from Excel
+            jenisSantri: defaultJenisSantri || String(row["Jenis Santri"] || row["jenisSantri"] || row["jenis_santri"] || row["JENIS_SANTRI"] || "PONDOK"),
             email: String(row["Email"] || row["email"] || row["EMAIL"] || ""),
             password: String(row["Password"] || row["password"] || row["PASSWORD"] || ""),
           }));
@@ -176,6 +179,9 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess }: ImportSant
   };
 
   const downloadTemplate = () => {
+    // Use defaultJenisSantri for template if provided
+    const jenisSantriValue = defaultJenisSantri || "PONDOK";
+    
     const templateData = [
       {
         NIS: "12345",
@@ -186,7 +192,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess }: ImportSant
         Status: "AKTIF",
         Beasiswa: "Ya",
         "Jenis Beasiswa": "FULL",
-        "Jenis Santri": "SMK",
+        "Jenis Santri": jenisSantriValue,
         Email: "ahmad@example.com",
         Password: "password123",
       },
@@ -199,20 +205,20 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess }: ImportSant
         Status: "AKTIF",
         Beasiswa: "Tidak",
         "Jenis Beasiswa": "",
-        "Jenis Santri": "SMP",
+        "Jenis Santri": jenisSantriValue,
         Email: "aisyah@example.com",
         Password: "password123",
       },
       {
         NIS: "12347",
         Nama: "Muhammad Rizki",
-        Kelas: "",
+        Kelas: jenisSantriValue === "PONDOK" ? "" : "X",
         Asrama: "Asrama Putra 2",
         Wali: "Bapak Muhammad",
         Status: "AKTIF",
         Beasiswa: "Ya",
         "Jenis Beasiswa": "SYAHRIAH",
-        "Jenis Santri": "PONDOK",
+        "Jenis Santri": jenisSantriValue,
         Email: "rizki@example.com",
         Password: "password123",
       },
@@ -221,7 +227,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess }: ImportSant
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Template Import Santri");
-    XLSX.writeFile(workbook, "template_import_santri.xlsx");
+    XLSX.writeFile(workbook, `template_import_santri_${jenisSantriValue.toLowerCase()}.xlsx`);
   };
 
   return (
@@ -349,7 +355,12 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess }: ImportSant
               <li><strong>Status</strong> - AKTIF, NON_AKTIF, LULUS, KELUAR</li>
               <li><strong>Beasiswa</strong> - Ya/Tidak</li>
               <li><strong>Jenis Beasiswa</strong> - FULL, SYAHRIAH, SPP, UANG_SAKU</li>
-              <li><strong>Jenis Santri</strong> - SMK, SMP, PONDOK</li>
+              {!defaultJenisSantri && (
+                <li><strong>Jenis Santri</strong> - SMK, SMP, PONDOK</li>
+              )}
+              {defaultJenisSantri && (
+                <li><strong>Jenis Santri</strong> - Otomatis diatur ke <strong>{defaultJenisSantri}</strong></li>
+              )}
               <li><strong>Email</strong> - Email untuk login (unik)</li>
               <li><strong>Password</strong> - Password untuk login</li>
             </ul>

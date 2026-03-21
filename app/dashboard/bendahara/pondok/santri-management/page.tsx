@@ -27,9 +27,10 @@ import {
   JenisSantri,
   JenisBeasiswa,
 } from "./columns";
-import { Plus, Users, Loader2, Trash2, GraduationCap } from "lucide-react";
+import { Plus, Users, Loader2, Trash2, GraduationCap, Upload } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { ImportSantriDialog } from "@/components/admin/import-santri-dialog";
 
 interface FormData {
   nis: string;
@@ -85,6 +86,7 @@ export default function SantriManagementPage() {
   const [deletingSantri, setDeletingSantri] = useState<Santri | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const fetchSantri = useCallback(async () => {
     try {
@@ -271,6 +273,10 @@ export default function SantriManagementPage() {
               Hapus ({selectedCount})
             </Button>
           )}
+          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import Excel
+          </Button>
           <Button onClick={handleOpenCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
             Tambah Santri
@@ -581,6 +587,14 @@ export default function SantriManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import Excel Dialog */}
+      <ImportSantriDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onSuccess={fetchSantri}
+        defaultJenisSantri="PONDOK"
+      />
     </div>
   );
 }

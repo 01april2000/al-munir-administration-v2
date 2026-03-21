@@ -48,7 +48,28 @@ export function AuthCard() {
         return;
       }
 
-      // Redirect to home on success
+      // Fetch session to get user role for redirect
+      try {
+        const sessionResponse = await fetch("/api/auth/session");
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          const userRole = sessionData?.user?.role;
+          
+          // Redirect based on role
+          if (userRole === "SANTRI") {
+            window.location.href = "/santri";
+          } else {
+            // For ADMIN, BENDAHARA_*, redirect to dashboard
+            window.location.href = "/dashboard";
+          }
+          return;
+        }
+      } catch {
+        // If session fetch fails, fallback to home
+        console.error("Failed to fetch session for redirect");
+      }
+      
+      // Fallback redirect to home
       window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

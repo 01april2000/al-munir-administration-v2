@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -110,18 +110,30 @@ const transactionConfig: Record<
   tka: { title: "TKA", icon: <BookMarked />, color: "blue" },
 }
 
-export function RealtimeTagihan({ 
-  initialTagihan, 
+export function RealtimeTagihan({
+  initialTagihan,
   apiEndpoint,
   refreshInterval = 30000 // Default 30 seconds
 }: RealtimeTagihanProps) {
   const [tagihan, setTagihan] = useState<TransactionData[]>(initialTagihan)
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  
+  // Use ref to track if a fetch is in progress to prevent concurrent fetches
+  const fetchingRef = useRef(false)
+  // Use ref to track if component is mounted to prevent state updates after unmount
+  const mountedRef = useRef(true)
 
   const fetchData = useCallback(async () => {
+    // Prevent concurrent fetches
+    if (fetchingRef.current) {
+      return
+    }
+    
     try {
+      fetchingRef.current = true
       setIsLoading(true)
+      
       // Add timestamp to force network request and bypass cache
       const url = new URL(apiEndpoint, window.location.origin)
       url.searchParams.set('_t', Date.now().toString())
@@ -134,7 +146,7 @@ export function RealtimeTagihan({
         },
       })
 
-      if (response.ok) {
+      if (response.ok && mountedRef.current) {
         const data = await response.json()
         const { tagihan: newTagihan, transaksi } = data
 
@@ -142,10 +154,17 @@ export function RealtimeTagihan({
         // Use a map to prevent duplicate keys
         const processedTransactionsMap: Record<string, TransactionData> = {}
 
-        // Process tagihan based on jenis
+        // Process tagihan based on jenis - use a Set to track unique tagihan IDs
+        const processedTagihanIds = new Set<string>()
         const tagihanByJenis: Record<string, TransactionItem[]> = {}
 
         for (const t of newTagihan) {
+          // Skip if we've already processed this tagihan (prevent duplicates)
+          if (processedTagihanIds.has(t.id)) {
+            continue
+          }
+          processedTagihanIds.add(t.id)
+          
           const jenis = t.jenis
           if (!tagihanByJenis[jenis]) {
             tagihanByJenis[jenis] = []
@@ -190,9 +209,17 @@ export function RealtimeTagihan({
           }
         }
 
-        // Process Laundry transactions (for pondok)
+        // Process Laundry transactions (for pondok) - use Set to prevent duplicates
         if (transaksi) {
-          const laundryTransaksi = transaksi.filter((t: any) => t.jenis === "LAUNDRY")
+          const processedTransaksiIds = new Set<string>()
+          const laundryTransaksi = transaksi.filter((t: any) => {
+            if (t.jenis !== "LAUNDRY") return false
+            // Skip if already processed
+            if (processedTransaksiIds.has(t.id)) return false
+            processedTransaksiIds.add(t.id)
+            return true
+          })
+          
           if (laundryTransaksi.length > 0) {
             const laundryItems = laundryTransaksi.map((t: any) => ({
               label: t.jenisLaundry || t.keterangan || "Laundry",
@@ -228,27 +255,60 @@ export function RealtimeTagihan({
           }))
           .filter(t => t.items.length > 0)
 
-        setTagihan(tagihanOnly)
-        setLastUpdated(new Date())
+        // Only update state if component is still mounted
+        if (mountedRef.current) {
+          setTagihan(tagihanOnly)
+          setLastUpdated(new Date())
+        }
       }
     } catch (error) {
       console.error("Failed to fetch tagihan:", error)
     } finally {
-      setIsLoading(false)
+      fetchingRef.current = false
+      if (mountedRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [apiEndpoint])
 
-  // Polling effect
+  // Cleanup on unmount
   useEffect(() => {
-    const interval = setInterval(fetchData, refreshInterval)
-    return () => clearInterval(interval)
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  // Polling effect - only start after initial delay to avoid immediate duplicate fetch
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null
+    
+    // Delay polling start to avoid race with initial SWR fetch
+    const timeoutId = setTimeout(() => {
+      intervalId = setInterval(fetchData, refreshInterval)
+    }, 5000) // Wait 5 seconds before starting polling
+    
+    return () => {
+      clearTimeout(timeoutId)
+      if (intervalId) {
+        clearInterval(intervalId)
+      }
+    }
   }, [fetchData, refreshInterval])
 
-  // Also listen for visibility change to refresh when tab becomes active
+  // Listen for visibility change with debounce
   useEffect(() => {
+    let lastFetchTime = 0
+    const DEBOUNCE_MS = 2000 // 2 seconds debounce
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchData()
+        const now = Date.now()
+        // Only fetch if enough time has passed since last fetch
+        if (now - lastFetchTime > DEBOUNCE_MS) {
+          lastFetchTime = now
+          fetchData()
+        }
       }
     }
 

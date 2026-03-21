@@ -35,9 +35,10 @@ export function useSantriData(role: SantriRole) {
     fetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
+      revalidateOnReconnect: false, // Disable to prevent race condition with RealtimeTagihan's own fetching
       dedupingInterval: 30000, // Cache 30 detik
-      refreshInterval: 60000, // Auto refresh setiap 1 menit
+      refreshInterval: 0, // Disable auto refresh - let RealtimeTagihan handle polling
+      revalidateIfStale: false, // Don't revalidate when window regains focus
     }
   )
 

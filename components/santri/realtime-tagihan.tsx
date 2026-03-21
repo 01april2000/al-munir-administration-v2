@@ -122,8 +122,16 @@ export function RealtimeTagihan({
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(apiEndpoint, {
+      // Add timestamp to force network request and bypass cache
+      const url = new URL(apiEndpoint, window.location.origin)
+      url.searchParams.set('_t', Date.now().toString())
+      
+      const response = await fetch(url.toString(), {
         cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
       })
 
       if (response.ok) {

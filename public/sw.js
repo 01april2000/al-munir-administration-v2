@@ -1,4 +1,4 @@
-const CACHE_NAME = 'santri-portal-v1'
+const CACHE_NAME = 'santri-portal-v2'
 const urlsToCache = [
   '/santri',
   '/santri/pondok',
@@ -7,6 +7,13 @@ const urlsToCache = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
+]
+
+// Routes that should NOT be cached (always fetch from network)
+const NETWORK_ONLY_ROUTES = [
+  '/api/',
+  '/_next/',
+  '/auth/'
 ]
 
 // Install event - cache assets
@@ -29,6 +36,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Deleting old cache:', cacheName)
             return caches.delete(cacheName)
           }
         })
@@ -38,17 +46,78 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
-// Fetch event - serve from cache, fall back to network
+// Check if request should be network-only (not cached)
+function shouldUseNetworkOnly(url) {
+  return NETWORK_ONLY_ROUTES.some(route => url.pathname.startsWith(route))
+}
+
+// Fetch event - different strategies based on request type
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+  
+  // Skip non-GET requests (POST, PUT, DELETE, etc.) - always use network
+  if (event.request.method !== 'GET') {
+    event.respondWith(
+      fetch(event.request)
+        .catch((error) => {
+          console.error('Network request failed:', error)
+          return new Response(
+            JSON.stringify({ error: 'Network error', offline: true }),
+            { 
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            }
+          )
+        })
+    )
+    return
+  }
+
+  // Network-only for API routes and dynamic content
+  if (shouldUseNetworkOnly(url)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Clone and cache the response for potential offline fallback
+          const responseClone = response.clone()
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone)
+          })
+          return response
+        })
+        .catch((error) => {
+          console.error('Network request failed, trying cache:', error)
+          // Fallback to cache if network fails
+          return caches.match(event.request)
+        })
+    )
+    return
+  }
+
+  // Cache-first for static assets and pages
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
         // Cache hit - return response
         if (response) {
+          // Fetch in background to update cache (stale-while-revalidate)
+          fetch(event.request)
+            .then((networkResponse) => {
+              if (networkResponse && networkResponse.status === 200) {
+                caches.open(CACHE_NAME)
+                  .then((cache) => {
+                    cache.put(event.request, networkResponse)
+                  })
+              }
+            })
+            .catch(() => {
+              // Ignore fetch errors for background update
+            })
+          
           return response
         }
 
-        // Clone the request
+        // No cache - fetch from network
         const fetchRequest = event.request.clone()
 
         return fetch(fetchRequest).then((response) => {
@@ -67,6 +136,11 @@ self.addEventListener('fetch', (event) => {
 
           return response
         })
+      })
+      .catch((error) => {
+        console.error('Fetch failed:', error)
+        // Return offline page or fallback
+        return caches.match('/santri')
       })
   )
 })
@@ -102,6 +176,14 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.openWindow('/santri')
   )
+})
+
+// Handle messages from clients
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('Skipping waiting, activating new service worker')
+    self.skipWaiting()
+  }
 })
 
 async function syncTransactions() {

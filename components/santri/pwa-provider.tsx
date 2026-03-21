@@ -6,6 +6,8 @@ export function PWAProvider() {
   const [isInstallable, setIsInstallable] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [isOnline, setIsOnline] = useState(true)
+  const [showUpdateToast, setShowUpdateToast] = useState(false)
+  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null)
 
   useEffect(() => {
     // Check online status
@@ -21,10 +23,35 @@ export function PWAProvider() {
         .register('/sw.js')
         .then((registration) => {
           console.log('Service Worker registered:', registration)
+          setRegistration(registration)
+
+          // Check for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New content is available, show update toast
+                  setShowUpdateToast(true)
+                }
+              })
+            }
+          })
+
+          // Check for updates every 5 minutes
+          setInterval(() => {
+            registration.update().catch(console.error)
+          }, 5 * 60 * 1000)
         })
         .catch((error) => {
           console.log('Service Worker registration failed:', error)
         })
+
+      // Handle controller change (when new SW takes over)
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // Auto reload when new service worker takes over
+        window.location.reload()
+      })
     }
 
     // Handle PWA install prompt
@@ -65,8 +92,29 @@ export function PWAProvider() {
     setDeferredPrompt(null)
   }
 
+  const handleUpdateClick = () => {
+    if (registration?.waiting) {
+      // Tell the waiting service worker to activate
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+    }
+    setShowUpdateToast(false)
+  }
+
   return (
     <>
+      {/* Update Available Toast */}
+      {showUpdateToast && (
+        <div className="fixed bottom-20 left-4 right-4 z-50 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between gap-3">
+          <span className="text-sm">Update tersedia!</span>
+          <button
+            onClick={handleUpdateClick}
+            className="bg-white text-blue-600 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-50 transition-colors"
+          >
+            Update Sekarang
+          </button>
+        </div>
+      )}
+
       {/* Install PWA Button */}
       {isInstallable && (
         <button

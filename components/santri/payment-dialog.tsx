@@ -152,20 +152,6 @@ export function PaymentDialog({
         onClose: () => {
           setLoading(false)
         },
-        // IMPORTANT: This will redirect user back to the app after payment
-        // Works for Midtrans Simulator and real payments that open in new tab
-        onFinish: () => {
-          console.log("Payment finished - redirecting...")
-          // Check status and redirect
-          fetch("/api/payment/check-status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: data.orderId }),
-          }).catch(console.error)
-          
-          setOpen(false)
-          window.location.href = buildRedirectUrl("success")
-        },
       })
       
       // Also store orderId in sessionStorage as backup

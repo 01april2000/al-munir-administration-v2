@@ -29,7 +29,7 @@ const roleAccess: Record<string, string[]> = {
   ],
   SANTRI: [
     "/",
-    "/dashboard",
+    "/santri",
   ],
 };
 

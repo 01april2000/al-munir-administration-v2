@@ -196,6 +196,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Build finish redirect URL with payment info
+    // This ensures user is redirected back to the app after payment on Midtrans Simulator
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get("origin") || "http://localhost:3000"
+    const finishRedirectUrl = `${appUrl}/santri?payment_status=success&payment_type=${encodeURIComponent(jenis)}&amount=${amount}&order_id=${orderId}&refresh=${Date.now()}`
+
     // Create Midtrans Snap transaction
     const midtransTransaction = await createSnapTransaction({
       orderId,
@@ -209,6 +214,7 @@ export async function POST(request: NextRequest) {
       itemDetails,
       tagihanId: tagihanId || "",
       santriName: santri.nama,
+      finishRedirectUrl,
     });
 
     // Store Midtrans transaction details

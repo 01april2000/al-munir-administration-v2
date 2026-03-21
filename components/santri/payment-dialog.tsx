@@ -94,93 +94,92 @@ export function PaymentDialog({
       }
 
       const data = await response.json()
+      
+      // Get current path for redirect URLs
+      const currentPath = window.location.pathname
+      
+      // Build redirect URL with payment info
+      const buildRedirectUrl = (status: string) => {
+        const url = new URL(window.location.origin + currentPath)
+        url.searchParams.set("payment_status", status)
+        url.searchParams.set("payment_type", jenis)
+        url.searchParams.set("amount", amount)
+        url.searchParams.set("order_id", data.orderId)
+        url.searchParams.set("refresh", Date.now().toString())
+        return url.toString()
+      }
 
-      // Open Midtrans Snap popup
+      // Open Midtrans Snap popup with finish redirect URL
+      // This ensures user is redirected back after payment on simulator
       window.snap.pay(data.token, {
+        // Callback when payment is successful (for regular popup flow)
         onSuccess: async (result: any) => {
           console.log("Payment success:", result)
-          // Check payment status from Midtrans API to ensure DB is updated
           try {
             await fetch("/api/payment/check-status", {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ orderId: data.orderId }),
             })
           } catch (error) {
             console.error("Error checking payment status:", error)
           }
-          
-          // Close dialog
           setOpen(false)
-          
-          // Get current path and add payment success query params
-          const currentPath = window.location.pathname
-          const redirectUrl = new URL(window.location.origin + currentPath)
-          redirectUrl.searchParams.set("payment_status", "success")
-          redirectUrl.searchParams.set("payment_type", jenis)
-          redirectUrl.searchParams.set("amount", amount)
-          redirectUrl.searchParams.set("order_id", data.orderId)
-          redirectUrl.searchParams.set("refresh", Date.now().toString())
-          
-          // Use hard redirect to ensure fresh data load
-          window.location.href = redirectUrl.toString()
+          window.location.href = buildRedirectUrl("success")
         },
+        // Callback when payment is pending
         onPending: async (result: any) => {
           console.log("Payment pending:", result)
-          // Check payment status from Midtrans API
           try {
             await fetch("/api/payment/check-status", {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ orderId: data.orderId }),
             })
           } catch (error) {
             console.error("Error checking payment status:", error)
           }
-          
-          // Close dialog
           setOpen(false)
-          
-          // Get current path and add payment pending query params
-          const currentPath = window.location.pathname
-          const redirectUrl = new URL(window.location.origin + currentPath)
-          redirectUrl.searchParams.set("payment_status", "pending")
-          redirectUrl.searchParams.set("payment_type", jenis)
-          redirectUrl.searchParams.set("amount", amount)
-          redirectUrl.searchParams.set("order_id", data.orderId)
-          redirectUrl.searchParams.set("refresh", Date.now().toString())
-          
-          window.location.href = redirectUrl.toString()
+          window.location.href = buildRedirectUrl("pending")
         },
+        // Callback when payment fails
         onError: (result: any) => {
           console.error("Payment error:", result)
-          // Close dialog
           setOpen(false)
-          
-          // Get current path and add payment error query params
-          const currentPath = window.location.pathname
-          const redirectUrl = new URL(window.location.origin + currentPath)
-          redirectUrl.searchParams.set("payment_status", "error")
-          redirectUrl.searchParams.set("payment_type", jenis)
-          redirectUrl.searchParams.set("amount", amount)
-          redirectUrl.searchParams.set("refresh", Date.now().toString())
-          
-          window.location.href = redirectUrl.toString()
+          window.location.href = buildRedirectUrl("error")
         },
+        // Callback when user closes the popup
         onClose: () => {
-          // User closed the popup without completing payment
           setLoading(false)
         },
+        // IMPORTANT: This will redirect user back to the app after payment
+        // Works for Midtrans Simulator and real payments that open in new tab
+        onFinish: () => {
+          console.log("Payment finished - redirecting...")
+          // Check status and redirect
+          fetch("/api/payment/check-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: data.orderId }),
+          }).catch(console.error)
+          
+          setOpen(false)
+          window.location.href = buildRedirectUrl("success")
+        },
       })
+      
+      // Also store orderId in sessionStorage as backup
+      // User can manually check status if redirect fails
+      sessionStorage.setItem("pendingPayment", JSON.stringify({
+        orderId: data.orderId,
+        jenis,
+        amount,
+        timestamp: Date.now(),
+      }))
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred during payment")
     } finally {
-      // Only set loading to false if we're not waiting for Snap callback
-      // The callback will handle it
       setTimeout(() => {
         setLoading(false)
       }, 100)
@@ -228,7 +227,7 @@ export function PaymentDialog({
             <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-800 dark:text-blue-200">
                 <strong>Catatan:</strong> Setelah klik "Bayar Sekarang", Anda akan diarahkan ke halaman pembayaran Midtrans. 
-                Selesaikan pembayaran dan Anda akan otomatis kembali ke halaman utama dengan notifikasi hasil pembayaran.
+                Selesaikan pembayaran dan Anda akan otomatis diarahkan kembali ke halaman ini dengan notifikasi hasil pembayaran.
               </p>
             </div>
           </div>

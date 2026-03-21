@@ -39,6 +39,7 @@ export async function createSnapTransaction(params: {
   }>;
   tagihanId: string;
   santriName: string;
+  finishRedirectUrl?: string;
 }) {
   try {
     // Get webhook URL from environment or use default
@@ -46,8 +47,8 @@ export async function createSnapTransaction(params: {
       ? `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/webhook`
       : "http://localhost:3000/api/payment/webhook";
 
-    // @ts-ignore - createTransaction method exists in the Snap class but not in TypeScript types
-    const transaction = await (midtransSnap as any).createTransaction({
+    // Build transaction payload
+    const transactionPayload: any = {
       transaction_details: {
         order_id: params.orderId,
         gross_amount: params.grossAmount,
@@ -75,7 +76,18 @@ export async function createSnapTransaction(params: {
       notifications: {
         payment_notification_url: webhookUrl,
       },
-    });
+    };
+
+    // Add finish redirect URL if provided
+    // This ensures user is redirected back to the app after payment
+    if (params.finishRedirectUrl) {
+      transactionPayload.callbacks = {
+        finish: params.finishRedirectUrl,
+      };
+    }
+
+    // @ts-ignore - createTransaction method exists in the Snap class but not in TypeScript types
+    const transaction = await (midtransSnap as any).createTransaction(transactionPayload);
 
     return transaction;
   } catch (error) {

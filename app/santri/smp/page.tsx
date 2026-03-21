@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from "@/components/ui/empty"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Receipt, Wallet, Shirt, FileCheck, BookMarked, BookOpen, CheckCircle2, Clock, XCircle, ArrowDown, ArrowUp, CreditCard, TrendingUp, AlertCircle, Calendar, RefreshCw, Bell, User, Send, QrCode, MoreHorizontal, Sparkles } from "lucide-react"
+import { Receipt, Wallet, Shirt, FileCheck, BookMarked, BookOpen, CheckCircle2, Clock, XCircle, ArrowDown, ArrowUp, CreditCard, TrendingUp, AlertCircle, Calendar, RefreshCw, Bell, User, Send, QrCode, MoreHorizontal, Sparkles, History, Settings, LogOut, Mail, Phone, MapPin, School } from "lucide-react"
 import { ModeToggle } from "@/components/theme-toggle"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
@@ -31,6 +31,8 @@ import { TopupButton } from "@/components/santri/topup-button"
 import { LaundryButton } from "@/components/santri/laundry-button"
 import { Button } from "@/components/ui/button"
 import { MobileBottomNav } from "@/components/santri/mobile-bottom-nav"
+import { SignOutButton } from "@/components/sign-out-button"
+import { RealtimeTagihan } from "@/components/santri/realtime-tagihan"
 
 type TransactionType = "spp" | "syahriah" | "uang-saku" | "laundry" | "ujian" | "tka" | "buku-pendamping"
 
@@ -205,7 +207,14 @@ async function getSantriData() {
   return response.json()
 }
 
-export default async function SantriSMPPage() {
+export default async function SantriSMPPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
+  const activeTab = tab || "beranda"
+  
   const data = await getSantriData()
   const { tagihan, transaksi, santri } = data
 
@@ -423,6 +432,25 @@ export default async function SantriSMPPage() {
     })
   }
 
+  // Filter for tagihan (unpaid bills only)
+  const tagihanOnly = processedTransactions
+    .filter(t => t.type !== "uang-saku")
+    .map(t => ({
+      ...t,
+      items: t.items.filter(item => item.status === "Belum Lunas" || item.status === "Menunggu")
+    }))
+    .filter(t => t.items.length > 0)
+
+  // Filter for aktivitas (payment history - paid items and uang saku)
+  const aktivitasOnly = processedTransactions
+    .map(t => ({
+      ...t,
+      items: t.type === "uang-saku" 
+        ? t.items 
+        : t.items.filter(item => item.status === "Lunas")
+    }))
+    .filter(t => t.items.length > 0)
+
   const santriName = santri?.nama || "Santri"
   const santriInitials = santriName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
 
@@ -457,217 +485,303 @@ export default async function SantriSMPPage() {
 
       {/* Main Content */}
       <div className="px-4 md:px-6 py-4 md:py-6 space-y-6">
-        {/* Balance Card - Prominent */}
-        <Card className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-white border-0 shadow-2xl shadow-primary/20">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5Ljk0MSAwIDE4LTguMDU5IDE4LTE4cy04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNHMxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-20" />
-          <CardHeader className="relative pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <Wallet className="h-5 w-5 md:h-6 md:w-6" />
-                </div>
-                <span className="text-sm md:text-base font-medium text-white/90">Saldo Uang Saku</span>
-              </div>
-              <Sparkles className="h-5 w-5 text-white/60 animate-pulse" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative pt-0">
-            <div className="text-3xl md:text-5xl font-bold tracking-tight mb-2">
-              {formatCurrency(summaryStats.uangSakuBalance)}
-            </div>
-            <div className="flex items-center gap-2 text-white/70 text-xs md:text-sm">
-              <div className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
-                <span>Aktif</span>
-              </div>
-              <span>•</span>
-              <span>Santri SMP</span>
-            </div>
-            <div className="flex gap-2 mt-4 md:mt-6">
-              <TopupButton className="flex-1 bg-white text-primary hover:bg-white/90 shadow-lg" />
-              <LaundryButton />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-4 gap-3">
-          <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
-              <Receipt className="h-5 w-5" />
-            </div>
-            <span className="text-xs font-medium">SPP</span>
-          </Button>
-          <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/20">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-            <span className="text-xs font-medium">Lunas</span>
-          </Button>
-          <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20">
-              <AlertCircle className="h-5 w-5" />
-            </div>
-            <span className="text-xs font-medium">Tagihan</span>
-          </Button>
-          <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/20">
-              <Shirt className="h-5 w-5" />
-            </div>
-            <span className="text-xs font-medium">Laundry</span>
-          </Button>
-        </div>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-red-500/10 hover:-translate-y-1 active:scale-[0.98]">
-            <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative px-4 py-3">
-              <div className="flex flex-col gap-1">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                  Tagihan
-                </CardTitle>
-              </div>
-              <div className="flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-rose-600 p-2.5 shadow-lg shadow-red-500/20">
-                <AlertCircle className="text-white h-4 w-4 md:h-5 md:w-5" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative px-4 pb-4">
-              <div className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">{formatCurrency(summaryStats.totalUnpaid)}</div>
-              <div className="mt-2 flex items-center gap-2">
-                <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-500" style={{ width: `${Math.min((summaryStats.totalUnpaid / (summaryStats.totalUnpaid + summaryStats.totalPaid + 1)) * 100, 100)}%` }} />
-                </div>
-                <span className="text-[10px] md:text-xs text-muted-foreground">{summaryStats.unpaidCount}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 active:scale-[0.98]">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative px-4 py-3">
-              <div className="flex flex-col gap-1">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                  Dibayar
-                </CardTitle>
-              </div>
-              <div className="flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 p-2.5 shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 className="text-white h-4 w-4 md:h-5 md:w-5" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative px-4 pb-4">
-              <div className="text-xl md:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">{formatCurrency(summaryStats.totalPaid)}</div>
-              <div className="mt-2 flex items-center gap-2">
-                <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-600 transition-all duration-500" style={{ width: `${Math.min((summaryStats.totalPaid / (summaryStats.totalUnpaid + summaryStats.totalPaid + 1)) * 100, 100)}%` }} />
-                </div>
-                <span className="text-[10px] md:text-xs text-muted-foreground">{summaryStats.paidCount}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Empty State */}
-      {processedTransactions.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Receipt />
-            </EmptyMedia>
-            <EmptyTitle>Belum ada tagihan atau transaksi</EmptyTitle>
-            <EmptyDescription>
-              Tagihan dan riwayat transaksi Anda akan muncul di sini setelah tersedia.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {processedTransactions.map((transaction) => (
-            <Card key={transaction.type} className="group overflow-hidden transition-all duration-300 hover:shadow-xl border-border/50 rounded-2xl">
-              <CardHeader className={`border-b ${colorClasses[transaction.color as keyof typeof colorClasses].bg} transition-colors duration-300 px-4 py-4 md:px-6 md:py-4`}>
-                <div className="flex items-center gap-3">
-                  <div className={`flex shrink-0 items-center justify-center p-3 md:p-3.5 bg-gradient-to-br ${colorClasses[transaction.color as keyof typeof colorClasses].gradient} rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-110`}>
-                    <div className="text-white">
-                      {transaction.icon}
+        {/* BERANDA TAB */}
+        {activeTab === "beranda" && (
+          <>
+            {/* Balance Card - Prominent */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-white border-0 shadow-2xl shadow-primary/20">
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5Ljk0MSAwIDE4LTguMDU5IDE4LTE4cy04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNHMxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-20" />
+              <CardHeader className="relative pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                      <Wallet className="h-5 w-5 md:h-6 md:w-6" />
                     </div>
+                    <span className="text-sm md:text-base font-medium text-white/90">Saldo Uang Saku</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base md:text-lg">{transaction.title}</CardTitle>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      {transaction.items.length} item{transaction.items.length > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  {transaction.items.some(item => item.status === "Belum Lunas") && (
-                    <Badge variant="destructive" className="shadow-sm text-xs md:text-sm rounded-full px-3 py-1">
-                      {transaction.items.filter(item => item.status === "Belum Lunas").length} belum lunas
-                    </Badge>
-                  )}
-                  {transaction.type === "laundry" && (
-                    <LaundryButton />
-                  )}
+                  <Sparkles className="h-5 w-5 text-white/60 animate-pulse" />
                 </div>
               </CardHeader>
-              <CardContent className="p-3 md:p-4">
-                <div className="flex flex-col gap-2 md:gap-3">
-                  {transaction.items.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`group/item flex flex-col md:flex-row md:items-center justify-between p-4 md:p-4 rounded-2xl border transition-all duration-300 ${colorClasses[transaction.color as keyof typeof colorClasses].hover} ${item.status === "Belum Lunas" ? "bg-destructive/5 border-destructive/20 shadow-sm shadow-destructive/5" : "hover:shadow-md active:scale-[0.98]"}`}
-                    >
-                      <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-                        <div className={`flex shrink-0 items-center justify-center p-2.5 md:p-3 ${colorClasses[transaction.color as keyof typeof colorClasses].bg} rounded-xl transition-all duration-300 group-hover/item:scale-110`}>
-                          <div className={colorClasses[transaction.color as keyof typeof colorClasses].text}>
-                            {transaction.icon}
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm truncate">{item.label}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            {item.amount && (
-                              <p className="text-sm font-semibold text-foreground">{item.amount}</p>
-                            )}
-                            {item.balance && (
-                              <p className="text-xs text-muted-foreground">Saldo: {item.balance}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between md:justify-end gap-2 md:gap-3 shrink-0 mt-3 md:mt-0">
-                        <div className="text-right">
-                          <Badge variant={statusBadgeVariant[item.status] || "outline"} className="shadow-sm text-xs rounded-full px-2.5 py-1">
-                            {statusIcons[item.status]}
-                            {item.status === "in" ? "Masuk" : item.status === "out" ? "Keluar" : item.status}
-                          </Badge>
-                          <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            <span>{item.date}</span>
-                          </div>
-                        </div>
-                        {item.status === "Belum Lunas" && (item.tagihanId || item.transaksiId) && (
-                          <PaymentDialog
-                            tagihanId={item.tagihanId}
-                            transaksiId={item.transaksiId}
-                            jenis={transaction.title}
-                            label={item.label}
-                            amount={item.amount || ""}
-                            rawAmount={item.rawAmount}
-                            trigger={
-                              <Button size="sm" className="shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 min-w-[80px] md:min-w-auto rounded-full">
-                                <CreditCard data-icon="inline-start" className="md:mr-1" />
-                                <span className="hidden md:inline">Bayar</span>
-                              </Button>
-                            }
-                          />
-                        )}
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="relative pt-0">
+                <div className="text-3xl md:text-5xl font-bold tracking-tight mb-2">
+                  {formatCurrency(summaryStats.uangSakuBalance)}
+                </div>
+                <div className="flex items-center gap-2 text-white/70 text-xs md:text-sm">
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>Aktif</span>
+                  </div>
+                  <span>•</span>
+                  <span>Santri SMP</span>
+                </div>
+                <div className="flex gap-2 mt-4 md:mt-6">
+                  <TopupButton className="flex-1 bg-white text-primary hover:bg-white/90 shadow-lg" />
+                  <LaundryButton />
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-4 gap-3">
+              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-medium">SPP</span>
+              </Button>
+              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/20">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-medium">Lunas</span>
+              </Button>
+              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-medium">Tagihan</span>
+              </Button>
+              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/20">
+                  <Shirt className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-medium">Laundry</span>
+              </Button>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-red-500/10 hover:-translate-y-1 active:scale-[0.98]">
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative px-4 py-3">
+                  <div className="flex flex-col gap-1">
+                    <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                      Tagihan
+                    </CardTitle>
+                  </div>
+                  <div className="flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-rose-600 p-2.5 shadow-lg shadow-red-500/20">
+                    <AlertCircle className="text-white h-4 w-4 md:h-5 md:w-5" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative px-4 pb-4">
+                  <div className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">{formatCurrency(summaryStats.totalUnpaid)}</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-500" style={{ width: `${Math.min((summaryStats.totalUnpaid / (summaryStats.totalUnpaid + summaryStats.totalPaid + 1)) * 100, 100)}%` }} />
+                    </div>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">{summaryStats.unpaidCount}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 active:scale-[0.98]">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative px-4 py-3">
+                  <div className="flex flex-col gap-1">
+                    <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                      Dibayar
+                    </CardTitle>
+                  </div>
+                  <div className="flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 p-2.5 shadow-lg shadow-emerald-500/20">
+                    <CheckCircle2 className="text-white h-4 w-4 md:h-5 md:w-5" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative px-4 pb-4">
+                  <div className="text-xl md:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">{formatCurrency(summaryStats.totalPaid)}</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-600 transition-all duration-500" style={{ width: `${Math.min((summaryStats.totalPaid / (summaryStats.totalUnpaid + summaryStats.totalPaid + 1)) * 100, 100)}%` }} />
+                    </div>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">{summaryStats.paidCount}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {/* TAGIHAN TAB */}
+        {activeTab === "tagihan" && (
+          <RealtimeTagihan
+            initialTagihan={tagihanOnly}
+            apiEndpoint="/api/santri/smp"
+            refreshInterval={30000} // Refresh every 30 seconds
+          />
+        )}
+
+        {/* AKTIVITAS TAB */}
+        {activeTab === "aktivitas" && (
+          <>
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Riwayat Pembayaran</h2>
+            </div>
+            
+            {aktivitasOnly.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <History />
+                  </EmptyMedia>
+                  <EmptyTitle>Belum ada riwayat</EmptyTitle>
+                  <EmptyDescription>
+                    Riwayat pembayaran dan transaksi Anda akan muncul di sini.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {aktivitasOnly.map((transaction) => (
+                  <Card key={transaction.type} className="group overflow-hidden transition-all duration-300 hover:shadow-xl border-border/50 rounded-2xl">
+                    <CardHeader className={`border-b ${colorClasses[transaction.color as keyof typeof colorClasses].bg} transition-colors duration-300 px-4 py-4 md:px-6 md:py-4`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`flex shrink-0 items-center justify-center p-3 md:p-3.5 bg-gradient-to-br ${colorClasses[transaction.color as keyof typeof colorClasses].gradient} rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-110`}>
+                          <div className="text-white">
+                            {transaction.icon}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base md:text-lg">{transaction.title}</CardTitle>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            {transaction.items.length} transaksi
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex flex-col gap-2 md:gap-3">
+                        {transaction.items.map((item, index) => (
+                          <div
+                            key={index}
+                            className={`group/item flex flex-col md:flex-row md:items-center justify-between p-4 md:p-4 rounded-2xl border transition-all duration-300 ${colorClasses[transaction.color as keyof typeof colorClasses].hover} hover:shadow-md active:scale-[0.98]`}
+                          >
+                            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                              <div className={`flex shrink-0 items-center justify-center p-2.5 md:p-3 ${colorClasses[transaction.color as keyof typeof colorClasses].bg} rounded-xl transition-all duration-300 group-hover/item:scale-110`}>
+                                <div className={colorClasses[transaction.color as keyof typeof colorClasses].text}>
+                                  {transaction.icon}
+                                </div>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm truncate">{item.label}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {item.amount && (
+                                    <p className="text-sm font-semibold text-foreground">{item.amount}</p>
+                                  )}
+                                  {item.balance && (
+                                    <p className="text-xs text-muted-foreground">Saldo: {item.balance}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between md:justify-end gap-2 md:gap-3 shrink-0 mt-3 md:mt-0">
+                              <div className="text-right">
+                                <Badge variant={statusBadgeVariant[item.status] || "outline"} className="shadow-sm text-xs rounded-full px-2.5 py-1">
+                                  {statusIcons[item.status]}
+                                  {item.status === "in" ? "Masuk" : item.status === "out" ? "Keluar" : item.status}
+                                </Badge>
+                                <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{item.date}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* AKUN TAB */}
+        {activeTab === "akun" && (
+          <>
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Informasi Akun</h2>
+            </div>
+
+            {/* Profile Card */}
+            <Card className="overflow-hidden border-border/50 rounded-2xl">
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center text-center">
+                  <Avatar className="h-24 w-24 ring-4 ring-primary/20 mb-4">
+                    <AvatarImage src={santri?.foto} alt={santriName} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-white font-bold text-2xl">
+                      {santriInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <h3 className="text-xl font-bold">{santriName}</h3>
+                  <p className="text-sm text-muted-foreground">Santri SMP</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Account Details */}
+            <Card className="overflow-hidden border-border/50 rounded-2xl">
+              <CardHeader className="px-4 py-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <School className="h-4 w-4" />
+                  Detail Akun
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nama Lengkap</p>
+                    <p className="text-sm font-medium">{santri?.nama || "-"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-sm font-medium">{santri?.email || "-"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">No. Telepon</p>
+                    <p className="text-sm font-medium">{santri?.telepon || "-"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <School className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Kelas</p>
+                    <p className="text-sm font-medium">{santri?.kelas || "-"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Alamat</p>
+                    <p className="text-sm font-medium">{santri?.alamat || "-"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Actions */}
+            <Card className="overflow-hidden border-border/50 rounded-2xl">
+              <CardContent className="p-4 space-y-2">
+                <Button variant="outline" className="w-full justify-start gap-3" disabled>
+                  <Settings className="h-4 w-4" />
+                  Pengaturan
+                </Button>
+                <SignOutButton 
+                  className="w-full justify-start gap-3 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
+                  variant="ghost"
+                />
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Mobile Bottom Navigation */}

@@ -7,14 +7,8 @@ import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
   Receipt,
-  Wallet,
-  Shirt,
-  FileCheck,
-  Briefcase,
-  Trophy,
-  BookOpen,
-  BookMarked,
-  DollarSign,
+  History,
+  User,
 } from "lucide-react"
 
 type SantriRole = "smk" | "smp" | "pondok"
@@ -26,21 +20,21 @@ interface MobileBottomNavProps {
 const navItems = {
   smk: [
     { href: "/santri/smk", label: "Beranda", icon: LayoutDashboard },
-    { href: "/santri/smk?tab=spp", label: "SPP", icon: Receipt },
-    { href: "/santri/smk?tab=uang-saku", label: "Uang Saku", icon: Wallet },
-    { href: "/santri/smk?tab=laundry", label: "Laundry", icon: Shirt },
+    { href: "/santri/smk?tab=tagihan", label: "Tagihan", icon: Receipt },
+    { href: "/santri/smk?tab=aktivitas", label: "Aktivitas", icon: History },
+    { href: "/santri/smk?tab=akun", label: "Akun", icon: User },
   ],
   smp: [
     { href: "/santri/smp", label: "Beranda", icon: LayoutDashboard },
-    { href: "/santri/smp?tab=spp", label: "SPP", icon: Receipt },
-    { href: "/santri/smp?tab=uang-saku", label: "Uang Saku", icon: Wallet },
-    { href: "/santri/smp?tab=laundry", label: "Laundry", icon: Shirt },
+    { href: "/santri/smp?tab=tagihan", label: "Tagihan", icon: Receipt },
+    { href: "/santri/smp?tab=aktivitas", label: "Aktivitas", icon: History },
+    { href: "/santri/smp?tab=akun", label: "Akun", icon: User },
   ],
   pondok: [
     { href: "/santri/pondok", label: "Beranda", icon: LayoutDashboard },
-    { href: "/santri/pondok?tab=syahriah", label: "Syahriah", icon: Receipt },
-    { href: "/santri/pondok?tab=uang-saku", label: "Uang Saku", icon: Wallet },
-    { href: "/santri/pondok?tab=laundry", label: "Laundry", icon: Shirt },
+    { href: "/santri/pondok?tab=tagihan", label: "Tagihan", icon: Receipt },
+    { href: "/santri/pondok?tab=aktivitas", label: "Aktivitas", icon: History },
+    { href: "/santri/pondok?tab=akun", label: "Akun", icon: User },
   ],
 }
 

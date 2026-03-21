@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { SantriSidebar } from "@/components/santri/santri-sidebar"
 import { PWAProvider } from "@/components/santri/pwa-provider"
+import { PaymentNotification } from "@/components/santri/payment-notification"
 import {
   SidebarInset,
   SidebarProvider,
@@ -21,19 +23,23 @@ export default function SantriLayout({
   const pathname = usePathname()
 
   // Determine the role from the pathname
-  const getRole = (): "smk" | "smp" | null => {
-    if (pathname?.startsWith("/dashboard/santri/smk")) return "smk"
-    if (pathname?.startsWith("/dashboard/santri/smp")) return "smp"
+  const getRole = (): "smk" | "smp" | "pondok" | null => {
+    if (pathname?.includes("/santri/smk")) return "smk"
+    if (pathname?.includes("/santri/smp")) return "smp"
+    if (pathname?.includes("/santri/pondok")) return "pondok"
     return null
   }
 
   const role = getRole()
 
-  // Only show sidebar when in a specific role (smk or smp)
+  // Only show sidebar when in a specific role (smk, smp, or pondok)
   if (!role) {
     return (
       <>
         <PWAProvider />
+        <Suspense fallback={null}>
+          <PaymentNotification />
+        </Suspense>
         {children}
       </>
     )
@@ -42,6 +48,9 @@ export default function SantriLayout({
   return (
     <ThemeProvider defaultTheme="system" storageKey="santri-theme">
       <PWAProvider />
+      <Suspense fallback={null}>
+        <PaymentNotification />
+      </Suspense>
       <SidebarProvider>
         <SantriSidebar role={role} />
         <SidebarInset>
@@ -49,7 +58,7 @@ export default function SantriLayout({
             <SidebarTrigger />
             <div className="flex-1" />
             <nav className="flex items-center gap-4">
-              <Link href="/dashboard/santri">
+              <Link href="/santri">
                 <Button variant="ghost" size="sm">
                   Kembali
                 </Button>

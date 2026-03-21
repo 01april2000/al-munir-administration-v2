@@ -36,7 +36,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 
-type SantriRole = "smk" | "smp"
+type SantriRole = "smk" | "smp" | "pondok"
 
 interface SantriSidebarProps {
   role: SantriRole

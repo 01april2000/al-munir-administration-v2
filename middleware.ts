@@ -14,17 +14,14 @@ const roleAccess: Record<string, string[]> = {
   ],
   BENDAHARA_SMK: [
     "/",
-    "/dashboard",
     "/dashboard/bendahara/smk",
   ],
   BENDAHARA_SMP: [
     "/",
-    "/dashboard",
     "/dashboard/bendahara/smp",
   ],
   BENDAHARA_PONDOK: [
     "/",
-    "/dashboard",
     "/dashboard/bendahara/pondok",
   ],
   SANTRI: [

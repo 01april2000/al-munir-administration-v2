@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Shirt, AlertCircle, Calendar, Check } from "lucide-react"
+import { Loader2, Shirt, AlertCircle, Calendar, Check, CheckCircle2, Clock, XCircle, X } from "lucide-react"
 
 interface LaundryDialogProps {
   onPaymentComplete?: () => void
@@ -38,6 +38,8 @@ const currentMonth = new Date().getMonth() + 1
 
 const years = Array.from({ length: 3 }, (_, i) => currentYear + i)
 
+type PaymentNotificationStatus = "success" | "pending" | "error" | null
+
 export function LaundryDialog({
   onPaymentComplete,
   trigger,
@@ -48,6 +50,11 @@ export function LaundryDialog({
   const [snapLoaded, setSnapLoaded] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const [selectedYear, setSelectedYear] = useState<number>(currentYear)
+  const [notification, setNotification] = useState<{
+    status: PaymentNotificationStatus
+    amount: number
+    month: string
+  } | null>(null)
 
   // Load Midtrans Snap script
   useEffect(() => {
@@ -124,6 +131,16 @@ export function LaundryDialog({
           }
           setOpen(false)
           setSelectedMonth(null)
+          // Show success notification
+          setNotification({
+            status: "success",
+            amount: LAUNDRY_PRICE,
+            month: `${monthNames[selectedMonth! - 1]} ${selectedYear}`,
+          })
+          // Auto-hide notification after 5 seconds
+          setTimeout(() => {
+            setNotification(null)
+          }, 5000)
           onPaymentComplete?.()
         },
         onPending: async () => {
@@ -131,10 +148,28 @@ export function LaundryDialog({
           // Status remains PENDING until webhook confirms payment
           setOpen(false)
           setSelectedMonth(null)
+          // Show pending notification
+          setNotification({
+            status: "pending",
+            amount: LAUNDRY_PRICE,
+            month: `${monthNames[selectedMonth! - 1]} ${selectedYear}`,
+          })
+          // Auto-hide notification after 8 seconds
+          setTimeout(() => {
+            setNotification(null)
+          }, 8000)
           onPaymentComplete?.()
         },
         onError: () => {
-          setError("Pembayaran gagal. Silakan coba lagi.")
+          // Show error notification
+          setNotification({
+            status: "error",
+            amount: LAUNDRY_PRICE,
+            month: `${monthNames[selectedMonth! - 1]} ${selectedYear}`,
+          })
+          setTimeout(() => {
+            setNotification(null)
+          }, 5000)
         },
         onClose: () => {
           // User closed the popup without completing payment
@@ -287,6 +322,80 @@ export function LaundryDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Notification */}
+      {notification && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setNotification(null)}
+          />
+          
+          {/* Notification Card */}
+          <div
+            className={`relative text-white rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-300 ${
+              notification.status === "success"
+                ? "bg-gradient-to-r from-emerald-500 to-green-500"
+                : notification.status === "pending"
+                ? "bg-gradient-to-r from-amber-500 to-yellow-500"
+                : "bg-gradient-to-r from-red-500 to-rose-500"
+            }`}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setNotification(null)}
+              className="absolute top-3 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Content */}
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 p-3 bg-white/20 rounded-full">
+                {notification.status === "success" ? (
+                  <CheckCircle2 className="h-8 w-8" />
+                ) : notification.status === "pending" ? (
+                  <Clock className="h-8 w-8" />
+                ) : (
+                  <XCircle className="h-8 w-8" />
+                )}
+              </div>
+              
+              <h2 className="text-xl font-bold mb-2">
+                {notification.status === "success"
+                  ? "Pembayaran Berhasil!"
+                  : notification.status === "pending"
+                  ? "Menunggu Pembayaran"
+                  : "Pembayaran Gagal"}
+              </h2>
+              <p className="text-white/90 text-sm mb-2">
+                {notification.status === "success"
+                  ? `Pembayaran Laundry ${notification.month} sebesar Rp ${formatCurrency(notification.amount)} telah berhasil diproses.`
+                  : notification.status === "pending"
+                  ? `Pembayaran Laundry ${notification.month} sebesar Rp ${formatCurrency(notification.amount)} sedang menunggu konfirmasi.`
+                  : `Pembayaran Laundry ${notification.month} sebesar Rp ${formatCurrency(notification.amount)} gagal diproses. Silakan coba lagi.`}
+              </p>
+
+              {notification.status === "success" && (
+                <div className="w-full bg-white/20 rounded-lg p-3 mt-2">
+                  <p className="text-sm">
+                    ✅ Status pembayaran Anda telah diperbarui
+                  </p>
+                </div>
+              )}
+
+              {notification.status === "pending" && (
+                <div className="w-full bg-white/20 rounded-lg p-3 mt-2">
+                  <p className="text-sm">
+                    💡 Silakan selesaikan pembayaran Anda. Status akan diperbarui secara otomatis setelah pembayaran dikonfirmasi.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

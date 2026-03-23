@@ -139,6 +139,44 @@ const smpTransactionConfig: Record<string, { title: string; color: keyof typeof 
   "buku-pendamping": { title: "Buku Pendamping", color: "orange" },
 }
 
+// Quick action configurations per role
+const smkQuickActions = [
+  { type: "spp", title: "SPP", icon: "Receipt" },
+  { type: "syahriah", title: "Syahriah", icon: "Receipt" },
+  { type: "uang-saku", title: "Uang Saku", icon: "Wallet" },
+  { type: "laundry", title: "Laundry", icon: "Shirt" },
+  { type: "ujian", title: "Ujian", icon: "FileCheck" },
+  { type: "pkl", title: "PKL", icon: "Briefcase" },
+  { type: "lks", title: "LKS", icon: "Trophy" },
+] as const
+
+const smpQuickActions = [
+  { type: "spp", title: "SPP", icon: "Receipt" },
+  { type: "syahriah", title: "Syahriah", icon: "Receipt" },
+  { type: "uang-saku", title: "Uang Saku", icon: "Wallet" },
+  { type: "laundry", title: "Laundry", icon: "Shirt" },
+  { type: "ujian", title: "Ujian", icon: "FileCheck" },
+  { type: "buku-pendamping", title: "Buku Pendamping", icon: "BookMarked" },
+] as const
+
+const pondokQuickActions = [
+  { type: "uang-saku", title: "Uang Saku", icon: "Wallet" },
+  { type: "laundry", title: "Laundry", icon: "Shirt" },
+] as const
+
+function getQuickActions(role: SantriRole) {
+  switch (role) {
+    case "smk":
+      return smkQuickActions
+    case "smp":
+      return smpQuickActions
+    case "pondok":
+      return pondokQuickActions
+    default:
+      return smkQuickActions
+  }
+}
+
 const pondokTransactionConfig: Record<string, { title: string; color: keyof typeof colorClasses }> = {
   syahriah: { title: "Syahriah", color: "green" },
   "uang-saku": { title: "Uang Saku", color: "yellow" },
@@ -530,30 +568,14 @@ export function SantriContent({ role }: { role: SantriRole }) {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-4 gap-3">
-              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
-                  <Receipt className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium">SPP</span>
-              </Button>
-              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/20">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium">Lunas</span>
-              </Button>
-              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20">
-                  <AlertCircle className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium">Tagihan</span>
-              </Button>
-              <Button variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/20">
-                  <Shirt className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium">Laundry</span>
-              </Button>
+              {getQuickActions(role).map((action) => (
+                <Button key={action.type} variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br ${colorClasses[smkTransactionConfig[action.type]?.color || smpTransactionConfig[action.type]?.color || "blue"].gradient} text-white shadow-lg`}>
+                    <TransactionIcon type={action.type} />
+                  </div>
+                  <span className="text-xs font-medium">{action.title}</span>
+                </Button>
+              ))}
             </div>
 
             {/* Summary Stats */}

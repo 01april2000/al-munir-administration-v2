@@ -13,34 +13,6 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import type { Role, JenisSantri } from "@/lib/auth-client";
-
-// Get redirect path based on role and jenisSantri
-function getRedirectPath(role: Role, jenisSantri?: JenisSantri | null): string {
-  switch (role) {
-    case "ADMIN":
-      return "/dashboard/admin";
-    case "BENDAHARA_SMK":
-      return "/dashboard/bendahara/smk";
-    case "BENDAHARA_SMP":
-      return "/dashboard/bendahara/smp";
-    case "BENDAHARA_PONDOK":
-      return "/dashboard/bendahara/pondok";
-    case "SANTRI":
-      switch (jenisSantri) {
-        case "SMK":
-          return "/santri/smk";
-        case "SMP":
-          return "/santri/smp";
-        case "PONDOK":
-          return "/santri/pondok";
-        default:
-          return "/santri";
-      }
-    default:
-      return "/dashboard";
-  }
-}
 
 export function AuthCard() {
   const [isLogin, setIsLogin] = useState(true);
@@ -77,24 +49,30 @@ export function AuthCard() {
         return;
       }
 
-      // The signIn/signUp result contains the session data
-      // We need to extract user info from the result
-      // The result structure from better-auth has user data
-      const sessionData = result as {
-        user?: {
-          role?: Role;
-          jenisSantri?: JenisSantri | null;
-        };
-      } | null;
-
-      if (sessionData?.user) {
-        const redirectPath = getRedirectPath(
-          sessionData.user.role as Role,
-          sessionData.user.jenisSantri
-        );
-        window.location.href = redirectPath;
+      // The signIn result contains the user data
+      // Redirect directly to the appropriate dashboard based on role
+      const user = (result as { user?: { role?: string; jenisSantri?: string | null } }).user;
+      
+      if (user?.role === "ADMIN") {
+        window.location.href = "/dashboard/admin";
+      } else if (user?.role === "BENDAHARA_SMK") {
+        window.location.href = "/dashboard/bendahara/smk";
+      } else if (user?.role === "BENDAHARA_SMP") {
+        window.location.href = "/dashboard/bendahara/smp";
+      } else if (user?.role === "BENDAHARA_PONDOK") {
+        window.location.href = "/dashboard/bendahara/pondok";
+      } else if (user?.role === "SANTRI") {
+        if (user.jenisSantri === "SMK") {
+          window.location.href = "/santri/smk";
+        } else if (user.jenisSantri === "SMP") {
+          window.location.href = "/santri/smp";
+        } else if (user.jenisSantri === "PONDOK") {
+          window.location.href = "/santri/pondok";
+        } else {
+          window.location.href = "/santri";
+        }
       } else {
-        // Fallback to home page which will handle redirect
+        // Fallback to home page
         window.location.href = "/";
       }
     } catch (err) {

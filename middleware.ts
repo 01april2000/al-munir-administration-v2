@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import type { Role, JenisSantri } from "@/lib/auth";
 
@@ -82,12 +81,21 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Get session using better-auth
-  const session = await auth.api.getSession({
-    headers: await headers(),
+  // We need to create a Headers object from the request headers
+  const headers = new Headers();
+  request.headers.forEach((value, key) => {
+    headers.set(key, value);
   });
+
+  const session = await auth.api.getSession({
+    headers,
+  });
+
+  console.log("Middleware session:", session?.user?.email, session?.user?.role);
 
   // If no session, redirect to auth page
   if (!session) {
+    console.log("No session, redirecting to /auth");
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
@@ -95,9 +103,12 @@ export async function middleware(request: NextRequest) {
   const userRole = session.user?.role as Role;
   const jenisSantri = session.user?.jenisSantri as JenisSantri | null | undefined;
 
+  console.log("User role:", userRole, "jenisSantri:", jenisSantri);
+
   // If user is on root path "/", redirect to their default page
   if (pathname === "/") {
     const defaultPath = getDefaultPath(userRole, jenisSantri);
+    console.log("Redirecting to:", defaultPath);
     return NextResponse.redirect(new URL(defaultPath, request.url));
   }
 

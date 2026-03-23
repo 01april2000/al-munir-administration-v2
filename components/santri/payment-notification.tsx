@@ -4,11 +4,15 @@ import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { CheckCircle2, Clock, XCircle, X, RefreshCw } from "lucide-react"
 
+// Custom event for payment success to trigger data refresh
+export const PAYMENT_SUCCESS_EVENT = "payment-success"
+
 interface PaymentNotificationProps {
   onNotificationClose?: () => void
+  onDataRefresh?: () => void // Callback to refresh data after successful payment
 }
 
-export function PaymentNotification({ onNotificationClose }: PaymentNotificationProps) {
+export function PaymentNotification({ onNotificationClose, onDataRefresh }: PaymentNotificationProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [isVisible, setIsVisible] = useState(false)
@@ -48,6 +52,16 @@ export function PaymentNotification({ onNotificationClose }: PaymentNotification
       // Clear pending payment from sessionStorage
       sessionStorage.removeItem("pendingPayment")
 
+      // If payment is successful, refresh data immediately
+      if (paymentStatus === "success") {
+        // Call the data refresh callback if provided
+        onDataRefresh?.()
+        // Dispatch custom event for other components to listen to
+        window.dispatchEvent(new CustomEvent(PAYMENT_SUCCESS_EVENT))
+        // Also trigger router refresh for server-side data
+        router.refresh()
+      }
+
       // Auto-hide after timeout
       const timeout = paymentStatus === "success" ? 10000 : 15000
       setTimeout(() => {
@@ -55,7 +69,7 @@ export function PaymentNotification({ onNotificationClose }: PaymentNotification
         onNotificationClose?.()
       }, timeout)
     }
-  }, [searchParams, router, onNotificationClose])
+  }, [searchParams, router, onNotificationClose, onDataRefresh])
 
   // Check for pending payment in sessionStorage (backup if redirect failed)
   useEffect(() => {

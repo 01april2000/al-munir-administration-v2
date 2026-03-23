@@ -1,6 +1,8 @@
 "use client"
 
+import { useEffect } from "react"
 import useSWR from "swr"
+import { PAYMENT_SUCCESS_EVENT } from "@/components/santri/payment-notification"
 
 type SantriRole = "smk" | "smp" | "pondok"
 
@@ -41,6 +43,19 @@ export function useSantriData(role: SantriRole) {
       revalidateIfStale: false, // Don't revalidate when window regains focus
     }
   )
+
+  // Listen for payment success event and refresh data
+  useEffect(() => {
+    const handlePaymentSuccess = () => {
+      console.log("Payment success event received, refreshing data...")
+      mutate()
+    }
+
+    window.addEventListener(PAYMENT_SUCCESS_EVENT, handlePaymentSuccess)
+    return () => {
+      window.removeEventListener(PAYMENT_SUCCESS_EVENT, handlePaymentSuccess)
+    }
+  }, [mutate])
 
   return {
     data,

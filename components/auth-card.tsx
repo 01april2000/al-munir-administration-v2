@@ -13,6 +13,34 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import type { Role, JenisSantri } from "@/lib/auth-client";
+
+// Get redirect path based on role and jenisSantri
+function getRedirectPath(role: Role, jenisSantri?: JenisSantri | null): string {
+  switch (role) {
+    case "ADMIN":
+      return "/dashboard/admin";
+    case "BENDAHARA_SMK":
+      return "/dashboard/bendahara/smk";
+    case "BENDAHARA_SMP":
+      return "/dashboard/bendahara/smp";
+    case "BENDAHARA_PONDOK":
+      return "/dashboard/bendahara/pondok";
+    case "SANTRI":
+      switch (jenisSantri) {
+        case "SMK":
+          return "/santri/smk";
+        case "SMP":
+          return "/santri/smp";
+        case "PONDOK":
+          return "/santri/pondok";
+        default:
+          return "/santri";
+      }
+    default:
+      return "/dashboard";
+  }
+}
 
 export function AuthCard() {
   const [isLogin, setIsLogin] = useState(true);
@@ -45,32 +73,30 @@ export function AuthCard() {
       // Check for errors in the response
       if (result?.error) {
         setError(result.error.message || "Authentication failed");
+        setLoading(false);
         return;
       }
 
-      // Fetch session to get user role for redirect
-      try {
-        const sessionResponse = await fetch("/api/auth/session");
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          const userRole = sessionData?.user?.role;
-          
-          // Redirect based on role
-          if (userRole === "SANTRI") {
-            window.location.href = "/santri";
-          } else {
-            // For ADMIN, BENDAHARA_*, redirect to dashboard
-            window.location.href = "/dashboard";
-          }
-          return;
-        }
-      } catch {
-        // If session fetch fails, fallback to home
-        console.error("Failed to fetch session for redirect");
+      // The signIn/signUp result contains the session data
+      // We need to extract user info from the result
+      // The result structure from better-auth has user data
+      const sessionData = result as {
+        user?: {
+          role?: Role;
+          jenisSantri?: JenisSantri | null;
+        };
+      } | null;
+
+      if (sessionData?.user) {
+        const redirectPath = getRedirectPath(
+          sessionData.user.role as Role,
+          sessionData.user.jenisSantri
+        );
+        window.location.href = redirectPath;
+      } else {
+        // Fallback to home page which will handle redirect
+        window.location.href = "/";
       }
-      
-      // Fallback redirect to home
-      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

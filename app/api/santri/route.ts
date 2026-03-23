@@ -240,6 +240,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Update user with jenisSantri from santri
+    await prisma.user.update({
+      where: { id: userId },
+      data: { jenisSantri: santri.jenisSantri },
+    });
+
     return NextResponse.json({ santri }, { status: 201 });
   } catch (error) {
     console.error("Error creating santri:", error);

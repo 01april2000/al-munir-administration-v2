@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create santri linked to user
+        const jenisSantriValue = (row.jenisSantri?.toUpperCase() as JenisSantri) || "PONDOK";
         await prisma.santri.create({
           data: {
             nis: row.nis,
@@ -158,12 +159,18 @@ export async function POST(request: NextRequest) {
             wali: row.wali,
             status: (row.status?.toUpperCase() as StatusSantri) || "AKTIF",
             beasiswa: row.beasiswa || false,
-            jenisBeasiswa: row.beasiswa && row.jenisBeasiswa 
-              ? (row.jenisBeasiswa.toUpperCase() as JenisBeasiswa) 
+            jenisBeasiswa: row.beasiswa && row.jenisBeasiswa
+              ? (row.jenisBeasiswa.toUpperCase() as JenisBeasiswa)
               : null,
-            jenisSantri: (row.jenisSantri?.toUpperCase() as JenisSantri) || "PONDOK",
+            jenisSantri: jenisSantriValue,
             userId: userId,
           },
+        });
+
+        // Update user with jenisSantri from santri
+        await prisma.user.update({
+          where: { id: userId },
+          data: { jenisSantri: jenisSantriValue },
         });
 
         results.success++;

@@ -139,10 +139,12 @@ export async function PUT(
         const updateData: {
           name?: string;
           email?: string;
+          jenisSantri?: typeof jenisSantri;
         } = {};
 
         if (nama) updateData.name = nama;
         if (email) updateData.email = email;
+        if (jenisSantri !== undefined) updateData.jenisSantri = jenisSantri;
 
         if (Object.keys(updateData).length > 0) {
           await tx.user.update({

@@ -1,6 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { adminClient } from "better-auth/client/plugins";
-import type { Role } from "./auth";
+import type { Role, JenisSantri } from "./auth";
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
@@ -16,8 +16,8 @@ export const {
   useSession,
 } = authClient;
 
-// Re-export role type for use in components
-export type { Role };
+// Re-export types for use in components
+export type { Role, JenisSantri };
 
 // Extended user type with role
 export interface UserWithRole {
@@ -27,6 +27,7 @@ export interface UserWithRole {
   name: string;
   image?: string | null;
   role: Role;
+  jenisSantri?: JenisSantri | null;
   createdAt: Date;
   updatedAt: Date;
 }

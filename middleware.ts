@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import type { Role, JenisSantri } from "@/lib/auth";
 
 // Role-based route access configuration
 const roleAccess: Record<string, string[]> = {
@@ -29,12 +30,43 @@ const roleAccess: Record<string, string[]> = {
   ],
   SANTRI: [
     "/",
-    "/dashboard",
+    "/santri",
+    "/santri/smk",
+    "/santri/smp",
+    "/santri/pondok",
   ],
 };
 
+// Get default redirect path based on role and jenisSantri
+function getDefaultPath(role: Role, jenisSantri?: JenisSantri | null): string {
+  switch (role) {
+    case "ADMIN":
+      return "/dashboard/admin";
+    case "BENDAHARA_SMK":
+      return "/dashboard/bendahara/smk";
+    case "BENDAHARA_SMP":
+      return "/dashboard/bendahara/smp";
+    case "BENDAHARA_PONDOK":
+      return "/dashboard/bendahara/pondok";
+    case "SANTRI":
+      // Redirect santri based on their jenisSantri
+      switch (jenisSantri) {
+        case "SMK":
+          return "/santri/smk";
+        case "SMP":
+          return "/santri/smp";
+        case "PONDOK":
+          return "/santri/pondok";
+        default:
+          return "/santri";
+      }
+    default:
+      return "/dashboard";
+  }
+}
+
 // Check if a path is allowed for a given role
-function isPathAllowed(path: string, role: string): boolean {
+function isPathAllowed(path: string, role: string, jenisSantri?: JenisSantri | null): boolean {
   const allowedPaths = roleAccess[role] || [];
   
   // Check if the path starts with any of the allowed paths
@@ -59,13 +91,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
-  // Get user role from session
-  const userRole = session.user?.role as string;
+  // Get user role and jenisSantri from session
+  const userRole = session.user?.role as Role;
+  const jenisSantri = session.user?.jenisSantri as JenisSantri | null | undefined;
+
+  // If user is on root path "/", redirect to their default page
+  if (pathname === "/") {
+    const defaultPath = getDefaultPath(userRole, jenisSantri);
+    return NextResponse.redirect(new URL(defaultPath, request.url));
+  }
 
   // Check if user has access to the requested path
-  if (!isPathAllowed(pathname, userRole)) {
+  if (!isPathAllowed(pathname, userRole, jenisSantri)) {
     // Redirect to their appropriate dashboard based on role
-    const defaultPath = roleAccess[userRole]?.[0] || "/dashboard";
+    const defaultPath = getDefaultPath(userRole, jenisSantri);
     return NextResponse.redirect(new URL(defaultPath, request.url));
   }
 
@@ -74,5 +113,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   runtime: "nodejs", // Required for auth.api calls in middleware
-  matcher: ["/", "/dashboard/:path*"],
+  matcher: ["/", "/dashboard/:path*", "/santri/:path*"],
 };

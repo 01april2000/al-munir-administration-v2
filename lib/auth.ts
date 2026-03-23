@@ -37,6 +37,11 @@ export const auth = betterAuth({
         required: false,
         input: false,
       },
+      jenisSantri: {
+        type: "string",
+        required: false,
+        input: false,
+      },
     },
   },
   plugins: [
@@ -50,3 +55,6 @@ export const auth = betterAuth({
 
 // Export type for role
 export type Role = "ADMIN" | "BENDAHARA_SMK" | "BENDAHARA_SMP" | "BENDAHARA_PONDOK" | "SANTRI";
+
+// Export type for jenis santri
+export type JenisSantri = "SMK" | "SMP" | "PONDOK";

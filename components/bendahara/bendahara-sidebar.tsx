@@ -37,6 +37,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import { ModeToggle } from "@/components/theme-toggle"
 
 type BendaharaRole = "smk" | "smp" | "pondok"
 
@@ -101,9 +102,12 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
   return (
     <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-2">
-          <LayoutDashboard className="h-6 w-6" />
-          <span className="text-lg font-semibold">{getRoleTitle()}</span>
+        <div className="flex items-center justify-between px-2 py-2">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-6 w-6" />
+            <span className="text-lg font-semibold">{getRoleTitle()}</span>
+          </div>
+          <ModeToggle />
         </div>
       </SidebarHeader>
 

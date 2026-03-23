@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   FileText,
   Receipt,
+  BarChart3,
 } from "lucide-react"
 
 import {
@@ -60,6 +61,18 @@ export function AdminSidebar() {
           <SidebarGroupLabel>Menu Utama</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname === "/dashboard/admin"}
+                  render={
+                    <Link href="/dashboard/admin">
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  }
+                />
+              </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={pathname === "/dashboard/admin/staff-management"}

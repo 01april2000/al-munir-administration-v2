@@ -18,8 +18,7 @@ export function LaundryButton({ className }: LaundryButtonProps) {
         </Button>
       }
       onPaymentComplete={() => {
-        // Refresh the page to update transaction history
-        window.location.reload()
+        // Navigation is handled by LaundryDialog - no need to reload
       }}
     />
   )

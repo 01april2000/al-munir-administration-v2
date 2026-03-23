@@ -1,4 +1,4 @@
-const CACHE_NAME = 'santri-portal-v2'
+const CACHE_NAME = 'santri-portal-v3'
 const urlsToCache = [
   '/santri',
   '/santri/pondok',
@@ -48,6 +48,12 @@ self.addEventListener('activate', (event) => {
 
 // Check if request should be network-only (not cached)
 function shouldUseNetworkOnly(url) {
+  // Check for payment notification query params - always fetch from network
+  if (url.searchParams.has('payment_status') ||
+      url.searchParams.has('payment_type') ||
+      url.searchParams.has('order_id')) {
+    return true
+  }
   return NETWORK_ONLY_ROUTES.some(route => url.pathname.startsWith(route))
 }
 

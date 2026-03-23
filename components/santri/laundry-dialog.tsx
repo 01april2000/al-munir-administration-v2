@@ -117,9 +117,23 @@ export function LaundryDialog({
 
       // Get current path to determine santri base path
       const currentPath = window.location.pathname
-      const santriBasePath = currentPath.includes('/smp') ? '/santri/smp' : 
-                             currentPath.includes('/smk') ? '/santri/smk' : 
+      const santriBasePath = currentPath.includes('/smp') ? '/santri/smp' :
+                             currentPath.includes('/smk') ? '/santri/smk' :
                              currentPath.includes('/pondok') ? '/santri/pondok' : '/santri'
+
+      // Store pending payment in sessionStorage as backup for PWA mode
+      // This allows the payment-notification component to check status even if redirect fails
+      sessionStorage.setItem("pendingPayment", JSON.stringify({
+        orderId: data.orderId,
+        jenis: `Laundry ${monthName}`,
+        amount: amountFormatted,
+        timestamp: Date.now(),
+      }))
+
+      // Check if running in PWA standalone mode
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                    (window.navigator as any).standalone === true ||
+                    document.referrer.includes('android-app://')
 
       // Open Midtrans Snap popup
       window.snap.pay(data.token, {
@@ -136,12 +150,23 @@ export function LaundryDialog({
           } catch (error) {
             console.error("Error confirming payment:", error)
           }
+          
+          // Clear pending payment from sessionStorage since payment succeeded
+          sessionStorage.removeItem("pendingPayment")
+          
           setOpen(false)
           setSelectedMonth(null)
           
-          // Redirect to santri page with success notification
+          // In PWA mode, use window.location.href for more reliable navigation
+          // This ensures the page properly reloads and query params are processed
           const redirectUrl = `${santriBasePath}?payment_status=success&payment_type=Laundry ${monthName}&amount=${encodeURIComponent(amountFormatted)}&order_id=${data.orderId || ''}`
-          router.push(redirectUrl)
+          
+          if (isPWA) {
+            // Use full page navigation in PWA mode to ensure notification appears
+            window.location.href = redirectUrl
+          } else {
+            router.push(redirectUrl)
+          }
           onPaymentComplete?.()
         },
         onPending: async () => {
@@ -152,16 +177,30 @@ export function LaundryDialog({
           
           // Redirect to santri page with pending notification
           const redirectUrl = `${santriBasePath}?payment_status=pending&payment_type=Laundry ${monthName}&amount=${encodeURIComponent(amountFormatted)}&order_id=${data.orderId || ''}`
-          router.push(redirectUrl)
+          
+          if (isPWA) {
+            window.location.href = redirectUrl
+          } else {
+            router.push(redirectUrl)
+          }
           onPaymentComplete?.()
         },
         onError: () => {
+          // Clear pending payment from sessionStorage
+          sessionStorage.removeItem("pendingPayment")
+          
           // Redirect to santri page with error notification
           const redirectUrl = `${santriBasePath}?payment_status=error&payment_type=Laundry ${monthName}&amount=${encodeURIComponent(amountFormatted)}`
-          router.push(redirectUrl)
+          
+          if (isPWA) {
+            window.location.href = redirectUrl
+          } else {
+            router.push(redirectUrl)
+          }
         },
         onClose: () => {
           // User closed the popup without completing payment
+          // Keep pendingPayment in sessionStorage so notification can check status later
           setLoading(false)
         },
       })

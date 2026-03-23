@@ -21,6 +21,7 @@ import { SignOutButton } from "@/components/sign-out-button"
 import { RealtimeTagihan } from "@/components/santri/realtime-tagihan"
 import { useSantriTabContext } from "@/components/santri/santri-tab-context"
 import { SantriRole } from "@/hooks/use-santri-data"
+import { TransactionHistoryDialog, TransactionData } from "@/components/santri/transaction-history-dialog"
 
 // Color classes for transaction types
 const colorClasses = {
@@ -474,6 +475,8 @@ function StatusIcon({ status }: { status: string }) {
 export function SantriContent({ role }: { role: SantriRole }) {
   const { activeTab, data, isLoading, mutate } = useSantriTabContext()
   const [isRefreshing, setIsRefreshing] = React.useState(false)
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [selectedTransactionType, setSelectedTransactionType] = React.useState<string | null>(null)
   const processed = useProcessedData(data, role)
 
   const handleRefresh = async () => {
@@ -483,11 +486,16 @@ export function SantriContent({ role }: { role: SantriRole }) {
     setTimeout(() => setIsRefreshing(false), 500)
   }
 
+  const handleQuickActionClick = (type: string) => {
+    setSelectedTransactionType(type)
+    setDialogOpen(true)
+  }
+
   if (isLoading || !processed) {
     return <LoadingSkeleton />
   }
 
-  const { summaryStats, tagihanOnly, aktivitasOnly, santri, santriName, santriInitials } = processed
+  const { summaryStats, tagihanOnly, aktivitasOnly, santri, santriName, santriInitials, processedTransactions } = processed
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 pb-20 md:pb-6">
@@ -569,7 +577,12 @@ export function SantriContent({ role }: { role: SantriRole }) {
             {/* Quick Actions */}
             <div className="grid grid-cols-4 gap-3">
               {getQuickActions(role).map((action) => (
-                <Button key={action.type} variant="outline" className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1">
+                <Button
+                  key={action.type}
+                  variant="outline"
+                  className="flex flex-col gap-2 h-auto py-4 rounded-2xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 hover:-translate-y-1"
+                  onClick={() => handleQuickActionClick(action.type)}
+                >
                   <div className={`flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br ${colorClasses[smkTransactionConfig[action.type]?.color || smpTransactionConfig[action.type]?.color || "blue"].gradient} text-white shadow-lg`}>
                     <TransactionIcon type={action.type} />
                   </div>
@@ -815,6 +828,15 @@ export function SantriContent({ role }: { role: SantriRole }) {
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav role={role} />
+
+      {/* Transaction History Dialog */}
+      <TransactionHistoryDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        transactionType={selectedTransactionType}
+        role={role}
+        transactions={processedTransactions}
+      />
     </div>
   )
 }

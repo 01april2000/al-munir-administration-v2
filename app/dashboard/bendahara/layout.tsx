@@ -1,52 +1,63 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { Suspense } from "react"
 import { BendaharaSidebar } from "@/components/bendahara/bendahara-sidebar"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { UserInfo } from "@/components/user-info"
+import { Loader2 } from "lucide-react"
+import { useSession } from "@/lib/auth-client"
 
 export default function BendaharaLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const pathname = usePathname()
+  const { data: session, isPending } = useSession()
 
-  // Determine the role from the pathname
+  // Determine the role from the user session
   const getRole = (): "smk" | "smp" | "pondok" | null => {
-    if (pathname?.startsWith("/dashboard/bendahara/smk")) return "smk"
-    if (pathname?.startsWith("/dashboard/bendahara/smp")) return "smp"
-    if (pathname?.startsWith("/dashboard/bendahara/pondok")) return "pondok"
+    const userRole = session?.user?.role
+    if (userRole === "BENDAHARA_SMK") return "smk"
+    if (userRole === "BENDAHARA_SMP") return "smp"
+    if (userRole === "BENDAHARA_PONDOK") return "pondok"
     return null
   }
 
   const role = getRole()
 
-  // Only show sidebar when in a specific role (smk, smp, or pondok)
+  // Show loading state while session is being fetched
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  // Only show sidebar when user has a valid bendahara role
   if (!role) {
     return <>{children}</>
   }
 
   return (
     <SidebarProvider>
-      <BendaharaSidebar role={role} />
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }>
+        <BendaharaSidebar role={role} />
+      </Suspense>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b px-6">
+        <header className="flex items-center gap-4 p-2">
           <SidebarTrigger />
           <div className="flex-1" />
-          <nav className="flex items-center gap-4">
-            <Link href="/dashboard/bendahara">
-              <Button variant="ghost" size="sm">
-                Kembali
-              </Button>
-            </Link>
-          </nav>
+          <UserInfo />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>

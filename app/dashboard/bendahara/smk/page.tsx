@@ -1,96 +1,110 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Receipt, Building2, Shirt, Book, FileText, History } from "lucide-react"
+import { useState } from "react"
+import { useFinancialData } from "@/hooks/use-financial-data"
+import { PeriodSelector } from "@/components/admin/period-selector"
+import { SummaryCards } from "@/components/admin/summary-cards"
+import { TransactionByType } from "@/components/admin/transaction-by-type"
+import { StatusOverview } from "@/components/admin/status-overview"
+import { RecentTransactions } from "@/components/admin/recent-transactions"
+import { QuickActions } from "@/components/admin/quick-actions"
+import { LoadingState, ErrorState } from "@/components/admin/admin-loading-error"
+import { ExportLaporanButton } from "@/components/admin/export-laporan-button"
+import { MONTHS } from "@/lib/financial"
 
 export default function BendaharaSMKPage() {
+  // Period selection state
+  const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false)
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => {
+    const now = new Date()
+    return now.getMonth()
+  })
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    const now = new Date()
+    return now.getFullYear()
+  })
+  const [tempMonth, setTempMonth] = useState<number>(selectedMonth)
+  const [tempYear, setTempYear] = useState<number>(selectedYear)
+
+  // Fetch financial data using custom hook
+  // The API automatically filters by role (BENDAHARA_SMK -> SMK transactions only)
+  const {
+    summary,
+    byJenis,
+    byStatus,
+    recentTransaksi,
+    loading,
+    error,
+    refetch
+  } = useFinancialData(selectedMonth, selectedYear)
+
+  const handleApplyPeriod = () => {
+    setSelectedMonth(tempMonth)
+    setSelectedYear(tempYear)
+    setIsPeriodDialogOpen(false)
+  }
+
+  if (loading) {
+    return <LoadingState />
+  }
+
+  if (error) {
+    return <ErrorState error={error} onRetry={refetch} />
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Bendahara SMK</h1>
-        <p className="text-slate-600">Kelola keuangan Sekolah Menengah Kejuruan</p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Laporan Keuangan SMK</h1>
+          <p className="text-muted-foreground">
+            Ringkasan dan analisis keuangan Sekolah Menengah Kejuruan
+            <span className="ml-2 text-primary font-medium">
+              • {MONTHS[selectedMonth]} {selectedYear}
+            </span>
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <PeriodSelector
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            tempMonth={tempMonth}
+            tempYear={tempYear}
+            isPeriodDialogOpen={isPeriodDialogOpen}
+            onOpenChange={setIsPeriodDialogOpen}
+            onTempMonthChange={setTempMonth}
+            onTempYearChange={setTempYear}
+            onApply={handleApplyPeriod}
+          />
+          <ExportLaporanButton
+            summary={summary}
+            byJenis={byJenis}
+            byStatus={byStatus}
+            recentTransaksi={recentTransaksi}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" />
-              <CardTitle>Pembayaran SPP</CardTitle>
-            </div>
-            <CardDescription>Kelola pembayaran SPP siswa</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full">Kelola SPP</Button>
-          </CardContent>
-        </Card>
+      {/* Summary Cards */}
+      <SummaryCards summary={summary} />
 
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              <CardTitle>Pembayaran Uang Gedung</CardTitle>
-            </div>
-            <CardDescription>Kelola pembayaran uang gedung</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full">Kelola Uang Gedung</Button>
-          </CardContent>
-        </Card>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Transaction by Type */}
+        <TransactionByType byJenis={byJenis} />
 
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Shirt className="h-5 w-5 text-primary" />
-              <CardTitle>Pembayaran Seragam</CardTitle>
-            </div>
-            <CardDescription>Kelola pembayaran seragam</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full">Kelola Seragam</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Book className="h-5 w-5 text-primary" />
-              <CardTitle>Pembayaran Buku</CardTitle>
-            </div>
-            <CardDescription>Kelola pembayaran buku</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full">Kelola Buku</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <CardTitle>Laporan Keuangan</CardTitle>
-            </div>
-            <CardDescription>Lihat laporan keuangan SMK</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full">Lihat Laporan</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              <CardTitle>Riwayat Transaksi</CardTitle>
-            </div>
-            <CardDescription>Lihat riwayat transaksi</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full">Lihat Riwayat</Button>
-          </CardContent>
-        </Card>
+        {/* Status Overview */}
+        <StatusOverview byStatus={byStatus} />
       </div>
+
+      {/* Recent Transactions */}
+      <RecentTransactions recentTransaksi={recentTransaksi} />
+
+      {/* Quick Actions */}
+      <QuickActions />
     </div>
   )
 }

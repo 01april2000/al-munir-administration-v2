@@ -6,7 +6,7 @@ export default function LaundryPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Transaksi Laundry</h1>
         <p className="text-muted-foreground">
-          Kelola transaksi laundry santri Pondok Al-Munir
+          Kelola transaksi laundry santri (SMK, SMP, Pondok)
         </p>
       </div>
 

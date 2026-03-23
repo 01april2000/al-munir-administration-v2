@@ -30,17 +30,20 @@ export async function GET(request: NextRequest) {
     let jenisSantri = searchParams.get("jenisSantri") as JenisSantri | null;
     const managedBy = searchParams.get("managedBy") as Role | null;
     const search = searchParams.get("search");
+    const allJenisSantri = searchParams.get("allJenisSantri") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
 
-    // Auto-filter by jenisSantri based on user role
+    // Auto-filter by jenisSantri based on user role (unless allJenisSantri is set)
     const userRole = session.user.role as Role;
-    if (userRole === "BENDAHARA_SMK") {
-      jenisSantri = "SMK";
-    } else if (userRole === "BENDAHARA_SMP") {
-      jenisSantri = "SMP";
-    } else if (userRole === "BENDAHARA_PONDOK") {
-      jenisSantri = "PONDOK";
+    if (!allJenisSantri) {
+      if (userRole === "BENDAHARA_SMK") {
+        jenisSantri = "SMK";
+      } else if (userRole === "BENDAHARA_SMP") {
+        jenisSantri = "SMP";
+      } else if (userRole === "BENDAHARA_PONDOK") {
+        jenisSantri = "PONDOK";
+      }
     }
 
     // Build filter

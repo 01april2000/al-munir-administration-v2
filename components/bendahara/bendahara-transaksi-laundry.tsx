@@ -86,14 +86,13 @@ export function BendaharaTransaksiLaundry() {
   const [santriSearch, setSantriSearch] = useState("");
   const [loadingSantri, setLoadingSantri] = useState(false);
 
-  // Fetch santri for dropdown (PONDOK only)
+  // Fetch santri for dropdown (all santri: SMK, SMP, and PONDOK)
   const fetchSantri = useCallback(async (search: string = "") => {
     try {
       setLoadingSantri(true);
       const params = new URLSearchParams();
       if (search) params.append("search", search);
-      params.append("limit", "20");
-      params.append("jenisSantri", "PONDOK");
+      params.append("limit", "50");
 
       const response = await fetch(`/api/santri?${params.toString()}`);
       if (response.ok) {
@@ -115,6 +114,7 @@ export function BendaharaTransaksiLaundry() {
       params.append("jenis", "LAUNDRY");
       params.append("page", page.toString());
       params.append("limit", limit.toString());
+      params.append("allJenisSantri", "true"); // Fetch from all jenis santri (SMK, SMP, PONDOK)
 
       if (filterStatus) params.append("status", filterStatus);
       if (filterJenisLaundry) params.append("jenisLaundry", filterJenisLaundry);

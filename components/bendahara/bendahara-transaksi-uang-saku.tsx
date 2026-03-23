@@ -106,6 +106,7 @@ export function BendaharaTransaksiUangSaku() {
       params.append("jenis", "UANG_SAKU");
       params.append("page", page.toString());
       params.append("limit", limit.toString());
+      params.append("allJenisSantri", "true"); // Fetch from all jenis santri (SMK, SMP, PONDOK)
 
       if (filterStatusUangSaku) params.append("statusUangSaku", filterStatusUangSaku);
       if (searchQuery) params.append("search", searchQuery);

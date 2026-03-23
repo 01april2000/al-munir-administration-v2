@@ -1,81 +1,109 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+"use client"
+
+import { useState } from "react"
+import { usePondokFinancialData } from "@/hooks/use-pondok-financial-data"
+import { PeriodSelector } from "@/components/admin/period-selector"
+import { SummaryCards } from "@/components/admin/summary-cards"
+import { TransactionByType } from "@/components/admin/transaction-by-type"
+import { StatusOverview } from "@/components/admin/status-overview"
+import { RecentTransactions } from "@/components/admin/recent-transactions"
+import { LoadingState, ErrorState } from "@/components/admin/admin-loading-error"
+import { PondokQuickActions } from "@/components/bendahara/pondok-quick-actions"
+import { ExportLaporanButton } from "@/components/admin/export-laporan-button"
+import { MONTHS } from "@/lib/financial"
 
 export default function BendaharaPondokPage() {
+  // Period selection state
+  const [isPeriodDialogOpen, setIsPeriodDialogOpen] = useState(false)
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => {
+    const now = new Date()
+    return now.getMonth()
+  })
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    const now = new Date()
+    return now.getFullYear()
+  })
+  const [tempMonth, setTempMonth] = useState<number>(selectedMonth)
+  const [tempYear, setTempYear] = useState<number>(selectedYear)
+
+  // Fetch financial data using custom hook (filtered for UANG_SAKU and LAUNDRY only)
+  const {
+    summary,
+    byJenis,
+    byStatus,
+    recentTransaksi,
+    loading,
+    error,
+    refetch
+  } = usePondokFinancialData(selectedMonth, selectedYear)
+
+  const handleApplyPeriod = () => {
+    setSelectedMonth(tempMonth)
+    setSelectedYear(tempYear)
+    setIsPeriodDialogOpen(false)
+  }
+
+  if (loading) {
+    return <LoadingState />
+  }
+
+  if (error) {
+    return <ErrorState error={error} onRetry={refetch} />
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <Link href="/dashboard/bendahara">
-            <Button variant="ghost" className="mb-4">← Kembali ke Bendahara</Button>
-          </Link>
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">Bendahara Pondok</h1>
-          <p className="text-slate-600">Kelola keuangan Pondok Pesantren</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Laporan Keuangan Pondok</h1>
+          <p className="text-muted-foreground">
+            Ringkasan transaksi Uang Saku dan Laundry (Semua Jenis Santri)
+            <span className="ml-2 text-primary font-medium">
+              • {MONTHS[selectedMonth]} {selectedYear}
+            </span>
+          </p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pembayaran SPP Santri</CardTitle>
-              <CardDescription>Kelola pembayaran SPP santri</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">Kelola SPP</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Pembayaran Uang Makan</CardTitle>
-              <CardDescription>Kelola pembayaran uang makan</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">Kelola Uang Makan</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Pembayaran Perlengkapan</CardTitle>
-              <CardDescription>Kelola pembayaran perlengkapan santri</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">Kelola Perlengkapan</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Pembayaran Kitab</CardTitle>
-              <CardDescription>Kelola pembayaran kitab</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">Kelola Kitab</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Laporan Keuangan</CardTitle>
-              <CardDescription>Lihat laporan keuangan Pondok</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">Lihat Laporan</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Riwayat Transaksi</CardTitle>
-              <CardDescription>Lihat riwayat transaksi</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">Lihat Riwayat</Button>
-            </CardContent>
-          </Card>
+        <div className="flex gap-2">
+          <ExportLaporanButton
+            summary={summary}
+            byJenis={byJenis}
+            byStatus={byStatus}
+            recentTransaksi={recentTransaksi}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+          />
+          <PeriodSelector
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            tempMonth={tempMonth}
+            tempYear={tempYear}
+            isPeriodDialogOpen={isPeriodDialogOpen}
+            onOpenChange={setIsPeriodDialogOpen}
+            onTempMonthChange={setTempMonth}
+            onTempYearChange={setTempYear}
+            onApply={handleApplyPeriod}
+          />
         </div>
       </div>
+
+      {/* Summary Cards */}
+      <SummaryCards summary={summary} />
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Transaction by Type */}
+        <TransactionByType byJenis={byJenis} />
+
+        {/* Status Overview */}
+        <StatusOverview byStatus={byStatus} />
+      </div>
+
+      {/* Recent Transactions */}
+      <RecentTransactions recentTransaksi={recentTransaksi} />
+
+      {/* Quick Actions */}
+      <PondokQuickActions />
     </div>
-  );
+  )
 }

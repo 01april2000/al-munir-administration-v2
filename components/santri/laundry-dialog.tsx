@@ -110,9 +110,9 @@ export function LaundryDialog({
       // Open Midtrans Snap popup
       window.snap.pay(data.token, {
         onSuccess: async () => {
-          // Check payment status from Midtrans API
+          // Payment is successful - directly update status to LUNAS
           try {
-            await fetch("/api/payment/check-status", {
+            await fetch("/api/payment/laundry/confirm", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -120,26 +120,15 @@ export function LaundryDialog({
               body: JSON.stringify({ orderId: data.orderId }),
             })
           } catch (error) {
-            console.error("Error checking payment status:", error)
+            console.error("Error confirming payment:", error)
           }
           setOpen(false)
           setSelectedMonth(null)
           onPaymentComplete?.()
         },
         onPending: async () => {
-          // Check payment status from Midtrans API
-          try {
-            await fetch("/api/payment/check-status", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ orderId: data.orderId }),
-            })
-          } catch (error) {
-            console.error("Error checking payment status:", error)
-          }
-          // Payment is pending, user can close the dialog
+          // Payment is pending (e.g., bank transfer waiting for confirmation)
+          // Status remains PENDING until webhook confirms payment
           setOpen(false)
           setSelectedMonth(null)
           onPaymentComplete?.()

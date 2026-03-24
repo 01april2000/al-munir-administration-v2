@@ -102,11 +102,15 @@ export async function middleware(request: NextRequest) {
 
   console.log("User role:", userRole, "jenisSantri:", jenisSantri);
 
-  // If user is on root path "/", redirect to their default page
-  if (pathname === "/") {
+  // If user is on root path "/" or "/santri", redirect to their default page
+  // For SANTRI role, /santri should redirect to specific jenisSantri page
+  if (pathname === "/" || pathname === "/santri") {
     const defaultPath = getDefaultPath(userRole, jenisSantri);
-    console.log("Redirecting to:", defaultPath);
-    return NextResponse.redirect(new URL(defaultPath, request.url));
+    // Only redirect if not already at the target path
+    if (pathname !== defaultPath) {
+      console.log("Redirecting from", pathname, "to:", defaultPath);
+      return NextResponse.redirect(new URL(defaultPath, request.url));
+    }
   }
 
   // Check if user has access to the requested path

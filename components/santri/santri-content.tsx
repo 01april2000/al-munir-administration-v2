@@ -23,6 +23,7 @@ import { RealtimeTagihan } from "@/components/santri/realtime-tagihan"
 import { useSantriTabContext } from "@/components/santri/santri-tab-context"
 import { SantriRole } from "@/hooks/use-santri-data"
 import { TransactionHistoryDialog, TransactionData } from "@/components/santri/transaction-history-dialog"
+import { NotificationDialog } from "@/components/santri/notification-dialog"
 
 // Color classes for transaction types
 const colorClasses = {
@@ -477,6 +478,7 @@ export function SantriContent({ role }: { role: SantriRole }) {
   const { activeTab, data, isLoading, mutate } = useSantriTabContext()
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [notificationOpen, setNotificationOpen] = React.useState(false)
   const [selectedTransactionType, setSelectedTransactionType] = React.useState<string | null>(null)
   const processed = useProcessedData(data, role)
 
@@ -532,7 +534,13 @@ export function SantriContent({ role }: { role: SantriRole }) {
               <RefreshCw className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
             <ModeToggle />
-            <Button variant="ghost" size="icon" className="rounded-full md:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full md:hidden"
+              onClick={() => setNotificationOpen(true)}
+              title="Riwayat notifikasi transaksi"
+            >
               <Bell className="h-5 w-5" />
             </Button>
             <Button variant="ghost" size="icon" className="rounded-full hidden md:flex">
@@ -841,6 +849,13 @@ export function SantriContent({ role }: { role: SantriRole }) {
           onOpenChange={setDialogOpen}
           transactionType={selectedTransactionType}
           role={role}
+          transactions={processedTransactions}
+        />
+
+        {/* Notification Dialog */}
+        <NotificationDialog
+          open={notificationOpen}
+          onOpenChange={setNotificationOpen}
           transactions={processedTransactions}
         />
       </div>

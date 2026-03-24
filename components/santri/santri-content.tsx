@@ -17,6 +17,7 @@ import { ModeToggle } from "@/components/theme-toggle"
 import { TopupButton } from "@/components/santri/topup-button"
 import { LaundryButton } from "@/components/santri/laundry-button"
 import { MobileBottomNav } from "@/components/santri/mobile-bottom-nav"
+import { DesktopSidebar } from "@/components/santri/desktop-sidebar"
 import { SignOutButton } from "@/components/sign-out-button"
 import { RealtimeTagihan } from "@/components/santri/realtime-tagihan"
 import { useSantriTabContext } from "@/components/santri/santri-tab-context"
@@ -498,7 +499,12 @@ export function SantriContent({ role }: { role: SantriRole }) {
   const { summaryStats, tagihanOnly, aktivitasOnly, santri, santriName, santriInitials, processedTransactions } = processed
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 pb-20 md:pb-6">
+    <div className="flex min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+      {/* Desktop Sidebar */}
+      <DesktopSidebar role={role} />
+      
+      {/* Main Content */}
+      <div className="flex-1 md:ml-64 pb-20 md:pb-6">
       {/* Header with Profile */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
@@ -826,17 +832,18 @@ export function SantriContent({ role }: { role: SantriRole }) {
         )}
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav role={role} />
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav role={role} />
 
-      {/* Transaction History Dialog */}
-      <TransactionHistoryDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        transactionType={selectedTransactionType}
-        role={role}
-        transactions={processedTransactions}
-      />
+        {/* Transaction History Dialog */}
+        <TransactionHistoryDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          transactionType={selectedTransactionType}
+          role={role}
+          transactions={processedTransactions}
+        />
+      </div>
     </div>
   )
 }

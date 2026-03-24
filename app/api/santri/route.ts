@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, JenisSantri } from "@/lib/generated/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { JenisSantri } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-const prisma = new PrismaClient({ adapter });
+import { prisma } from "@/lib/prisma";
 
 // GET - List all santri
 export async function GET(request: NextRequest) {

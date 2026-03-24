@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, StatusTransaksi } from "@/lib/generated/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { StatusTransaksi } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-const prisma = new PrismaClient({ adapter });
+import { prisma } from "@/lib/prisma";
 
 // POST - Directly confirm laundry payment as LUNAS (called from Snap onSuccess)
 export async function POST(request: NextRequest) {

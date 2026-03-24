@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, JenisTransaksi, StatusTransaksi, StatusUangSaku, JenisSantri, Role, JenisTagihan, StatusTagihan } from "@/lib/generated/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { JenisTransaksi, StatusTransaksi, StatusUangSaku, JenisSantri, Role, JenisTagihan, StatusTagihan } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-const prisma = new PrismaClient({ adapter });
+import { prisma } from "@/lib/prisma";
 
 // GET - List all transaksi with filters and pagination
 export async function GET(request: NextRequest) {

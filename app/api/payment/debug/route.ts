@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@/lib/generated/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { getTransactionStatus } from "@/lib/midtrans";
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-const prisma = new PrismaClient({ adapter });
+import { prisma } from "@/lib/prisma";
 
 // POST - Debug payment status
 export async function POST(request: NextRequest) {

@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, JenisTagihan, StatusTagihan, JenisSantri, StatusSantri } from "@/lib/generated/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { JenisTagihan, StatusTagihan, JenisSantri, StatusSantri } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-const prisma = new PrismaClient({ adapter });
+import { prisma } from "@/lib/prisma";
 
 // Default amounts per jenisSantri (can be configured later in a settings table)
 const DEFAULT_AMOUNTS: Record<JenisSantri, { SPP: number; SYAHRIAH: number }> = {

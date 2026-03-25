@@ -203,3 +203,89 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+// GET - Cron job endpoint for automatic monthly generation
+export async function GET(request: NextRequest) {
+  try {
+    // ===== VALIDASI CRON SECRET =====
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // ===== AUTO-DETECT BULAN & TAHUN =====
+    const now = new Date();
+    const wibOffset = 7 * 60 * 60 * 1000;
+    const wibTime = new Date(now.getTime() + wibOffset);
+    
+    const bulanList = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    
+    const bulan = bulanList[wibTime.getMonth()];
+    const tahun = wibTime.getFullYear();
+
+    // ===== REUSE LOGIC DARI POST =====
+    const activeSantri = await prisma.santri.findMany({
+      where: { status: StatusSantri.AKTIF },
+      select: {
+        id: true, nis: true, nama: true, jenisSantri: true,
+        beasiswa: true, jenisBeasiswa: true,
+      },
+    });
+
+    if (activeSantri.length === 0) {
+      return NextResponse.json({ success: true, message: "Tidak ada santri aktif" });
+    }
+
+    const bulanIndex = bulanList.indexOf(bulan);
+    const jatuhTempo = new Date(tahun, bulanIndex, 15);
+
+    const tagihanData: any[] = [];
+
+    for (const santri of activeSantri) {
+      const amounts = DEFAULT_AMOUNTS[santri.jenisSantri];
+
+      // SPP
+      const skipSPP = santri.beasiswa && 
+        (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SPP");
+      if (!skipSPP && amounts.SPP > 0) {
+        tagihanData.push({
+          kode: `SPP-${santri.nis}-${bulan}-${tahun}`,
+          santriId: santri.id, jenis: "SPP", bulan, tahun,
+          jumlah: amounts.SPP, status: "BELUM_LUNAS", jatuhTempo,
+        });
+      }
+
+      // SYAHRIAH
+      const skipSyahriah = santri.beasiswa && 
+        (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SYAHRIAH");
+      if (!skipSyahriah && amounts.SYAHRIAH > 0) {
+        tagihanData.push({
+          kode: `SYAHRIAH-${santri.nis}-${bulan}-${tahun}`,
+          santriId: santri.id, jenis: "SYAHRIAH", bulan, tahun,
+          jumlah: amounts.SYAHRIAH, status: "BELUM_LUNAS", jatuhTempo,
+        });
+      }
+    }
+
+    let created = 0, skipped = 0;
+    for (const tagihan of tagihanData) {
+      try {
+        await prisma.tagihan.create({ data: tagihan });
+        created++;
+      } catch { skipped++; }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Cron: ${created} tagihan dibuat, ${skipped} sudah ada.`,
+      data: { bulan, tahun, created, skipped },
+    });
+  } catch (error) {
+    console.error("Cron error:", error);
+    return NextResponse.json({ error: "Cron failed" }, { status: 500 });
+  }
+}

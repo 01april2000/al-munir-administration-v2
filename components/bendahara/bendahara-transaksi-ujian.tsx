@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,6 +100,8 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
   const [santriList, setSantriList] = useState<Santri[]>([]);
   const [santriSearch, setSantriSearch] = useState("");
   const [loadingSantri, setLoadingSantri] = useState(false);
+  const [showSantriDropdown, setShowSantriDropdown] = useState(false);
+  const santriDropdownRef = useRef<HTMLDivElement>(null);
 
   const jenisSantriValue = role === "smk" ? "SMK" : "SMP";
 
@@ -160,6 +162,17 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
     fetchSantri();
   }, [fetchSantri]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (santriDropdownRef.current && !santriDropdownRef.current.contains(event.target as Node)) {
+        setShowSantriDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Handle form change
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -169,6 +182,7 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
   const resetForm = () => {
     setFormData(getDefaultFormData());
     setSantriSearch("");
+    setShowSantriDropdown(false);
   };
 
   // Build request body
@@ -563,35 +577,58 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
           <div className="grid gap-4 py-4">
             <div>
               <Label htmlFor="santri">Santri</Label>
-              <div className="relative">
+              <div className="relative" ref={santriDropdownRef}>
                 <Input
                   id="santri-search"
-                  placeholder="Cari santri..."
+                  placeholder="Ketik nama santri..."
                   value={santriSearch}
                   onChange={(e) => {
                     setSantriSearch(e.target.value);
-                    fetchSantri(e.target.value);
+                    // Only show dropdown when user types (at least 1 character)
+                    if (e.target.value.length > 0) {
+                      fetchSantri(e.target.value);
+                      setShowSantriDropdown(true);
+                    } else {
+                      setShowSantriDropdown(false);
+                    }
                   }}
+                  autoComplete="off"
                 />
                 {loadingSantri && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </div>
                 )}
+                {/* Autocomplete Dropdown */}
+                {showSantriDropdown && santriList.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
+                    {santriList.map((santri) => (
+                      <div
+                        key={santri.id}
+                        className="flex flex-col px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => {
+                          handleFormChange("santriId", santri.id);
+                          setSantriSearch(`${santri.nama} - ${santri.nis}`);
+                          setShowSantriDropdown(false);
+                        }}
+                      >
+                        <span className="font-medium">{santri.nama}</span>
+                        <span className="text-xs text-muted-foreground">
+                          NIS: {santri.nis} | Kelas: {santri.kelas}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* No results message */}
+                {showSantriDropdown && !loadingSantri && santriSearch.length > 0 && santriList.length === 0 && (
+                  <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-md p-3 text-sm text-muted-foreground">
+                    Tidak ada santri ditemukan
+                  </div>
+                )}
               </div>
-              <select
-                id="santri"
-                className="flex h-10 w-full mt-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={formData.santriId}
-                onChange={(e) => handleFormChange("santriId", e.target.value)}
-              >
-                <option value="">Pilih Santri</option>
-                {santriList.map((santri) => (
-                  <option key={santri.id} value={santri.id}>
-                    {santri.nama} - {santri.nis} ({santri.kelas})
-                  </option>
-                ))}
-              </select>
+              {/* Hidden input for form validation */}
+              <input type="hidden" value={formData.santriId} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

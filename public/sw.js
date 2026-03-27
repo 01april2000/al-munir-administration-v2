@@ -1,28 +1,37 @@
-const CACHE_NAME = 'santri-portal-v3'
-const urlsToCache = [
-  '/santri',
-  '/santri/pondok',
-  '/santri/smp',
-  '/santri/smk',
-  '/manifest.json',
+const CACHE_NAME = 'santri-portal-v4'
+
+// Only cache truly static assets (icons, manifest)
+// HTML pages should NOT be cached to avoid stale chunk references
+const STATIC_ASSETS = [
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/manifest.json'
 ]
 
 // Routes that should NOT be cached (always fetch from network)
 const NETWORK_ONLY_ROUTES = [
   '/api/',
   '/_next/',
-  '/auth/'
+  '/auth/',
+  '/dashboard/'
 ]
 
-// Install event - cache assets
+// HTML pages - use network-first strategy
+const HTML_PAGES = [
+  '/santri',
+  '/santri/',
+  '/santri/pondok',
+  '/santri/smp',
+  '/santri/smk'
+]
+
+// Install event - only cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache')
-        return cache.addAll(urlsToCache)
+        console.log('Caching static assets only')
+        return cache.addAll(STATIC_ASSETS)
       })
   )
   self.skipWaiting()
@@ -57,6 +66,11 @@ function shouldUseNetworkOnly(url) {
   return NETWORK_ONLY_ROUTES.some(route => url.pathname.startsWith(route))
 }
 
+// Check if request is for an HTML page
+function isHTMLPage(url) {
+  return HTML_PAGES.some(page => url.pathname === page || url.pathname === page + '/')
+}
+
 // Fetch event - different strategies based on request type
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
@@ -84,7 +98,22 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Clone and cache the response for potential offline fallback
+          return response
+        })
+        .catch((error) => {
+          console.error('Network request failed:', error)
+          return caches.match(event.request)
+        })
+    )
+    return
+  }
+
+  // Network-first for HTML pages to avoid stale chunk references
+  if (isHTMLPage(url)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Clone and cache the response for offline fallback only
           const responseClone = response.clone()
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone)
@@ -93,14 +122,27 @@ self.addEventListener('fetch', (event) => {
         })
         .catch((error) => {
           console.error('Network request failed, trying cache:', error)
-          // Fallback to cache if network fails
+          // Fallback to cache if network fails (offline scenario)
           return caches.match(event.request)
+            .then((response) => {
+              if (response) {
+                return response
+              }
+              // Return offline fallback
+              return new Response(
+                '<html><body><h1>Offline</h1><p>Please check your internet connection.</p></body></html>',
+                { 
+                  status: 503,
+                  headers: { 'Content-Type': 'text/html' }
+                }
+              )
+            })
         })
     )
     return
   }
 
-  // Cache-first for static assets and pages
+  // Cache-first for static assets only
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

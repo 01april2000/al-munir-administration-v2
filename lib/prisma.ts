@@ -6,9 +6,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Check if using Accelerate (prisma:// protocol)
+// Check if using Accelerate (prisma:// or prisma+postgres:// protocol)
 const databaseUrl = process.env.DATABASE_URL || "";
-const useAccelerate = databaseUrl.startsWith("prisma://");
+const useAccelerate = databaseUrl.startsWith("prisma://") || databaseUrl.startsWith("prisma+postgres://");
 
 function createPrismaClient() {
   if (useAccelerate) {

@@ -70,35 +70,52 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    // Calculate balance for each santri
-    const santriWithBalance = await Promise.all(
-      santri.map(async (s) => {
-        const uangSakuTransaksi = await prisma.transaksi.findMany({
-          where: {
-            santriId: s.id,
-            jenis: "UANG_SAKU",
-          },
-          select: {
-            statusUangSaku: true,
-            jumlah: true,
-          },
-        });
+    // Calculate balance for all santri using aggregation (fixes N+1 query)
+    const santriIds = santri.map((s) => s.id);
 
-        let balance = 0;
-        uangSakuTransaksi.forEach((t) => {
-          if (t.statusUangSaku === "DITAMBAH") {
-            balance += t.jumlah;
-          } else if (t.statusUangSaku === "DIAMBIL") {
-            balance -= t.jumlah;
-          }
-        });
+    // Query 1: Total DITAMBAH per santri
+    const ditambahAgg = await prisma.transaksi.groupBy({
+      by: ["santriId"],
+      where: {
+        santriId: { in: santriIds },
+        jenis: "UANG_SAKU",
+        statusUangSaku: "DITAMBAH",
+      },
+      _sum: {
+        jumlah: true,
+      },
+    });
 
-        return {
-          ...s,
-          saldo: balance,
-        };
-      })
+    // Query 2: Total DIAMBIL per santri
+    const diambilAgg = await prisma.transaksi.groupBy({
+      by: ["santriId"],
+      where: {
+        santriId: { in: santriIds },
+        jenis: "UANG_SAKU",
+        statusUangSaku: "DIAMBIL",
+      },
+      _sum: {
+        jumlah: true,
+      },
+    });
+
+    // Create balance maps for O(1) lookup
+    const ditambahMap = new Map(
+      ditambahAgg.map((item) => [item.santriId, item._sum.jumlah || 0])
     );
+    const diambilMap = new Map(
+      diambilAgg.map((item) => [item.santriId, item._sum.jumlah || 0])
+    );
+
+    // Calculate balance for each santri
+    const santriWithBalance = santri.map((s) => {
+      const ditambah = ditambahMap.get(s.id) || 0;
+      const diambil = diambilMap.get(s.id) || 0;
+      return {
+        ...s,
+        saldo: ditambah - diambil,
+      };
+    });
 
     return NextResponse.json({ santri: santriWithBalance });
   } catch (error) {

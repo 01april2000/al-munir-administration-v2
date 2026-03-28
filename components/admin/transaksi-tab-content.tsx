@@ -94,6 +94,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [totalSaldoUangSaku, setTotalSaldoUangSaku] = useState(0);
 
   // Filter states - different per transaction type
   const [filterBulan, setFilterBulan] = useState<string>(bulanList[currentMonthIndex]);
@@ -211,6 +212,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
       const data = await response.json();
       setTransaksiList(data.items);
       setTotal(data.total);
+      setTotalSaldoUangSaku(data.totalSaldoUangSaku || 0);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -407,7 +409,6 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
       const totalDiambil = transaksiList
         .filter((t) => t.statusUangSaku === "DIAMBIL")
         .reduce((sum, t) => sum + t.jumlah, 0);
-      const saldo = totalDitambah - totalDiambil;
 
       return (
         <>
@@ -431,12 +432,12 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Saldo</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Saldo Santri</CardTitle>
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${saldo >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {formatCurrency(saldo)}
+              <div className={`text-2xl font-bold ${totalSaldoUangSaku >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {formatCurrency(totalSaldoUangSaku)}
               </div>
             </CardContent>
           </Card>

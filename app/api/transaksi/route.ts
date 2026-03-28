@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
               kelas: true,
               asrama: true,
               jenisSantri: true,
+              saldoUangSaku: true,
             },
           },
         },
@@ -113,11 +114,29 @@ export async function GET(request: NextRequest) {
       prisma.transaksi.count({ where: filter }),
     ]);
 
+    // For UANG_SAKU transactions, get total saldo from Santri model
+    let totalSaldoUangSaku = 0;
+    if (jenis === "UANG_SAKU") {
+      const santriFilter: { jenisSantri?: JenisSantri } = {};
+      if (jenisSantri && Object.values(JenisSantri).includes(jenisSantri)) {
+        santriFilter.jenisSantri = jenisSantri;
+      }
+      
+      const saldoResult = await prisma.santri.aggregate({
+        where: santriFilter,
+        _sum: {
+          saldoUangSaku: true,
+        },
+      });
+      totalSaldoUangSaku = saldoResult._sum.saldoUangSaku || 0;
+    }
+
     return NextResponse.json({
       items: transaksi,
       total,
       page,
       limit,
+      totalSaldoUangSaku,
     });
   } catch (error) {
     console.error("Error fetching transaksi:", error);
@@ -289,6 +308,19 @@ export async function POST(request: NextRequest) {
           status: tagihanStatus,
           jatuhTempo,
           transaksiId: transaksi.id,
+        },
+      });
+    }
+
+    // For UANG_SAKU transactions with LUNAS status, update the santri's balance
+    if (jenis === "UANG_SAKU" && status === "LUNAS" && statusUangSaku) {
+      const balanceChange = statusUangSaku === "DITAMBAH" ? jumlah : -jumlah;
+      await prisma.santri.update({
+        where: { id: santriId },
+        data: {
+          saldoUangSaku: {
+            increment: balanceChange,
+          },
         },
       });
     }

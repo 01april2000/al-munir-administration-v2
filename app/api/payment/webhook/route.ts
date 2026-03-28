@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { StatusTransaksi, StatusTagihan } from "@/lib/generated/prisma";
+import { StatusTransaksi, StatusTagihan, JenisTransaksi, StatusUangSaku } from "@/lib/generated/prisma";
 import { verifyWebhookSignature } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 
@@ -165,5 +165,19 @@ async function handleSuccessfulPayment(transaksiId: string, paymentTime: string)
     console.log("handleSuccessfulPayment: Tagihan updated successfully");
   } else {
     console.log("handleSuccessfulPayment: No tagihan found for this transaksi");
+  }
+
+  // Update santri saldo if this is a UANG_SAKU top-up transaction
+  if (transaksi && transaksi.jenis === JenisTransaksi.UANG_SAKU && transaksi.statusUangSaku === StatusUangSaku.DITAMBAH) {
+    console.log("handleSuccessfulPayment: Updating santri saldo for top-up, amount:", transaksi.jumlah);
+    await prisma.santri.update({
+      where: { id: transaksi.santriId },
+      data: {
+        saldoUangSaku: {
+          increment: transaksi.jumlah,
+        },
+      },
+    });
+    console.log("handleSuccessfulPayment: Santri saldo updated successfully");
   }
 }

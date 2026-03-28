@@ -161,6 +161,7 @@ model Santri {
   beasiswa      Boolean          @default(false)
   jenisBeasiswa JenisBeasiswa?
   jenisSantri   JenisSantri      @default(PONDOK)
+  saldoUangSaku Int              @default(0)
   userId        String?          @unique
   user          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   transaksi     Transaksi[]

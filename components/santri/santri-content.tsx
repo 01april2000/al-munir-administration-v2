@@ -316,26 +316,22 @@ function useProcessedData(data: any, role: SantriRole) {
       if (!config) return
 
       if (type === "uang-saku") {
-        let runningBalance = 0
+        // Use the balance from santri data instead of calculating from transactions
+        const santriBalance = santri?.saldoUangSaku ?? 0
+        
         const chronologicalItems = [...items].reverse().map((t: any) => {
           const isIncoming = t.statusUangSaku === "DITAMBAH"
-          if (isIncoming) {
-            runningBalance += t.jumlah
-          } else {
-            runningBalance -= t.jumlah
-          }
           return {
             label: t.keterangan || (isIncoming ? "Top-up Uang Saku" : "Pengambilan Uang Saku"),
             amount: formatCurrency(t.jumlah),
             status: (isIncoming ? "in" : "out") as "in" | "out",
             date: formatDate(t.createdAt),
-            balance: formatCurrency(runningBalance),
             transaksiId: t.id,
             rawAmount: t.jumlah,
           }
         })
         const uangSakuItems = chronologicalItems.reverse()
-        summaryStats.uangSakuBalance = runningBalance
+        summaryStats.uangSakuBalance = santriBalance
         addTransactionItems(type, config, uangSakuItems)
       } else {
         const processedItems = items.map((t: any) => {

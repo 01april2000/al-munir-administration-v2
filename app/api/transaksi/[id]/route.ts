@@ -205,7 +205,56 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json({ transaksi });
+  // Handle UANG_SAKU balance updates
+  const transaksiStatusUangSaku = statusUangSaku ?? existingTransaksi.statusUangSaku;
+  
+  if (transaksiJenis === "UANG_SAKU" && transaksiStatusUangSaku) {
+    // Calculate balance changes based on status changes
+    const wasLunas = existingTransaksi.status === "LUNAS";
+    const nowLunas = transaksiStatus === "LUNAS";
+    
+    if (!wasLunas && nowLunas) {
+      // Status changed to LUNAS - add/subtract balance
+      const balanceChange = transaksiStatusUangSaku === "DITAMBAH" ? transaksiJumlah : -transaksiJumlah;
+      await prisma.santri.update({
+        where: { id: transaksiSantriId },
+        data: {
+          saldoUangSaku: {
+            increment: balanceChange,
+          },
+        },
+      });
+    } else if (wasLunas && !nowLunas) {
+      // Status changed from LUNAS to non-LUNAS - reverse the balance
+      const balanceChange = transaksiStatusUangSaku === "DITAMBAH" ? -transaksiJumlah : transaksiJumlah;
+      await prisma.santri.update({
+        where: { id: transaksiSantriId },
+        data: {
+          saldoUangSaku: {
+            increment: balanceChange,
+          },
+        },
+      });
+    } else if (wasLunas && nowLunas && jumlah !== undefined && jumlah !== existingTransaksi.jumlah) {
+      // Amount changed while staying LUNAS - adjust the difference
+      const oldBalanceChange = transaksiStatusUangSaku === "DITAMBAH" ? -existingTransaksi.jumlah : existingTransaksi.jumlah;
+      const newBalanceChange = transaksiStatusUangSaku === "DITAMBAH" ? transaksiJumlah : -transaksiJumlah;
+      const netChange = oldBalanceChange + newBalanceChange;
+      
+      if (netChange !== 0) {
+        await prisma.santri.update({
+          where: { id: transaksiSantriId },
+          data: {
+            saldoUangSaku: {
+              increment: netChange,
+            },
+          },
+        });
+      }
+    }
+  }
+
+  return NextResponse.json({ transaksi });
   } catch (error) {
     console.error("Error updating transaksi:", error);
     return NextResponse.json(

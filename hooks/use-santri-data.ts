@@ -19,6 +19,7 @@ interface SantriData {
     email?: string
     telepon?: string
     alamat?: string
+    saldoUangSaku?: number
   } | null
 }
 

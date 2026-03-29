@@ -13,7 +13,6 @@ import type { TransactionData, SantriRole } from "@/lib/types/santri"
 import {
   colorClasses,
   statusBadgeVariant,
-  formatCurrency,
 } from "@/lib/santri-helpers"
 
 // Transaction icon component

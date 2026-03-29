@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useSantriData, SantriData, SantriRole } from "@/hooks/use-santri-data"
+import type { ProcessedSantriData, SantriRole } from "@/lib/types/santri"
 
 type TabType = "beranda" | "tagihan" | "aktivitas" | "akun"
 
@@ -9,10 +9,7 @@ interface SantriTabContextType {
   activeTab: TabType
   setActiveTab: (tab: TabType) => void
   role: SantriRole
-  data: SantriData | undefined
-  isLoading: boolean
-  isError: boolean
-  mutate: () => void
+  data: ProcessedSantriData | undefined
 }
 
 const SantriTabContext = React.createContext<SantriTabContextType | undefined>(undefined)
@@ -29,11 +26,11 @@ interface SantriTabProviderProps {
   children: React.ReactNode
   role: SantriRole
   initialTab?: TabType
+  initialData?: ProcessedSantriData
 }
 
-export function SantriTabProvider({ children, role, initialTab = "beranda" }: SantriTabProviderProps) {
+export function SantriTabProvider({ children, role, initialTab = "beranda", initialData }: SantriTabProviderProps) {
   const [activeTab, setActiveTab] = React.useState<TabType>(initialTab)
-  const { data, isLoading, isError, mutate } = useSantriData(role)
 
   // Handle URL sync on mount
   React.useEffect(() => {
@@ -61,10 +58,7 @@ export function SantriTabProvider({ children, role, initialTab = "beranda" }: Sa
         activeTab,
         setActiveTab,
         role,
-        data,
-        isLoading,
-        isError,
-        mutate,
+        data: initialData,
       }}
     >
       {children}
@@ -72,4 +66,4 @@ export function SantriTabProvider({ children, role, initialTab = "beranda" }: Sa
   )
 }
 
-export type { TabType, SantriTabContextType }
+export type { TabType, SantriTabContextType, SantriRole }

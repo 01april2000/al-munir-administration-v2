@@ -1,4 +1,7 @@
 import type { Metadata } from "next"
+import { SantriTabProvider } from "@/components/santri/santri-tab-context"
+import { SantriContent } from "@/components/santri/santri-content"
+import { getPondokData } from "@/app/actions/santri"
 
 export const metadata: Metadata = {
   title: "Pondok - Portal Santri Al-Munir",
@@ -18,13 +21,12 @@ export const metadata: Metadata = {
   },
 }
 
-import { SantriTabProvider } from "@/components/santri/santri-tab-context"
-import { SantriContent } from "@/components/santri/santri-content"
+export default async function SantriPondokPage() {
+  const initialData = await getPondokData()
 
-export default function SantriPondokPage() {
   return (
-    <SantriTabProvider role="pondok">
-      <SantriContent role="pondok" />
+    <SantriTabProvider role="pondok" initialData={initialData}>
+      <SantriContent role="pondok" initialData={initialData} />
     </SantriTabProvider>
   )
 }

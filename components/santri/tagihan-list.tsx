@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,7 +20,7 @@ interface TransactionItem {
   rawAmount?: number
 }
 
-interface TransactionData {
+export interface TransactionData {
   type: TransactionType
   title: string
   icon: React.ReactNode
@@ -29,10 +28,8 @@ interface TransactionData {
   items: TransactionItem[]
 }
 
-interface RealtimeTagihanProps {
-  initialTagihan: TransactionData[]
-  apiEndpoint: "/api/santri/pondok" | "/api/santri/smp" | "/api/santri/smk"
-  refreshInterval?: number // in milliseconds, default 30000 (30 seconds)
+interface TagihanListProps {
+  tagihan: TransactionData[]
 }
 
 const colorClasses = {
@@ -110,212 +107,7 @@ const transactionConfig: Record<
   tka: { title: "TKA", icon: <BookMarked />, color: "blue" },
 }
 
-export function RealtimeTagihan({
-  initialTagihan,
-  apiEndpoint,
-  refreshInterval = 30000 // Default 30 seconds
-}: RealtimeTagihanProps) {
-  const [tagihan, setTagihan] = useState<TransactionData[]>(initialTagihan)
-  const [isLoading, setIsLoading] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
-  
-  // Use ref to track if a fetch is in progress to prevent concurrent fetches
-  const fetchingRef = useRef(false)
-  // Use ref to track if component is mounted to prevent state updates after unmount
-  const mountedRef = useRef(true)
-
-  const fetchData = useCallback(async () => {
-    // Prevent concurrent fetches
-    if (fetchingRef.current) {
-      return
-    }
-    
-    try {
-      fetchingRef.current = true
-      setIsLoading(true)
-      
-      // Add timestamp to force network request and bypass cache
-      const url = new URL(apiEndpoint, window.location.origin)
-      url.searchParams.set('_t', Date.now().toString())
-      
-      const response = await fetch(url.toString(), {
-        cache: "no-store",
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-      })
-
-      if (response.ok && mountedRef.current) {
-        const data = await response.json()
-        const { tagihan: newTagihan, transaksi } = data
-
-        // Process tagihan data based on endpoint type
-        // Use a map to prevent duplicate keys
-        const processedTransactionsMap: Record<string, TransactionData> = {}
-
-        // Process tagihan based on jenis - use a Set to track unique tagihan IDs
-        const processedTagihanIds = new Set<string>()
-        const tagihanByJenis: Record<string, TransactionItem[]> = {}
-
-        for (const t of newTagihan) {
-          // Skip if we've already processed this tagihan (prevent duplicates)
-          if (processedTagihanIds.has(t.id)) {
-            continue
-          }
-          processedTagihanIds.add(t.id)
-          
-          const jenis = t.jenis
-          if (!tagihanByJenis[jenis]) {
-            tagihanByJenis[jenis] = []
-          }
-
-          const item: TransactionItem = {
-            label: t.bulan && t.tahun ? `${getMonthName(t.bulan)} ${t.tahun}` : (t.keterangan || jenis),
-            amount: formatCurrency(t.jumlah),
-            status: t.status === "LUNAS" ? "Lunas" : t.status === "BELUM_LUNAS" ? "Belum Lunas" : "Menunggu" as const,
-            date: t.transaksi?.tanggalBayar ? formatDate(t.transaksi.tanggalBayar) : "-",
-            tagihanId: t.id,
-            rawAmount: t.jumlah,
-          }
-          tagihanByJenis[jenis].push(item)
-        }
-
-        // Map jenis to transaction type
-        const jenisToType: Record<string, TransactionType> = {
-          "SPP": "spp",
-          "SYAHRIAH": "syahriah",
-          "UJIAN": "ujian",
-          "BUKU_PENDAMPING": "buku-pendamping",
-          "LKS": "lks",
-          "PKL": "pkl",
-          "TKA": "tka",
-        }
-
-        for (const [jenis, items] of Object.entries(tagihanByJenis)) {
-          const type = jenisToType[jenis]
-          if (type && transactionConfig[type]) {
-            if (processedTransactionsMap[type]) {
-              // Merge items if type already exists
-              processedTransactionsMap[type].items.push(...items)
-            } else {
-              // Create new entry if type doesn't exist
-              processedTransactionsMap[type] = {
-                type,
-                ...transactionConfig[type],
-                items,
-              }
-            }
-          }
-        }
-
-        // Process Laundry transactions (for pondok) - use Set to prevent duplicates
-        if (transaksi) {
-          const processedTransaksiIds = new Set<string>()
-          const laundryTransaksi = transaksi.filter((t: any) => {
-            if (t.jenis !== "LAUNDRY") return false
-            // Skip if already processed
-            if (processedTransaksiIds.has(t.id)) return false
-            processedTransaksiIds.add(t.id)
-            return true
-          })
-          
-          if (laundryTransaksi.length > 0) {
-            const laundryItems = laundryTransaksi.map((t: any) => ({
-              label: t.jenisLaundry || t.keterangan || "Laundry",
-              amount: formatCurrency(t.jumlah),
-              status: t.status === "LUNAS" ? "Lunas" : t.status === "BELUM_BAYAR" ? "Belum Lunas" : "Menunggu" as const,
-              date: t.tanggalBayar ? formatDate(t.tanggalBayar) : formatDate(t.createdAt),
-              transaksiId: t.id,
-              rawAmount: t.jumlah,
-            }))
-            if (processedTransactionsMap.laundry) {
-              // Merge items if laundry already exists
-              processedTransactionsMap.laundry.items.push(...laundryItems)
-            } else {
-              // Create new entry if laundry doesn't exist
-              processedTransactionsMap.laundry = {
-                type: "laundry",
-                ...transactionConfig.laundry,
-                items: laundryItems,
-              }
-            }
-          }
-        }
-
-        // Convert map to array
-        const processedTransactions = Object.values(processedTransactionsMap)
-
-        // Filter for unpaid bills only
-        const tagihanOnly = processedTransactions
-          .filter(t => t.type !== "uang-saku")
-          .map(t => ({
-            ...t,
-            items: t.items.filter(item => item.status === "Belum Lunas" || item.status === "Menunggu")
-          }))
-          .filter(t => t.items.length > 0)
-
-        // Only update state if component is still mounted
-        if (mountedRef.current) {
-          setTagihan(tagihanOnly)
-          setLastUpdated(new Date())
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch tagihan:", error)
-    } finally {
-      fetchingRef.current = false
-      if (mountedRef.current) {
-        setIsLoading(false)
-      }
-    }
-  }, [apiEndpoint])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
-
-  // Polling effect - only start after initial delay to avoid immediate duplicate fetch
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null
-    
-    // Delay polling start to avoid race with initial SWR fetch
-    const timeoutId = setTimeout(() => {
-      intervalId = setInterval(fetchData, refreshInterval)
-    }, 5000) // Wait 5 seconds before starting polling
-    
-    return () => {
-      clearTimeout(timeoutId)
-      if (intervalId) {
-        clearInterval(intervalId)
-      }
-    }
-  }, [fetchData, refreshInterval])
-
-  // Listen for visibility change with debounce
-  useEffect(() => {
-    let lastFetchTime = 0
-    const DEBOUNCE_MS = 2000 // 2 seconds debounce
-    
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        const now = Date.now()
-        // Only fetch if enough time has passed since last fetch
-        if (now - lastFetchTime > DEBOUNCE_MS) {
-          lastFetchTime = now
-          fetchData()
-        }
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
-  }, [fetchData])
-
+export function TagihanList({ tagihan }: TagihanListProps) {
   return (
     <>
       <div className="flex items-center justify-between">
@@ -324,12 +116,6 @@ export function RealtimeTagihan({
           <h2 className="text-lg font-semibold">Tagihan Anda</h2>
         </div>
         <div className="flex items-center gap-2">
-          {isLoading && (
-            <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-          <span className="text-xs text-muted-foreground">
-            Diperbarui: {lastUpdated.toLocaleTimeString("id-ID")}
-          </span>
         </div>
       </div>
       
@@ -401,7 +187,6 @@ export function RealtimeTagihan({
                             label={item.label}
                             amount={item.amount || ""}
                             rawAmount={item.rawAmount}
-                            onPaymentComplete={fetchData}
                             trigger={
                               <Button size="sm" className="shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 min-w-[80px] md:min-w-auto rounded-full">
                                 <CreditCard data-icon="inline-start" className="md:mr-1" />

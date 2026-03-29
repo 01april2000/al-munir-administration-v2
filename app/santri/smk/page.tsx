@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
 import { SantriTabProvider } from "@/components/santri/santri-tab-context"
 import { SantriContent } from "@/components/santri/santri-content"
+import { getSmkData } from "@/app/actions/santri"
 
 export const metadata: Metadata = {
   title: "SMK - Portal Santri Al-Munir",
-  description: "Halaman santri SMK untuk pengelolaan administrasi dan transaksi",
+  description: "Halaman siswa SMK untuk pengelolaan administrasi dan transaksi",
   manifest: "/manifest.json",
   themeColor: "#10b981",
   appleWebApp: {
@@ -20,10 +21,12 @@ export const metadata: Metadata = {
   },
 }
 
-export default function SantriSMKPage() {
+export default async function SantriSMKPage() {
+  const initialData = await getSmkData()
+
   return (
-    <SantriTabProvider role="smk">
-      <SantriContent role="smk" />
+    <SantriTabProvider role="smk" initialData={initialData}>
+      <SantriContent role="smk" initialData={initialData} />
     </SantriTabProvider>
   )
 }

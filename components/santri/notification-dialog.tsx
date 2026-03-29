@@ -143,7 +143,6 @@ export interface NotificationTransactionData {
   type: string
   title: string
   color: string
-  icon: React.ReactNode
   items: NotificationTransactionItem[]
 }
 

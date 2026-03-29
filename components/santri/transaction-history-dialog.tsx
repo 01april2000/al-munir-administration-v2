@@ -14,7 +14,7 @@ import {
   Receipt, Wallet, Shirt, FileCheck, Briefcase, Trophy, BookOpen, BookMarked,
   CheckCircle2, Clock, XCircle, ArrowDown, ArrowUp, Calendar
 } from "lucide-react"
-import { SantriRole } from "@/hooks/use-santri-data"
+import { SantriRole } from "@/components/santri/santri-tab-context"
 
 // Color classes for transaction types
 const colorClasses = {

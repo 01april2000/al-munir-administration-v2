@@ -161,7 +161,6 @@ model Santri {
   beasiswa      Boolean          @default(false)
   jenisBeasiswa JenisBeasiswa?
   jenisSantri   JenisSantri      @default(PONDOK)
-  isSyalaf      Boolean          @default(false)
   saldoUangSaku Int              @default(0)
   userId        String?          @unique
   user          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -175,7 +174,6 @@ model Santri {
   @@index([status])
   @@index([beasiswa])
   @@index([jenisSantri])
-  @@index([isSyalaf])
   @@index([userId])
   @@map("santri")
 }

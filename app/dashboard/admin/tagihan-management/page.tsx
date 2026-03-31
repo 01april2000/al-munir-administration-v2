@@ -76,6 +76,9 @@ export default function TagihanManagementPage() {
   // Filter states
   const [filterBulan, setFilterBulan] = useState("");
   const [filterTahun, setFilterTahun] = useState("");
+  const [filterJenisTagihan, setFilterJenisTagihan] = useState("");
+  const [filterJenisSantri, setFilterJenisSantri] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
   // Generate form states
   const [generateBulan, setGenerateBulan] = useState(bulanList[currentMonthIndex]);
@@ -205,28 +208,47 @@ export default function TagihanManagementPage() {
 
   const columnsWithSelect = [selectColumn, ...columns];
 
-  // Filter data based on search query
+  // Filter data based on search query and field filters
   const filteredData = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return tagihanList;
+    let result = [...tagihanList];
+
+    // Apply search query filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((tagihan) => {
+        return (
+          tagihan.kode.toLowerCase().includes(query) ||
+          tagihan.jenis.toLowerCase().includes(query) ||
+          tagihan.bulan.toLowerCase().includes(query) ||
+          tagihan.status.toLowerCase().includes(query) ||
+          tagihan.santri.nis.toLowerCase().includes(query) ||
+          tagihan.santri.nama.toLowerCase().includes(query) ||
+          tagihan.santri.kelas.toLowerCase().includes(query) ||
+          tagihan.santri.asrama.toLowerCase().includes(query) ||
+          tagihan.santri.jenisSantri.toLowerCase().includes(query) ||
+          tagihan.jumlah.toString().includes(query) ||
+          tagihan.tahun.toString().includes(query)
+        );
+      });
     }
-    const query = searchQuery.toLowerCase().trim();
-    return tagihanList.filter((tagihan) => {
-      return (
-        tagihan.kode.toLowerCase().includes(query) ||
-        tagihan.jenis.toLowerCase().includes(query) ||
-        tagihan.bulan.toLowerCase().includes(query) ||
-        tagihan.status.toLowerCase().includes(query) ||
-        tagihan.santri.nis.toLowerCase().includes(query) ||
-        tagihan.santri.nama.toLowerCase().includes(query) ||
-        tagihan.santri.kelas.toLowerCase().includes(query) ||
-        tagihan.santri.asrama.toLowerCase().includes(query) ||
-        tagihan.santri.jenisSantri.toLowerCase().includes(query) ||
-        tagihan.jumlah.toString().includes(query) ||
-        tagihan.tahun.toString().includes(query)
-      );
-    });
-  }, [tagihanList, searchQuery]);
+
+    // Apply jenis tagihan filter
+    if (filterJenisTagihan) {
+      result = result.filter((tagihan) => tagihan.jenis === filterJenisTagihan);
+    }
+
+    // Apply jenis santri filter
+    if (filterJenisSantri) {
+      result = result.filter((tagihan) => tagihan.santri.jenisSantri === filterJenisSantri);
+    }
+
+    // Apply status filter
+    if (filterStatus) {
+      result = result.filter((tagihan) => tagihan.status === filterStatus);
+    }
+
+    return result;
+  }, [tagihanList, searchQuery, filterJenisTagihan, filterJenisSantri, filterStatus]);
 
   // Pagination calculations - use filtered data
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -236,11 +258,11 @@ export default function TagihanManagementPage() {
     return filteredData.slice(startIndex, endIndex);
   }, [filteredData, currentPage, itemsPerPage]);
 
-  // Reset to page 1 when search query changes
+  // Reset to page 1 when search query or filters change
   useEffect(() => {
     setCurrentPage(1);
     setRowSelection({});
-  }, [searchQuery]);
+  }, [searchQuery, filterJenisTagihan, filterJenisSantri, filterStatus]);
 
   // Reset row selection when page changes
   useEffect(() => {
@@ -342,7 +364,7 @@ export default function TagihanManagementPage() {
           <CardTitle>Filter</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="flex-1">
               <Label htmlFor="filter-bulan">Bulan</Label>
               <select
@@ -374,10 +396,65 @@ export default function TagihanManagementPage() {
                 ))}
               </select>
             </div>
-            <div className="flex items-end">
-              <Button variant="outline" onClick={fetchTagihan}>
+            <div className="flex-1">
+              <Label htmlFor="filter-jenis-tagihan">Jenis Tagihan</Label>
+              <select
+                id="filter-jenis-tagihan"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={filterJenisTagihan}
+                onChange={(e) => setFilterJenisTagihan(e.target.value)}
+              >
+                <option value="">Semua Jenis</option>
+                <option value="SPP">SPP</option>
+                <option value="SYAHRIAH">Syahriah</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="filter-jenis-santri">Jenis Santri</Label>
+              <select
+                id="filter-jenis-santri"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={filterJenisSantri}
+                onChange={(e) => setFilterJenisSantri(e.target.value)}
+              >
+                <option value="">Semua Jenis</option>
+                <option value="SMK">SMK</option>
+                <option value="SMP">SMP</option>
+                <option value="PONDOK">Pondok</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="filter-status">Status</Label>
+              <select
+                id="filter-status"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="">Semua Status</option>
+                <option value="LUNAS">Lunas</option>
+                <option value="BELUM_LUNAS">Belum Lunas</option>
+                <option value="OVERDUE">Terlambat</option>
+              </select>
+            </div>
+            <div className="flex items-end gap-2">
+              <Button variant="outline" onClick={fetchTagihan} className="flex-1">
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setFilterBulan("");
+                  setFilterTahun("");
+                  setFilterJenisTagihan("");
+                  setFilterJenisSantri("");
+                  setFilterStatus("");
+                  setSearchQuery("");
+                }}
+                className="flex-1"
+              >
+                Reset
               </Button>
             </div>
           </div>

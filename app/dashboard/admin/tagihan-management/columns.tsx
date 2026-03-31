@@ -60,7 +60,17 @@ export const columns: ColumnDef<Tagihan>[] = [
   },
   {
     accessorKey: "santri.nama",
-    header: "Nama Santri",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Nama Santri
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
     cell: ({ row }) => {
       const santri = row.original.santri;
       return (
@@ -73,7 +83,17 @@ export const columns: ColumnDef<Tagihan>[] = [
   },
   {
     accessorKey: "santri.kelas",
-    header: "Kelas",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Kelas
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
   },
   {
     accessorKey: "santri.jenisSantri",
@@ -108,7 +128,17 @@ export const columns: ColumnDef<Tagihan>[] = [
   },
   {
     accessorKey: "jumlah",
-    header: "Jumlah",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Jumlah
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
     cell: ({ row }) => {
       const jumlah = row.getValue("jumlah") as number;
       return (

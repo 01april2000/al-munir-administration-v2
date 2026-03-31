@@ -51,7 +51,6 @@ interface FormData {
   beasiswa: boolean;
   jenisBeasiswa: JenisBeasiswa | null;
   jenisSantri: JenisSantri;
-  isSyalaf: boolean;
   email: string;
   password: string;
 }
@@ -66,7 +65,6 @@ const initialFormData: FormData = {
   beasiswa: false,
   jenisBeasiswa: null,
   jenisSantri: "PONDOK",
-  isSyalaf: false,
   email: "",
   password: "",
 };
@@ -151,7 +149,6 @@ export default function SantriManagementPage() {
       beasiswa: santri.beasiswa,
       jenisBeasiswa: santri.jenisBeasiswa,
       jenisSantri: santri.jenisSantri,
-      isSyalaf: santri.isSyalaf,
       email: santri.user?.email || "",
       password: "",
     });
@@ -699,21 +696,6 @@ export default function SantriManagementPage() {
                   </select>
                 </div>
               )}
-              <div className="col-span-2 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isSyalaf"
-                  checked={formData.isSyalaf}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isSyalaf: e.target.checked,
-                    })
-                  }
-                  className="h-4 w-4 rounded border-input"
-                />
-                <Label htmlFor="isSyalaf">Syalaf</Label>
-              </div>
             </div>
             <DialogFooter>
               <DialogClose render={<Button type="button" variant="outline" disabled={submitting} />}>

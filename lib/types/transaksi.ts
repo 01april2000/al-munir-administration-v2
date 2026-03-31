@@ -97,6 +97,7 @@ export const STATUS_UANG_SAKU_OPTIONS = [
 ] as const;
 
 export const BULAN_OPTIONS = [
+  { value: '', label: 'Semua Bulan' },
   { value: 'Januari', label: 'Januari' },
   { value: 'Februari', label: 'Februari' },
   { value: 'Maret', label: 'Maret' },

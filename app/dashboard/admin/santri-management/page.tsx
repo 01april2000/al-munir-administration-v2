@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,10 +27,19 @@ import {
   JenisSantri,
   JenisBeasiswa,
 } from "./columns";
-import { Plus, Users, Loader2, Trash2, GraduationCap, UserCheck, Upload } from "lucide-react";
+import { Plus, Users, Loader2, Trash2, GraduationCap, UserCheck, Upload, Search } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { ImportSantriDialog } from "@/components/admin/import-santri-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface FormData {
   nis: string;
@@ -93,6 +102,13 @@ export default function SantriManagementPage() {
   const [submitting, setSubmitting] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchSantri = useCallback(async () => {
     try {
@@ -259,6 +275,91 @@ export default function SantriManagementPage() {
   const nonAktifSantri = santriList.filter((s) => s.status === "NON_AKTIF").length;
   const beasiswaSantri = santriList.filter((s) => s.beasiswa).length;
 
+  // Filter data based on search query
+  const filteredData = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return santriList;
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    return santriList.filter((santri) => {
+      return (
+        santri.nis.toLowerCase().includes(query) ||
+        santri.nama.toLowerCase().includes(query) ||
+        santri.kelas.toLowerCase().includes(query) ||
+        santri.asrama.toLowerCase().includes(query) ||
+        santri.wali.toLowerCase().includes(query) ||
+        santri.status.toLowerCase().includes(query) ||
+        santri.jenisSantri.toLowerCase().includes(query) ||
+        (santri.user?.email && santri.user.email.toLowerCase().includes(query))
+      );
+    });
+  }, [santriList, searchQuery]);
+
+  // Pagination calculations - use filtered data
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setRowSelection({});
+  }, [searchQuery]);
+
+  // Reset to page 1 when data changes
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [filteredData.length, totalPages, currentPage]);
+
+  // Generate page numbers to display
+  const getPageNumbers = useCallback(() => {
+    const pages: (number | "ellipsis")[] = [];
+    
+    if (totalPages <= 5) {
+      // Show all pages if 5 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+      
+      if (currentPage > 3) {
+        pages.push("ellipsis");
+      }
+      
+      // Show pages around current page
+      const startPage = Math.max(2, currentPage - 1);
+      const endPage = Math.min(totalPages - 1, currentPage + 1);
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      if (currentPage < totalPages - 2) {
+        pages.push("ellipsis");
+      }
+      
+      // Always show last page
+      if (totalPages > 1) {
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  }, [currentPage, totalPages]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setRowSelection({}); // Clear selection when changing page
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
@@ -285,6 +386,25 @@ export default function SantriManagementPage() {
             Tambah Santri
           </Button>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Cari santri (NIS, nama, kelas, asrama, wali, email...)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {searchQuery && (
+          <div className="text-sm text-muted-foreground">
+            Ditemukan {filteredData.length} hasil
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -344,12 +464,56 @@ export default function SantriManagementPage() {
           ) : (
             <DataTable
               columns={tableColumns}
-              data={santriList}
+              data={paginatedData}
               rowSelection={rowSelection}
               onRowSelectionChange={setRowSelection}
               enableRowSelection={true}
               getRowId={(row) => row.id}
             />
+          )}
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex flex-col items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredData.length)} dari {filteredData.length} data
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      text="Sebelumnya"
+                      onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {getPageNumbers().map((page, index) => (
+                    <PaginationItem key={index}>
+                      {page === "ellipsis" ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          isActive={currentPage === page}
+                          onClick={() => handlePageChange(page)}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext
+                      text="Selanjutnya"
+                      onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>

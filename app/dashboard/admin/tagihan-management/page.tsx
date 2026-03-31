@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,9 +21,18 @@ import {
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { columns, selectColumn, Tagihan, bulanOptions } from "./columns";
-import { Plus, FileText, Loader2, RefreshCw, Sparkles, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, FileText, Loader2, RefreshCw, Sparkles, Trash2, AlertTriangle, Search } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
@@ -57,9 +66,16 @@ export default function TagihanManagementPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Filter states
-  const [filterBulan, setFilterBulan] = useState(bulanList[currentMonthIndex]);
-  const [filterTahun, setFilterTahun] = useState(currentYear.toString());
+  const [filterBulan, setFilterBulan] = useState("");
+  const [filterTahun, setFilterTahun] = useState("");
 
   // Generate form states
   const [generateBulan, setGenerateBulan] = useState(bulanList[currentMonthIndex]);
@@ -189,11 +205,78 @@ export default function TagihanManagementPage() {
 
   const columnsWithSelect = [selectColumn, ...columns];
 
-  // Calculate summary
-  const totalBelumLunas = tagihanList.filter(t => t.status === "BELUM_LUNAS").length;
-  const totalLunas = tagihanList.filter(t => t.status === "LUNAS").length;
-  const totalOverdue = tagihanList.filter(t => t.status === "OVERDUE").length;
-  const totalJumlah = tagihanList.reduce((sum, t) => sum + t.jumlah, 0);
+  // Filter data based on search query
+  const filteredData = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return tagihanList;
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return tagihanList.filter((tagihan) => {
+      return (
+        tagihan.kode.toLowerCase().includes(query) ||
+        tagihan.jenis.toLowerCase().includes(query) ||
+        tagihan.bulan.toLowerCase().includes(query) ||
+        tagihan.status.toLowerCase().includes(query) ||
+        tagihan.santri.nis.toLowerCase().includes(query) ||
+        tagihan.santri.nama.toLowerCase().includes(query) ||
+        tagihan.santri.kelas.toLowerCase().includes(query) ||
+        tagihan.santri.asrama.toLowerCase().includes(query) ||
+        tagihan.santri.jenisSantri.toLowerCase().includes(query) ||
+        tagihan.jumlah.toString().includes(query) ||
+        tagihan.tahun.toString().includes(query)
+      );
+    });
+  }, [tagihanList, searchQuery]);
+
+  // Pagination calculations - use filtered data
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setRowSelection({});
+  }, [searchQuery]);
+
+  // Reset row selection when page changes
+  useEffect(() => {
+    setRowSelection({});
+  }, [currentPage]);
+
+  // Calculate summary based on filtered data
+  const totalBelumLunas = filteredData.filter(t => t.status === "BELUM_LUNAS").length;
+  const totalLunas = filteredData.filter(t => t.status === "LUNAS").length;
+  const totalOverdue = filteredData.filter(t => t.status === "OVERDUE").length;
+  const totalJumlah = filteredData.reduce((sum, t) => sum + t.jumlah, 0);
+
+  // Generate page numbers with ellipsis
+  const getPageNumbers = useCallback(() => {
+    const pages: (number | string)[] = [];
+    
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, "...", totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+      }
+    }
+    
+    return pages;
+  }, [currentPage, totalPages]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -218,7 +301,7 @@ export default function TagihanManagementPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tagihanList.length}</div>
+            <div className="text-2xl font-bold">{filteredData.length}</div>
             <p className="text-xs text-muted-foreground">
               Rp {totalJumlah.toLocaleString("id-ID")}
             </p>
@@ -277,14 +360,19 @@ export default function TagihanManagementPage() {
             </div>
             <div className="flex-1">
               <Label htmlFor="filter-tahun">Tahun</Label>
-              <Input
+              <select
                 id="filter-tahun"
-                type="number"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={filterTahun}
                 onChange={(e) => setFilterTahun(e.target.value)}
-                min="2020"
-                max="2100"
-              />
+              >
+                <option value="">Semua Tahun</option>
+                {Array.from({ length: 10 }, (_, i) => currentYear - 5 + i).map((year) => (
+                  <option key={year} value={year.toString()}>
+                    {year}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex items-end">
               <Button variant="outline" onClick={fetchTagihan}>
@@ -295,6 +383,25 @@ export default function TagihanManagementPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Search Bar */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Cari tagihan (kode, nama santri, NIS, kelas, jenis...)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {searchQuery && (
+          <div className="text-sm text-muted-foreground">
+            Ditemukan {filteredData.length} hasil
+          </div>
+        )}
+      </div>
 
       {/* Data Table */}
       <Card>
@@ -308,7 +415,7 @@ export default function TagihanManagementPage() {
           ) : (
             <DataTable
               columns={columnsWithSelect}
-              data={tagihanList}
+              data={paginatedData}
               rowSelection={rowSelection}
               onRowSelectionChange={setRowSelection}
               enableRowSelection={true}
@@ -317,6 +424,46 @@ export default function TagihanManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex flex-col items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredData.length)} dari {filteredData.length} data
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              {getPageNumbers().map((page, index) => (
+                <PaginationItem key={index}>
+                  {page === "..." ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink
+                      onClick={() => handlePageChange(page as number)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                  className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

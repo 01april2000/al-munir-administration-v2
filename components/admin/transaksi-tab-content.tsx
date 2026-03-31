@@ -30,6 +30,15 @@ import {
 import { Transaksi, JenisTransaksi } from "@/lib/types/transaksi";
 import { Plus, RefreshCw, Loader2, FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Shirt, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
@@ -97,8 +106,8 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   const [totalSaldoUangSaku, setTotalSaldoUangSaku] = useState(0);
 
   // Filter states - different per transaction type
-  const [filterBulan, setFilterBulan] = useState<string>(bulanList[currentMonthIndex]);
-  const [filterTahun, setFilterTahun] = useState(currentYear.toString());
+  const [filterBulan, setFilterBulan] = useState<string>("");
+  const [filterTahun, setFilterTahun] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterStatusUangSaku, setFilterStatusUangSaku] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -400,6 +409,52 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
     onDelete: openDeleteDialog,
   });
 
+  // Calculate total pages
+  const totalPages = Math.ceil(total / limit);
+
+  // Get page numbers for pagination
+  const getPageNumbers = useCallback(() => {
+    const pages: (number | string)[] = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (page <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      } else if (page >= totalPages - 2) {
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = page - 1; i <= page + 1; i++) {
+          pages.push(i);
+        }
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  }, [page, totalPages]);
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+    }
+  };
+
   // Calculate summary based on transaction type
   const getSummaryCards = () => {
     if (jenis === "UANG_SAKU") {
@@ -574,14 +629,19 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
           </div>
           <div>
             <Label htmlFor="filter-tahun">Tahun</Label>
-            <Input
+            <select
               id="filter-tahun"
-              type="number"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={filterTahun}
               onChange={(e) => setFilterTahun(e.target.value)}
-              min="2020"
-              max="2100"
-            />
+            >
+              <option value="">Semua Tahun</option>
+              {Array.from({ length: 10 }, (_, i) => currentYear - 5 + i).map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
         </>
       );
@@ -1163,6 +1223,46 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex flex-col items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            Menampilkan {((page - 1) * limit) + 1} - {Math.min(page * limit, total)} dari {total} data
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => handlePageChange(page - 1)}
+                  className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              {getPageNumbers().map((pageNum, index) => (
+                <PaginationItem key={index}>
+                  {pageNum === "ellipsis" ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink
+                      onClick={() => handlePageChange(pageNum as number)}
+                      isActive={page === pageNum}
+                      className="cursor-pointer"
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => handlePageChange(page + 1)}
+                  className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={(open) => {

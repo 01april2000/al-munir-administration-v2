@@ -200,6 +200,7 @@ export const selectColumn: ColumnDef<Tagihan> = {
 };
 
 export const bulanOptions = [
+  { value: "", label: "Semua Bulan" },
   { value: "Januari", label: "Januari" },
   { value: "Februari", label: "Februari" },
   { value: "Maret", label: "Maret" },

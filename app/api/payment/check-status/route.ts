@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { StatusTransaksi, StatusTagihan, JenisTransaksi, StatusUangSaku } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getTransactionStatus } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
+import { handleSuccessfulPayment, handleFailedPayment, handlePendingPayment } from "@/lib/payment-handler";
 
 // POST - Manually check and update payment status from Midtrans
 export async function POST(request: NextRequest) {
@@ -68,35 +68,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Handle different transaction statuses
+    // Handle different transaction statuses using shared handlers
     if (transaction_status === "capture") {
       if (fraud_status === "challenge") {
-        await prisma.transaksi.update({
-          where: { id: midtransTransaction.transaksiId },
-          data: { status: StatusTransaksi.PENDING },
-        });
+        await handlePendingPayment(midtransTransaction.transaksiId);
       } else if (fraud_status === "accept") {
         await handleSuccessfulPayment(midtransTransaction.transaksiId, settlement_time || transaction_time);
       }
     } else if (transaction_status === "settlement") {
       await handleSuccessfulPayment(midtransTransaction.transaksiId, settlement_time || transaction_time);
     } else if (transaction_status === "cancel" || transaction_status === "deny" || transaction_status === "expire") {
-      await prisma.transaksi.update({
-        where: { id: midtransTransaction.transaksiId },
-        data: { status: StatusTransaksi.DITOLAK },
-      });
-
-      if (midtransTransaction.transaksi.tagihan.length > 0) {
-        await prisma.tagihan.update({
-          where: { id: midtransTransaction.transaksi.tagihan[0].id },
-          data: { status: StatusTagihan.BELUM_LUNAS },
-        });
-      }
+      const tagihanId = midtransTransaction.transaksi.tagihan[0]?.id;
+      await handleFailedPayment(midtransTransaction.transaksiId, tagihanId);
     } else if (transaction_status === "pending") {
-      await prisma.transaksi.update({
-        where: { id: midtransTransaction.transaksiId },
-        data: { status: StatusTransaksi.PENDING },
-      });
+      await handlePendingPayment(midtransTransaction.transaksiId);
     }
 
     // Get updated transaksi with tagihan
@@ -120,50 +105,5 @@ export async function POST(request: NextRequest) {
       { error: "Failed to check payment status" },
       { status: 500 }
     );
-  }
-}
-
-async function handleSuccessfulPayment(transaksiId: string, paymentTime: string) {
-  console.log("handleSuccessfulPayment: Updating transaksi:", transaksiId, "to LUNAS");
-  
-  await prisma.transaksi.update({
-    where: { id: transaksiId },
-    data: {
-      status: StatusTransaksi.LUNAS,
-      tanggalBayar: new Date(paymentTime),
-    },
-  });
-
-  const transaksi = await prisma.transaksi.findUnique({
-    where: { id: transaksiId },
-    include: {
-      tagihan: true,
-      santri: true,
-    },
-  });
-
-  if (transaksi && transaksi.tagihan.length > 0) {
-    console.log("handleSuccessfulPayment: Updating tagihan:", transaksi.tagihan[0].id, "to LUNAS");
-    await prisma.tagihan.update({
-      where: { id: transaksi.tagihan[0].id },
-      data: { status: StatusTagihan.LUNAS },
-    });
-    console.log("handleSuccessfulPayment: Tagihan updated successfully");
-  } else {
-    console.log("handleSuccessfulPayment: No tagihan found for this transaksi");
-  }
-
-  // Update santri saldo if this is a UANG_SAKU top-up transaction
-  if (transaksi && transaksi.jenis === JenisTransaksi.UANG_SAKU && transaksi.statusUangSaku === StatusUangSaku.DITAMBAH) {
-    console.log("handleSuccessfulPayment: Updating santri saldo for top-up, amount:", transaksi.jumlah);
-    await prisma.santri.update({
-      where: { id: transaksi.santriId },
-      data: {
-        saldoUangSaku: {
-          increment: transaksi.jumlah,
-        },
-      },
-    });
-    console.log("handleSuccessfulPayment: Santri saldo updated successfully");
   }
 }

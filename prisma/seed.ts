@@ -428,12 +428,13 @@ async function main() {
 
   // Create some Accounts
   console.log("🔑 Creating accounts...");
+  const hashedDefaultPassword = await hashPassword("password123");
   const accountData = allUsers.map((user) => ({
     id: faker.string.uuid(),
     accountId: faker.string.uuid(),
     providerId: "credential",
     userId: user.id,
-    password: "$2a$10$EpRnTzVlqHNP0.fUbXUwSOyuiXe/QLSUG6xNekdHgTGmrpHEfIoxm", // hashed "password123"
+    password: hashedDefaultPassword,
   }));
 
   const createdAccounts = await prisma.account.createMany({

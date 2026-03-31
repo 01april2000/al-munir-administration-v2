@@ -3,13 +3,15 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from "@/components/ui/empty"
 import {
-  Receipt, AlertCircle, CheckCircle2, Clock, XCircle, Calendar
+  Receipt, AlertCircle, CheckCircle2, Clock, XCircle, Calendar, CreditCard
 } from "lucide-react"
 import { useInfiniteTagihan } from "@/hooks/use-infinite-scroll"
-import type { TransactionData, SantriRole } from "@/lib/types/santri"
+import { PaymentDialog } from "@/components/santri/payment-dialog"
+import type { TransactionData, SantriRole, TransactionItem } from "@/lib/types/santri"
 import {
   colorClasses,
   statusBadgeVariant,
@@ -161,6 +163,26 @@ export function TagihanTabContent({
                         <span>{item.date}</span>
                       </div>
                     </div>
+                    {/* Payment Button - Only show for unpaid items */}
+                    {(item.status === "Belum Lunas" || item.status === "Menunggu") && (
+                      <PaymentDialog
+                        tagihanId={item.tagihanId}
+                        transaksiId={item.transaksiId}
+                        jenis={transaction.type}
+                        label={item.label}
+                        amount={item.amount || ""}
+                        rawAmount={item.rawAmount}
+                        trigger={
+                          <Button
+                            size="sm"
+                            className="gap-1.5 h-8 rounded-full shadow-sm"
+                          >
+                            <CreditCard className="h-3.5 w-3.5" />
+                            <span className="hidden md:inline">Bayar</span>
+                          </Button>
+                        }
+                      />
+                    )}
                   </div>
                 </div>
               ))}

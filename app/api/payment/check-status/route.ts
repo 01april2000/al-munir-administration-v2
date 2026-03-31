@@ -138,10 +138,7 @@ async function handleSuccessfulPayment(transaksiId: string, paymentTime: string)
     where: { id: transaksiId },
     include: {
       tagihan: true,
-      santriId: true,
-      jenis: true,
-      statusUangSaku: true,
-      jumlah: true,
+      santri: true,
     },
   });
 

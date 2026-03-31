@@ -176,6 +176,18 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     render={
+                      <Link href={`${basePath}/tagihan-management`}>
+                        <Sparkles className="h-4 w-4" />
+                        <span>Tagihan Management</span>
+                      </Link>
+                    }
+                  />
+                </SidebarMenuItem>
+              )}
+              {role !== "pondok" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    render={
                       <Link href={`${basePath}/laporan-keuangan`}>
                         <FileText className="h-4 w-4" />
                         <span>Laporan Keuangan</span>

@@ -23,7 +23,7 @@ import {
   STATUS_TRANSAKSI_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, FileCheck } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, FileCheck, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const currentYear = new Date().getFullYear();
@@ -90,8 +90,27 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState<Transaksi | null>(null);
+
+  // Generate form states
+  const [generateJenisUjian, setGenerateJenisUjian] = useState("UTS");
+  const [generateTahun, setGenerateTahun] = useState(currentYear.toString());
+  const [generateJumlah, setGenerateJumlah] = useState("");
+  const [generateResult, setGenerateResult] = useState<{
+    success?: boolean;
+    message?: string;
+    data?: {
+      totalSantri: number;
+      created: number;
+      skipped: number;
+      jenisTransaksi: string;
+      tahun: number;
+      jumlah: number;
+    };
+  } | null>(null);
 
   // Form states
   const [formData, setFormData] = useState<FormData>(getDefaultFormData());
@@ -312,6 +331,45 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
     setIsDeleteDialogOpen(true);
   };
 
+  // Handle generate transactions
+  const handleGenerate = async () => {
+    try {
+      setIsGenerating(true);
+      setGenerateResult(null);
+
+      const response = await fetch("/api/transaksi/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jenisTransaksi: "UJIAN",
+          tahun: parseInt(generateTahun),
+          jenisUjian: generateJenisUjian,
+          jumlah: generateJumlah ? parseInt(generateJumlah) : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate transaksi");
+      }
+
+      setGenerateResult(data);
+      
+      // Refresh the list
+      await fetchTransaksi();
+    } catch (err) {
+      setGenerateResult({
+        success: false,
+        message: err instanceof Error ? err.message : "An error occurred",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Get columns with actions
   const columns = [
     {
@@ -434,10 +492,16 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
           <h2 className="text-xl font-semibold">Pembayaran Ujian</h2>
           <p className="text-sm text-muted-foreground">Kelola pembayaran ujian santri {roleTitle}</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Pembayaran
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsGenerateDialogOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate
+          </Button>
+          <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Pembayaran
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -839,6 +903,90 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
                 </>
               ) : (
                 "Hapus"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Dialog */}
+      <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Generate Transaksi Ujian</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="generate-jenis-ujian">Jenis Ujian</Label>
+                <select
+                  id="generate-jenis-ujian"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={generateJenisUjian}
+                  onChange={(e) => setGenerateJenisUjian(e.target.value)}
+                >
+                  {JENIS_UJIAN_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="generate-tahun">Tahun</Label>
+                <Input
+                  id="generate-tahun"
+                  type="number"
+                  value={generateTahun}
+                  onChange={(e) => setGenerateTahun(e.target.value)}
+                  min="2020"
+                  max="2100"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="generate-jumlah">Jumlah (Opsional)</Label>
+              <Input
+                id="generate-jumlah"
+                type="number"
+                placeholder="Biaya ujian"
+                value={generateJumlah}
+                onChange={(e) => setGenerateJumlah(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Kosongkan untuk menggunakan nilai default
+              </p>
+            </div>
+
+            {generateResult && (
+              <div className={`p-4 rounded-md ${generateResult.success ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"}`}>
+                <p className="font-medium">{generateResult.message}</p>
+                {generateResult.data && (
+                  <div className="mt-2 text-sm">
+                    <p>Total Santri: {generateResult.data.totalSantri}</p>
+                    <p>Dibuat: {generateResult.data.created}</p>
+                    <p>Sudah Ada: {generateResult.data.skipped}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)} disabled={isGenerating}>
+              Batal
+            </Button>
+            <Button onClick={handleGenerate} disabled={isGenerating}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate
+                </>
               )}
             </Button>
           </DialogFooter>

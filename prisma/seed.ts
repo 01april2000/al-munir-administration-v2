@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker/locale/id_ID";
 import { PrismaClient, Role, JenisSantri, StatusSantri, JenisTagihan, StatusTagihan, JenisTransaksi, StatusTransaksi, StatusUangSaku, JenisBeasiswa, PeriodePembayaran } from "../lib/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { hashPassword } from "../lib/password-hash";
+import { hashPassword } from "better-auth/crypto";
 import "dotenv/config";
 
 const adapter = new PrismaPg({

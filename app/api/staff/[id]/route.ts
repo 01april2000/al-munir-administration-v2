@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "better-auth/crypto";
 
 // GET - Get a single staff member by ID
 export async function GET(
@@ -63,7 +64,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, email, role, emailVerified } = body;
+    const { name, email, password, role, emailVerified } = body;
 
     // Check if staff exists
     const existingStaff = await prisma.user.findUnique({
@@ -85,6 +86,15 @@ export async function PUT(
           { status: 400 }
         );
       }
+    }
+
+    // If password is provided, update the password in account
+    if (password && password.trim() !== "") {
+      const hashedPassword = await hashPassword(password);
+      await prisma.account.updateMany({
+        where: { userId: id, providerId: "credential" },
+        data: { password: hashedPassword },
+      });
     }
 
     const staff = await prisma.user.update({

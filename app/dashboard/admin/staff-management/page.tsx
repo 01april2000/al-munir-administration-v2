@@ -27,12 +27,14 @@ import { Badge } from "@/components/ui/badge";
 interface FormData {
   name: string;
   email: string;
+  password: string;
   role: Role;
 }
 
 const initialFormData: FormData = {
   name: "",
   email: "",
+  password: "",
   role: "SANTRI",
 };
 
@@ -87,6 +89,7 @@ export default function StaffManagementPage() {
     setFormData({
       name: staffMember.name,
       email: staffMember.email,
+      password: "", // Password kosong saat edit, hanya diisi jika ingin mengubah
       role: staffMember.role,
     });
     setIsDialogOpen(true);
@@ -303,6 +306,21 @@ export default function StaffManagementPage() {
                   }
                   placeholder="Masukkan email"
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  Password {editingStaff && "(kosongkan jika tidak ingin mengubah)"}
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  placeholder={editingStaff ? "Masukkan password baru" : "Masukkan password"}
+                  required={!editingStaff}
                 />
               </div>
               <div className="space-y-2">

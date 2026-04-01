@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "better-auth/crypto";
 
 // GET - List all staff (non-SANTRI users)
 export async function GET(_request: NextRequest) {
@@ -57,11 +58,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, role } = body;
+    const { name, email, password, role } = body;
 
-    if (!name || !email) {
+    if (!name || !email || !password) {
       return NextResponse.json(
-        { error: "Name and email are required" },
+        { error: "Name, email, and password are required" },
         { status: 400 }
       );
     }
@@ -77,6 +78,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Hash password using better-auth compatible hashPassword
+    const hashedPassword = await hashPassword(password);
 
     const staff = await prisma.user.create({
       data: {
@@ -95,6 +99,17 @@ export async function POST(request: NextRequest) {
         image: true,
         createdAt: true,
         updatedAt: true,
+      },
+    });
+
+    // Create account with hashed password
+    await prisma.account.create({
+      data: {
+        id: crypto.randomUUID(),
+        accountId: staff.id,
+        providerId: "credential",
+        userId: staff.id,
+        password: hashedPassword,
       },
     });
 

@@ -16,6 +16,7 @@ const DEFAULT_AMOUNTS: Record<string, number> = {
   UJIAN_LAINNYA: 50000,
   BUKU_PENDAMPING: 75000,
   PKL: 150000,
+  LKS: 100000,
 };
 
 // Kelas yang terkena tagihan PKL
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { jenisTransaksi, tahun, jenisSantri, jumlah, jenisUjian, keterangan } = body;
+    const { jenisTransaksi, tahun, jenisSantri, jumlah, jenisUjian, keterangan, kelas, semester } = body;
 
     // Validate input
     if (!jenisTransaksi || !tahun) {
@@ -63,10 +64,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate jenisTransaksi
-    const validJenisTransaksi = ["UJIAN", "BUKU_PENDAMPING", "PKL"];
+    const validJenisTransaksi = ["UJIAN", "BUKU_PENDAMPING", "PKL", "LKS"];
     if (!validJenisTransaksi.includes(jenisTransaksi)) {
       return NextResponse.json(
-        { error: "Jenis transaksi tidak valid. Gunakan: UJIAN, BUKU_PENDAMPING, atau PKL" },
+        { error: "Jenis transaksi tidak valid. Gunakan: UJIAN, BUKU_PENDAMPING, PKL, atau LKS" },
         { status: 400 }
       );
     }
@@ -101,6 +102,16 @@ export async function POST(request: NextRequest) {
       santriFilter.jenisSantri = "SMK";
     }
 
+    // For LKS, filter by selected kelas if provided
+    if (jenisTransaksi === "LKS") {
+      // LKS hanya untuk SMK
+      santriFilter.jenisSantri = "SMK";
+      // If specific kelas are selected, filter by them
+      if (kelas && Array.isArray(kelas) && kelas.length > 0) {
+        santriFilter.kelas = { in: kelas as KelasSantri[] };
+      }
+    }
+
     // Get all active santri
     const activeSantri = await prisma.santri.findMany({
       where: santriFilter,
@@ -131,6 +142,8 @@ export async function POST(request: NextRequest) {
         finalJumlah = DEFAULT_AMOUNTS.BUKU_PENDAMPING;
       } else if (jenisTransaksi === "PKL") {
         finalJumlah = DEFAULT_AMOUNTS.PKL;
+      } else if (jenisTransaksi === "LKS") {
+        finalJumlah = DEFAULT_AMOUNTS.LKS;
       } else {
         finalJumlah = DEFAULT_AMOUNTS.UJIAN_LAINNYA;
       }
@@ -142,6 +155,8 @@ export async function POST(request: NextRequest) {
       kodePrefix = `UJIAN-${jenisUjian || "LAINNYA"}-${tahun}`;
     } else if (jenisTransaksi === "PKL") {
       kodePrefix = `PKL-${tahun}`;
+    } else if (jenisTransaksi === "LKS") {
+      kodePrefix = `LKS-${semester || "Semester-1"}-${tahun}`;
     } else {
       kodePrefix = `BUKU-PENDAMPING-${tahun}`;
     }
@@ -152,6 +167,8 @@ export async function POST(request: NextRequest) {
       finalKeterangan = jenisUjian || keterangan || "Ujian";
     } else if (jenisTransaksi === "PKL") {
       finalKeterangan = keterangan || "Praktik Kerja Lapangan";
+    } else if (jenisTransaksi === "LKS") {
+      finalKeterangan = keterangan || "Lembar Kerja Siswa";
     } else {
       finalKeterangan = keterangan || "Buku Pendamping";
     }
@@ -162,13 +179,24 @@ export async function POST(request: NextRequest) {
       jenis: JenisTransaksi;
       jumlah: number;
       tahun: number;
+      bulan?: string;
       status: StatusTransaksi;
       managedBy: Role;
       keterangan: string;
     }[] = [];
 
     for (const santri of activeSantri) {
-      transaksiData.push({
+      const data: {
+        kode: string;
+        santriId: string;
+        jenis: JenisTransaksi;
+        jumlah: number;
+        tahun: number;
+        bulan?: string;
+        status: StatusTransaksi;
+        managedBy: Role;
+        keterangan: string;
+      } = {
         kode: `${kodePrefix}-${santri.nis}`,
         santriId: santri.id,
         jenis: jenisTransaksi as JenisTransaksi,
@@ -177,7 +205,14 @@ export async function POST(request: NextRequest) {
         status: "BELUM_BAYAR",
         managedBy: session.user.role as Role,
         keterangan: finalKeterangan,
-      });
+      };
+
+      // Add bulan (semester) for LKS transactions
+      if (jenisTransaksi === "LKS" && semester) {
+        data.bulan = semester;
+      }
+
+      transaksiData.push(data);
     }
 
     // Use try-catch to handle duplicates gracefully

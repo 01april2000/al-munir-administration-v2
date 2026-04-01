@@ -25,7 +25,7 @@ import {
   PERIODE_PEMBAYARAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, Trophy } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, Trophy, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
@@ -36,6 +36,20 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Checkbox } from "@/components/ui/checkbox";
+
+// SMK Kelas options
+const SMK_KELAS_OPTIONS = [
+  { value: "X_RPL_A", label: "X RPL A" },
+  { value: "X_RPL_B", label: "X RPL B" },
+  { value: "X_AKL", label: "X AKL" },
+  { value: "XI_RPL_A", label: "XI RPL A" },
+  { value: "XI_RPL_B", label: "XI RPL B" },
+  { value: "XI_AKL", label: "XI AKL" },
+  { value: "XII_RPL_A", label: "XII RPL A" },
+  { value: "XII_RPL_B", label: "XII RPL B" },
+  { value: "XII_AKL", label: "XII AKL" },
+] as const;
 
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
@@ -96,8 +110,18 @@ export function BendaharaTransaksiLKS() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState<Transaksi | null>(null);
+
+  // Generate form states
+  const [generateKelas, setGenerateKelas] = useState<string[]>([]);
+  const [generateSemester, setGenerateSemester] = useState("Semester 1");
+  const [generateTahun, setGenerateTahun] = useState(currentYear.toString());
+  const [generateJumlah, setGenerateJumlah] = useState("");
+  const [generateKeterangan, setGenerateKeterangan] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Form states
   const [formData, setFormData] = useState<FormData>(getDefaultFormData());
@@ -321,6 +345,92 @@ export function BendaharaTransaksiLKS() {
     setIsDeleteDialogOpen(true);
   };
 
+  // Handle kelas toggle for generate
+  const handleKelasToggle = (kelasValue: string) => {
+    setGenerateKelas((prev) =>
+      prev.includes(kelasValue)
+        ? prev.filter((k) => k !== kelasValue)
+        : [...prev, kelasValue]
+    );
+  };
+
+  // Handle select all kelas
+  const handleSelectAllKelas = () => {
+    if (generateKelas.length === SMK_KELAS_OPTIONS.length) {
+      setGenerateKelas([]);
+    } else {
+      setGenerateKelas(SMK_KELAS_OPTIONS.map((k) => k.value));
+    }
+  };
+
+  // Handle generate transaksi
+  const handleGenerate = async () => {
+    if (generateKelas.length === 0) {
+      setError("Pilih minimal satu kelas untuk digenerate");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      setError(null);
+      setGenerateResult(null);
+
+      const response = await fetch("/api/transaksi/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jenisTransaksi: "LKS",
+          tahun: parseInt(generateTahun),
+          semester: generateSemester,
+          kelas: generateKelas,
+          jumlah: generateJumlah ? parseInt(generateJumlah) : undefined,
+          keterangan: generateKeterangan || undefined,
+          jenisSantri: "SMK",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate transaksi");
+      }
+
+      // Show success message in dialog
+      setGenerateResult({
+        success: true,
+        message: data.message || "Transaksi berhasil di-generate",
+      });
+
+      // Reset form but keep dialog open to show result
+      setGenerateKelas([]);
+      setGenerateSemester("Semester 1");
+      setGenerateTahun(currentYear.toString());
+      setGenerateJumlah("");
+      setGenerateKeterangan("");
+
+      // Refresh transaksi list
+      fetchTransaksi();
+    } catch (err) {
+      setGenerateResult({
+        success: false,
+        message: err instanceof Error ? err.message : "An error occurred",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Reset generate form
+  const resetGenerateForm = () => {
+    setGenerateKelas([]);
+    setGenerateSemester("Semester 1");
+    setGenerateTahun(currentYear.toString());
+    setGenerateJumlah("");
+    setGenerateKeterangan("");
+    setError(null);
+    setGenerateResult(null);
+  };
+
   // Get columns with actions
   const columns = [
     {
@@ -460,10 +570,22 @@ export function BendaharaTransaksiLKS() {
           <h2 className="text-xl font-semibold">Pembayaran LKS</h2>
           <p className="text-sm text-muted-foreground">Kelola pembayaran LKS santri SMK</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Pembayaran
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              resetGenerateForm();
+              setIsGenerateDialogOpen(true);
+            }}
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate
+          </Button>
+          <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Pembayaran
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -932,6 +1054,150 @@ export function BendaharaTransaksiLKS() {
                 "Hapus"
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Dialog */}
+      <Dialog open={isGenerateDialogOpen} onOpenChange={(open) => {
+        if (!open) resetGenerateForm();
+        setIsGenerateDialogOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Generate Transaksi LKS</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {error && (
+              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                {error}
+              </div>
+            )}
+            <div>
+              <Label className="mb-2">Pilih Kelas</Label>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">
+                  {generateKelas.length} dari {SMK_KELAS_OPTIONS.length} kelas dipilih
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSelectAllKelas}
+                >
+                  {generateKelas.length === SMK_KELAS_OPTIONS.length ? "Hapus Semua" : "Pilih Semua"}
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                {SMK_KELAS_OPTIONS.map((kelas) => (
+                  <div key={kelas.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`kelas-${kelas.value}`}
+                      checked={generateKelas.includes(kelas.value)}
+                      onCheckedChange={() => handleKelasToggle(kelas.value)}
+                    />
+                    <label
+                      htmlFor={`kelas-${kelas.value}`}
+                      className="text-sm cursor-pointer"
+                    >
+                      {kelas.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="generate-semester">Semester</Label>
+                <select
+                  id="generate-semester"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={generateSemester}
+                  onChange={(e) => setGenerateSemester(e.target.value)}
+                >
+                  {SEMESTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="generate-tahun">Tahun</Label>
+                <Input
+                  id="generate-tahun"
+                  type="number"
+                  value={generateTahun}
+                  onChange={(e) => setGenerateTahun(e.target.value)}
+                  min="2020"
+                  max="2100"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="generate-jumlah">Jumlah (Rp) - Kosongkan untuk default</Label>
+              <Input
+                id="generate-jumlah"
+                type="number"
+                value={generateJumlah}
+                onChange={(e) => setGenerateJumlah(e.target.value)}
+                placeholder="Default: Rp 100.000"
+              />
+            </div>
+            <div>
+              <Label htmlFor="generate-keterangan">Keterangan (Opsional)</Label>
+              <Input
+                id="generate-keterangan"
+                value={generateKeterangan}
+                onChange={(e) => setGenerateKeterangan(e.target.value)}
+                placeholder="Masukkan keterangan (opsional)"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+              <p className="font-medium">Informasi:</p>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>Transaksi akan digenerate untuk santri aktif di kelas yang dipilih</li>
+                <li>Status transaksi: Belum Bayar</li>
+                <li>Transaksi yang sudah ada akan dilewati (tidak duplikat)</li>
+              </ul>
+            </div>
+          </div>
+          {/* Result Message */}
+          {generateResult && (
+            <div className={`text-sm p-3 rounded-md ${
+              generateResult.success
+                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                : "bg-destructive/10 text-destructive"
+            }`}>
+              <div className="flex items-center gap-2">
+                {generateResult.success ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                )}
+                <span>{generateResult.message}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
+              {generateResult?.success ? "Tutup" : "Batal"}
+            </Button>
+            {!generateResult?.success && (
+              <Button onClick={handleGenerate} disabled={isGenerating || generateKelas.length === 0}>
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate"
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

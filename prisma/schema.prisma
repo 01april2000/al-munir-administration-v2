@@ -81,6 +81,28 @@ enum StatusSantri {
   KELUAR
 }
 
+enum KelasSantri {
+  VII_A
+  VII_B
+  VII_C
+  VIII_A
+  VIII_B
+  VIII_C
+  IX_A
+  IX_B
+  IX_C
+  X_RPL_A
+  X_RPL_B
+  X_AKL
+  XI_RPL_A
+  XI_RPL_B
+  XI_AKL
+  XII_RPL_A
+  XII_RPL_B
+  XII_AKL
+  PONDOK
+}
+
 model User {
   id            String      @id
   name          String
@@ -154,7 +176,7 @@ model Santri {
   id            String           @id @default(cuid())
   nis           String           @unique
   nama          String
-  kelas         String
+  kelas         KelasSantri
   asrama        String
   wali          String
   status        StatusSantri     @default(AKTIF)

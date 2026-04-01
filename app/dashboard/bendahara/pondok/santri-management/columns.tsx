@@ -19,11 +19,13 @@ export type StatusSantri = "AKTIF" | "NON_AKTIF" | "LULUS" | "KELUAR";
 export type JenisSantri = "SMK" | "SMP" | "PONDOK";
 export type JenisBeasiswa = "FULL" | "SYAHRIAH" | "SPP" | "UANG_SAKU";
 
+export type KelasPondok = "PONDOK";
+
 export interface Santri {
   id: string;
   nis: string;
   nama: string;
-  kelas: string;
+  kelas: KelasPondok;
   asrama: string;
   wali: string;
   status: StatusSantri;

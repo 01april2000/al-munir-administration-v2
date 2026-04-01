@@ -26,6 +26,7 @@ import {
   StatusSantri,
   JenisSantri,
   JenisBeasiswa,
+  KelasSmk,
 } from "./columns";
 import { Plus, Users, Loader2, Trash2, GraduationCap, Upload } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
@@ -35,7 +36,7 @@ import { ImportSantriDialog } from "@/components/admin/import-santri-dialog";
 interface FormData {
   nis: string;
   nama: string;
-  kelas: string;
+  kelas: KelasSmk;
   asrama: string;
   wali: string;
   status: StatusSantri;
@@ -49,7 +50,7 @@ interface FormData {
 const initialFormData: FormData = {
   nis: "",
   nama: "",
-  kelas: "",
+  kelas: "X_RPL_A",
   asrama: "",
   wali: "",
   status: "AKTIF",
@@ -59,6 +60,18 @@ const initialFormData: FormData = {
   email: "",
   password: "",
 };
+
+const kelasSmkOptions: { value: KelasSmk; label: string }[] = [
+  { value: "X_RPL_A", label: "X RPL A" },
+  { value: "X_RPL_B", label: "X RPL B" },
+  { value: "X_AKL", label: "X AKL" },
+  { value: "XI_RPL_A", label: "XI RPL A" },
+  { value: "XI_RPL_B", label: "XI RPL B" },
+  { value: "XI_AKL", label: "XI AKL" },
+  { value: "XII_RPL_A", label: "XII RPL A" },
+  { value: "XII_RPL_B", label: "XII RPL B" },
+  { value: "XII_AKL", label: "XII AKL" },
+];
 
 const statusOptions: { value: StatusSantri; label: string }[] = [
   { value: "AKTIF", label: "Aktif" },
@@ -386,15 +399,24 @@ export default function SantriManagementPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="kelas">Kelas</Label>
-                <Input
+                <select
                   id="kelas"
                   value={formData.kelas}
                   onChange={(e) =>
-                    setFormData({ ...formData, kelas: e.target.value })
+                    setFormData({
+                      ...formData,
+                      kelas: e.target.value as KelasSmk,
+                    })
                   }
-                  placeholder="Kelas"
+                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                   required
-                />
+                >
+                  {kelasSmkOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="asrama">Asrama</Label>

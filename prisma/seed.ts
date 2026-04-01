@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker/locale/id_ID";
-import { PrismaClient, Role, JenisSantri, StatusSantri, JenisTagihan, StatusTagihan, JenisTransaksi, StatusTransaksi, StatusUangSaku, JenisBeasiswa, PeriodePembayaran } from "../lib/generated/prisma";
+import { PrismaClient, Role, JenisSantri, StatusSantri, JenisTagihan, StatusTagihan, JenisTransaksi, StatusTransaksi, StatusUangSaku, JenisBeasiswa, PeriodePembayaran, KelasSantri } from "../lib/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "better-auth/crypto";
 import "dotenv/config";
@@ -22,9 +22,17 @@ const ADMIN_PASSWORD = "admin123"; // Password for admin account
 const BENDAHARA_PASSWORD = "bendahara123"; // Password for all bendahara accounts
 const SANTRI_PASSWORD = "santri123"; // Password for test santri accounts
 
-// Helper arrays
-const kelasSMK = ["X TKJ 1", "X TKJ 2", "X RPL 1", "X RPL 2", "XI TKJ 1", "XI TKJ 2", "XI RPL 1", "XI RPL 2", "XII TKJ 1", "XII TKJ 2", "XII RPL 1", "XII RPL 2"];
-const kelasSMP = ["VII A", "VII B", "VII C", "VIII A", "VIII B", "VIII C", "IX A", "IX B", "IX C"];
+// Helper arrays - using KelasSantri enum values
+const kelasSMK: KelasSantri[] = [
+  KelasSantri.X_RPL_A, KelasSantri.X_RPL_B, KelasSantri.X_AKL,
+  KelasSantri.XI_RPL_A, KelasSantri.XI_RPL_B, KelasSantri.XI_AKL,
+  KelasSantri.XII_RPL_A, KelasSantri.XII_RPL_B, KelasSantri.XII_AKL
+];
+const kelasSMP: KelasSantri[] = [
+  KelasSantri.VII_A, KelasSantri.VII_B, KelasSantri.VII_C,
+  KelasSantri.VIII_A, KelasSantri.VIII_B, KelasSantri.VIII_C,
+  KelasSantri.IX_A, KelasSantri.IX_B, KelasSantri.IX_C
+];
 const asramaList = ["Asrama Putra A", "Asrama Putra B", "Asrama Putri A", "Asrama Putri B", "Asrama Putri C"];
 const bulanList = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const jenisLaundryList = ["Cuci Setrika", "Cuci Kering", "Setrika Saja", "Express"];
@@ -196,7 +204,7 @@ async function main() {
       data: {
         nis: "12345678",
         nama: "Santri SMK Test",
-        kelas: "X TKJ 1",
+        kelas: KelasSantri.X_RPL_A,
         asrama: "Asrama Putra A",
         wali: faker.person.fullName(),
         status: StatusSantri.AKTIF,
@@ -210,7 +218,7 @@ async function main() {
       data: {
         nis: "12345679",
         nama: "Santri SMP Test",
-        kelas: "VII A",
+        kelas: KelasSantri.VII_A,
         asrama: "Asrama Putri A",
         wali: faker.person.fullName(),
         status: StatusSantri.AKTIF,
@@ -224,7 +232,7 @@ async function main() {
       data: {
         nis: "12345680",
         nama: "Santri Pondok Test",
-        kelas: "X TKJ 1",
+        kelas: KelasSantri.X_RPL_B,
         asrama: "Asrama Putra B",
         wali: faker.person.fullName(),
         status: StatusSantri.AKTIF,
@@ -269,7 +277,7 @@ async function main() {
   const santriData = [];
   for (let i = 0; i < Math.min(NUM_SANTRI, allSantriUsers.length); i++) {
     const user = allSantriUsers[i];
-    let kelas: string;
+    let kelas: KelasSantri;
     
     if (user.jenisSantri === JenisSantri.SMK) {
       kelas = faker.helpers.arrayElement(kelasSMK);

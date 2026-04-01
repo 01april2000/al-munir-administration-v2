@@ -26,6 +26,7 @@ import {
   StatusSantri,
   JenisSantri,
   JenisBeasiswa,
+  KelasPondok,
 } from "./columns";
 import { Plus, Users, Loader2, Trash2, GraduationCap, Upload } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
@@ -35,7 +36,7 @@ import { ImportSantriDialog } from "@/components/admin/import-santri-dialog";
 interface FormData {
   nis: string;
   nama: string;
-  kelas: string;
+  kelas: KelasPondok;
   asrama: string;
   wali: string;
   status: StatusSantri;
@@ -49,7 +50,7 @@ interface FormData {
 const initialFormData: FormData = {
   nis: "",
   nama: "",
-  kelas: "",
+  kelas: "PONDOK",
   asrama: "",
   wali: "",
   status: "AKTIF",
@@ -385,6 +386,7 @@ export default function SantriManagementPage() {
                   required
                 />
               </div>
+              <input type="hidden" name="kelas" value={formData.kelas} />
               <div className="space-y-2">
                 <Label htmlFor="asrama">Asrama</Label>
                 <Input

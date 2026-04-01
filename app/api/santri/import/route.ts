@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JenisSantri, StatusSantri, JenisBeasiswa } from "@/lib/generated/prisma";
+import { JenisSantri, StatusSantri, JenisBeasiswa, KelasSantri } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
           data: {
             nis: row.nis,
             nama: row.nama,
-            kelas: row.kelas || "",
+            kelas: (row.kelas?.toUpperCase().replace(/\s+/g, "_") as KelasSantri) || null,
             asrama: row.asrama,
             wali: row.wali,
             status: (row.status?.toUpperCase() as StatusSantri) || "AKTIF",

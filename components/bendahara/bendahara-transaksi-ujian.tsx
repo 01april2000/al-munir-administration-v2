@@ -25,6 +25,15 @@ import {
 import { Transaksi } from "@/lib/types/transaksi";
 import { Plus, RefreshCw, Loader2, FileText, FileCheck, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const currentYear = new Date().getFullYear();
 
@@ -624,10 +633,58 @@ export function BendaharaTransaksiUjian({ role }: BendaharaTransaksiUjianProps) 
           ) : error ? (
             <div className="text-center text-destructive py-8">{error}</div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={transaksiList}
-            />
+            <>
+              <DataTable
+                columns={columns}
+                data={transaksiList}
+              />
+              {/* Pagination */}
+              {total > 0 && (
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    Menampilkan {((page - 1) * limit) + 1} - {Math.min(page * limit, total)} dari {total} data
+                  </div>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setPage(p => Math.max(1, p - 1))}
+                          className={page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: Math.ceil(total / limit) }, (_, i) => i + 1)
+                        .filter((p) => {
+                          const totalPages = Math.ceil(total / limit);
+                          if (totalPages <= 5) return true;
+                          if (p === 1 || p === totalPages) return true;
+                          if (Math.abs(p - page) <= 1) return true;
+                          return false;
+                        })
+                        .map((p, i, arr) => (
+                          <PaginationItem key={p}>
+                            {i > 0 && arr[i - 1] !== p - 1 && (
+                              <PaginationEllipsis />
+                            )}
+                            <PaginationLink
+                              onClick={() => setPage(p)}
+                              isActive={page === p}
+                              className="cursor-pointer"
+                            >
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
+                          className={page >= Math.ceil(total / limit) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

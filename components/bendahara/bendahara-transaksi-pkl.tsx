@@ -23,7 +23,7 @@ import {
   STATUS_TRANSAKSI_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, FileCheck, Briefcase } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, FileCheck, Briefcase, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const currentYear = new Date().getFullYear();
@@ -88,8 +88,16 @@ export function BendaharaTransaksiPkl({ role }: BendaharaTransaksiPklProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState<Transaksi | null>(null);
+
+  // Generate form state
+  const [generateTahun, setGenerateTahun] = useState(currentYear.toString());
+  const [generateJumlah, setGenerateJumlah] = useState("150000");
+  const [generateKeterangan, setGenerateKeterangan] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Form states
   const [formData, setFormData] = useState<FormData>(getDefaultFormData());
@@ -310,6 +318,45 @@ export function BendaharaTransaksiPkl({ role }: BendaharaTransaksiPklProps) {
     setIsDeleteDialogOpen(true);
   };
 
+  // Handle generate PKL transactions
+  const handleGeneratePkl = async () => {
+    if (!generateTahun) {
+      setGenerateResult({ type: "error", message: "Tahun wajib diisi" });
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      setGenerateResult(null);
+      const response = await fetch("/api/transaksi/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jenisTransaksi: "PKL",
+          tahun: parseInt(generateTahun),
+          jumlah: generateJumlah ? parseInt(generateJumlah) : undefined,
+          keterangan: generateKeterangan || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal generate transaksi PKL");
+      }
+
+      setGenerateResult({ type: "success", message: data.message || "Berhasil generate transaksi PKL" });
+      setGenerateTahun(currentYear.toString());
+      setGenerateJumlah("150000");
+      setGenerateKeterangan("");
+      fetchTransaksi();
+    } catch (err) {
+      setGenerateResult({ type: "error", message: err instanceof Error ? err.message : "Terjadi kesalahan" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Get columns with actions
   const columns = [
     {
@@ -431,11 +478,23 @@ export function BendaharaTransaksiPkl({ role }: BendaharaTransaksiPklProps) {
         <div>
           <h2 className="text-xl font-semibold">Pembayaran PKL</h2>
           <p className="text-sm text-muted-foreground">Kelola pembayaran PKL santri {roleTitle}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Generate otomatis hanya untuk kelas: XII_RPL_A, XII_RPL_B, XII_AKL
+          </p>
         </div>
-        <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Pembayaran
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsGenerateDialogOpen(true)}
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate PKL
+          </Button>
+          <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Pembayaran
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -837,6 +896,83 @@ export function BendaharaTransaksiPkl({ role }: BendaharaTransaksiPklProps) {
                 </>
               ) : (
                 "Hapus"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate PKL Dialog */}
+      <Dialog open={isGenerateDialogOpen} onOpenChange={(open) => {
+        setIsGenerateDialogOpen(open);
+        if (!open) setGenerateResult(null);
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Generate Transaksi PKL</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Generate transaksi PKL untuk santri kelas XII_RPL_A, XII_RPL_B, dan XII_AKL.
+            </p>
+            <div className="grid gap-4 py-2">
+              <div>
+                <Label htmlFor="generate-tahun">Tahun</Label>
+                <Input
+                  id="generate-tahun"
+                  type="number"
+                  value={generateTahun}
+                  onChange={(e) => setGenerateTahun(e.target.value)}
+                  min="2020"
+                  max="2100"
+                />
+              </div>
+              <div>
+                <Label htmlFor="generate-jumlah">Jumlah (Opsional)</Label>
+                <Input
+                  id="generate-jumlah"
+                  type="number"
+                  value={generateJumlah}
+                  onChange={(e) => setGenerateJumlah(e.target.value)}
+                  placeholder="Default: 150000"
+                />
+              </div>
+              <div>
+                <Label htmlFor="generate-keterangan">Keterangan (Opsional)</Label>
+                <Input
+                  id="generate-keterangan"
+                  value={generateKeterangan}
+                  onChange={(e) => setGenerateKeterangan(e.target.value)}
+                  placeholder="Contoh: Praktik Kerja Lapangan"
+                />
+              </div>
+            </div>
+            {/* Result notification */}
+            {generateResult && (
+              <div className={`p-3 rounded-md text-sm ${
+                generateResult.type === "success"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+              }`}>
+                {generateResult.message}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsGenerateDialogOpen(false);
+              setGenerateResult(null);
+            }}>
+              Tutup
+            </Button>
+            <Button onClick={handleGeneratePkl} disabled={isGenerating}>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate"
               )}
             </Button>
           </DialogFooter>

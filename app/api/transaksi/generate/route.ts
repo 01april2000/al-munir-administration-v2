@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JenisTransaksi, StatusTransaksi, StatusSantri, JenisSantri, Role } from "@/lib/generated/prisma";
+import { JenisTransaksi, StatusTransaksi, StatusSantri, JenisSantri, Role, KelasSantri } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -15,7 +15,15 @@ const DEFAULT_AMOUNTS: Record<string, number> = {
   UJIAN_TKA: 150000,
   UJIAN_LAINNYA: 50000,
   BUKU_PENDAMPING: 75000,
+  PKL: 150000,
 };
+
+// Kelas yang terkena tagihan PKL
+const PKL_KELAS: KelasSantri[] = [
+  KelasSantri.XII_RPL_A,
+  KelasSantri.XII_RPL_B,
+  KelasSantri.XII_AKL,
+];
 
 // POST - Generate transactions for all active santri for a specific type
 export async function POST(request: NextRequest) {
@@ -55,10 +63,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate jenisTransaksi
-    const validJenisTransaksi = ["UJIAN", "BUKU_PENDAMPING"];
+    const validJenisTransaksi = ["UJIAN", "BUKU_PENDAMPING", "PKL"];
     if (!validJenisTransaksi.includes(jenisTransaksi)) {
       return NextResponse.json(
-        { error: "Jenis transaksi tidak valid. Gunakan: UJIAN atau BUKU_PENDAMPING" },
+        { error: "Jenis transaksi tidak valid. Gunakan: UJIAN, BUKU_PENDAMPING, atau PKL" },
         { status: 400 }
       );
     }
@@ -74,6 +82,7 @@ export async function POST(request: NextRequest) {
     const santriFilter: {
       status: StatusSantri;
       jenisSantri?: JenisSantri;
+      kelas?: { in: KelasSantri[] };
     } = {
       status: StatusSantri.AKTIF,
     };
@@ -85,6 +94,13 @@ export async function POST(request: NextRequest) {
       santriFilter.jenisSantri = jenisSantri as JenisSantri;
     }
 
+    // For PKL, only target specific kelas (XII_RPL_A, XII_RPL_B, XII_AKL)
+    if (jenisTransaksi === "PKL") {
+      santriFilter.kelas = { in: PKL_KELAS };
+      // PKL hanya untuk SMK
+      santriFilter.jenisSantri = "SMK";
+    }
+
     // Get all active santri
     const activeSantri = await prisma.santri.findMany({
       where: santriFilter,
@@ -93,6 +109,7 @@ export async function POST(request: NextRequest) {
         nis: true,
         nama: true,
         jenisSantri: true,
+        kelas: true,
       },
     });
 
@@ -112,20 +129,32 @@ export async function POST(request: NextRequest) {
         finalJumlah = DEFAULT_AMOUNTS[key] || DEFAULT_AMOUNTS.UJIAN_LAINNYA;
       } else if (jenisTransaksi === "BUKU_PENDAMPING") {
         finalJumlah = DEFAULT_AMOUNTS.BUKU_PENDAMPING;
+      } else if (jenisTransaksi === "PKL") {
+        finalJumlah = DEFAULT_AMOUNTS.PKL;
       } else {
         finalJumlah = DEFAULT_AMOUNTS.UJIAN_LAINNYA;
       }
     }
 
     // Generate kode prefix
-    const kodePrefix = jenisTransaksi === "UJIAN" 
-      ? `UJIAN-${jenisUjian || "LAINNYA"}-${tahun}`
-      : `BUKU-PENDAMPING-${tahun}`;
+    let kodePrefix: string;
+    if (jenisTransaksi === "UJIAN") {
+      kodePrefix = `UJIAN-${jenisUjian || "LAINNYA"}-${tahun}`;
+    } else if (jenisTransaksi === "PKL") {
+      kodePrefix = `PKL-${tahun}`;
+    } else {
+      kodePrefix = `BUKU-PENDAMPING-${tahun}`;
+    }
 
     // Build keterangan
-    const finalKeterangan = jenisTransaksi === "UJIAN" 
-      ? jenisUjian || keterangan || "Ujian"
-      : keterangan || "Buku Pendamping";
+    let finalKeterangan: string;
+    if (jenisTransaksi === "UJIAN") {
+      finalKeterangan = jenisUjian || keterangan || "Ujian";
+    } else if (jenisTransaksi === "PKL") {
+      finalKeterangan = keterangan || "Praktik Kerja Lapangan";
+    } else {
+      finalKeterangan = keterangan || "Buku Pendamping";
+    }
 
     const transaksiData: {
       kode: string;

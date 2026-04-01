@@ -166,18 +166,6 @@ export function AdminSidebar() {
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={pathname === "/dashboard/admin/laporan-keuangan"}
-                  render={
-                    <Link href="/dashboard/admin/laporan-keuangan">
-                      <FileText className="h-4 w-4" />
-                      <span>Laporan Keuangan</span>
-                    </Link>
-                  }
-                />
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

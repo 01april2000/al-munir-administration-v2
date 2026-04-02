@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Card,
@@ -30,6 +31,7 @@ import {
 import { Transaksi, JenisTransaksi } from "@/lib/types/transaksi";
 import { Plus, RefreshCw, Loader2, FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Shirt, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useReceiptPrinting } from "@/components/shared/receipt-printing";
 import {
   Pagination,
   PaginationContent,
@@ -116,9 +118,13 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState<Transaksi | null>(null);
   const [isAmbilSaldoDialog, setIsAmbilSaldoDialog] = useState(false);
+
+  // Receipt printing hook
+  const { openReceipt, ReceiptDialog } = useReceiptPrinting();
 
   // Form states
   const [formData, setFormData] = useState<FormData>(getDefaultFormData(jenis));
@@ -403,10 +409,57 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
     setIsDeleteDialogOpen(true);
   };
 
+  // Open cash payment dialog
+  const openCashPaymentDialog = (transaksi: Transaksi) => {
+    setSelectedTransaksi(transaksi);
+    setIsCashPaymentDialogOpen(true);
+  };
+
+  // Handle cash payment confirmation
+  const handleCashPayment = async () => {
+    if (!selectedTransaksi) return;
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch("/api/transaksi/cash-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaksiId: selectedTransaksi.id }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to confirm cash payment");
+      }
+
+      const data = await response.json();
+      setIsCashPaymentDialogOpen(false);
+      
+      // Refresh the transaction list
+      fetchTransaksi();
+      
+      // Open receipt with updated transaction data
+      if (data.transaksi) {
+        openReceipt(data.transaksi);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle print receipt
+  const handlePrintReceipt = (transaksi: Transaksi) => {
+    openReceipt(transaksi);
+  };
+
   // Get columns with actions
   const columns = getTransaksiColumns(jenis, {
     onEdit: openEditDialog,
     onDelete: openDeleteDialog,
+    onCashPayment: openCashPaymentDialog,
+    onPrintReceipt: handlePrintReceipt,
   });
 
   // Calculate total pages
@@ -1358,6 +1411,54 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cash Payment Confirmation Dialog */}
+      <Dialog open={isCashPaymentDialogOpen} onOpenChange={setIsCashPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Pembayaran Cash</DialogTitle>
+            <DialogDescription>
+              Konfirmasi bahwa pembayaran telah diterima secara tunai.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedTransaksi && (
+              <div className="p-3 bg-muted rounded-md text-sm space-y-2">
+                <p><strong>Kode:</strong> {selectedTransaksi.kode}</p>
+                <p><strong>Santri:</strong> {selectedTransaksi.santri.nama} ({selectedTransaksi.santri.nis})</p>
+                <p><strong>Jenis:</strong> {selectedTransaksi.jenis}</p>
+                {selectedTransaksi.bulan && (
+                  <p><strong>Bulan:</strong> {selectedTransaksi.bulan} {selectedTransaksi.tahun}</p>
+                )}
+                <p className="text-lg font-bold text-green-600">
+                  <strong>Jumlah:</strong> {formatCurrency(selectedTransaksi.jumlah)}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCashPaymentDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleCashPayment} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Konfirmasi Pembayaran
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Dialog */}
+      <ReceiptDialog />
     </div>
   );
 }

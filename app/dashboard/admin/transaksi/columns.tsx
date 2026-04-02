@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpDown, Pencil, Trash2, Banknote, Printer } from "lucide-react";
 import { Transaksi, JenisTransaksi, STATUS_TRANSAKSI_OPTIONS, STATUS_UANG_SAKU_OPTIONS, BULAN_OPTIONS } from "@/lib/types/transaksi";
 
 // Format currency to Indonesian Rupiah
@@ -73,6 +73,8 @@ export function StatusUangSakuBadge({ status }: { status: string }) {
 interface ColumnOptions {
   onEdit?: (transaksi: Transaksi) => void;
   onDelete?: (transaksi: Transaksi) => void;
+  onCashPayment?: (transaksi: Transaksi) => void;
+  onPrintReceipt?: (transaksi: Transaksi) => void;
 }
 
 // Base columns shared by all transaction types
@@ -235,13 +237,37 @@ function createActionsColumn(options: ColumnOptions): ColumnDef<Transaksi> {
     header: "Aksi",
     cell: ({ row }) => {
       const transaksi = row.original;
+      const canConfirmCashPayment = transaksi.status === "BELUM_BAYAR" || transaksi.status === "PENDING";
+      const canPrintReceipt = transaksi.status === "LUNAS";
+      
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {options.onCashPayment && canConfirmCashPayment && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => options.onCashPayment!(transaksi)}
+              title="Konfirmasi Pembayaran Cash"
+            >
+              <Banknote className="h-4 w-4 text-green-600" />
+            </Button>
+          )}
+          {options.onPrintReceipt && canPrintReceipt && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => options.onPrintReceipt!(transaksi)}
+              title="Cetak Struk"
+            >
+              <Printer className="h-4 w-4 text-blue-600" />
+            </Button>
+          )}
           {options.onEdit && (
             <Button
               variant="ghost"
               size="icon"
               onClick={() => options.onEdit!(transaksi)}
+              title="Edit"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -251,6 +277,7 @@ function createActionsColumn(options: ColumnOptions): ColumnDef<Transaksi> {
               variant="ghost"
               size="icon"
               onClick={() => options.onDelete!(transaksi)}
+              title="Hapus"
             >
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
@@ -285,7 +312,7 @@ export function getTransaksiColumns(
   }
 
   // Add actions column if callbacks provided
-  if (options.onEdit || options.onDelete) {
+  if (options.onEdit || options.onDelete || options.onCashPayment || options.onPrintReceipt) {
     columns.push(createActionsColumn(options));
   }
 

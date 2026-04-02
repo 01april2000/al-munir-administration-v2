@@ -56,6 +56,12 @@ enum StatusUangSaku {
   DIAMBIL
 }
 
+enum MetodePembayaran {
+  CASH
+  MIDTRANS
+  TRANSFER
+}
+
 enum JenisBeasiswa {
   FULL
   SYAHRIAH
@@ -240,6 +246,7 @@ model Transaksi {
   jenisLaundry          String?
   keterangan            String?
   managedBy             Role?                 @default(ADMIN)
+  metodePembayaran      MetodePembayaran?
   midtransTransactions  MidtransTransaction[]
   tagihan               Tagihan[]
   createdAt             DateTime              @default(now())
@@ -251,7 +258,8 @@ model Transaksi {
   @@index([createdAt])
   @@index([periodePembayaran])
   @@index([tahun])
-  @@index([managedBy])
+    @@index([managedBy])
+  @@index([metodePembayaran])
   @@map("transaksi")
 }
 

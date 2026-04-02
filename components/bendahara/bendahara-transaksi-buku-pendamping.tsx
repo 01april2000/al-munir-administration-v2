@@ -25,7 +25,8 @@ import {
   PERIODE_PEMBAYARAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, BookOpen, Sparkles } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, BookOpen, Sparkles, Banknote } from "lucide-react";
+import { ReceiptPrinting } from "@/components/shared/receipt-printing";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
@@ -97,9 +98,12 @@ export function BendaharaTransaksiBukuPendamping() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessingCash, setIsProcessingCash] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState<Transaksi | null>(null);
+  const [receiptTransaksi, setReceiptTransaksi] = useState<Transaksi | null>(null);
 
   // Generate form states
   const [generateTahun, setGenerateTahun] = useState(currentYear.toString());
@@ -380,6 +384,45 @@ export function BendaharaTransaksiBukuPendamping() {
     }
   };
 
+  // Handle cash payment
+  const handleCashPayment = async (transaksi: Transaksi) => {
+    try {
+      setIsProcessingCash(true);
+      const response = await fetch("/api/transaksi/cash-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          transaksiId: transaksi.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to process cash payment");
+      }
+
+      // Show receipt dialog
+      setReceiptTransaksi(data.transaksi);
+      setIsReceiptDialogOpen(true);
+      
+      // Refresh the list
+      await fetchTransaksi();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsProcessingCash(false);
+    }
+  };
+
+  // Open receipt dialog
+  const openReceiptDialog = (transaksi: Transaksi) => {
+    setReceiptTransaksi(transaksi);
+    setIsReceiptDialogOpen(true);
+  };
+
   // Get columns with actions
   const columns = [
     {
@@ -483,19 +526,51 @@ export function BendaharaTransaksiBukuPendamping() {
       id: "actions",
       header: "Aksi",
       cell: ({ row }: { row: { original: Transaksi } }) => {
+        const transaksi = row.original;
+        const isBelumBayar = transaksi.status === "BELUM_BAYAR";
+        const isLunas = transaksi.status === "LUNAS";
+        
         return (
           <div className="flex gap-2">
+            {isBelumBayar && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => handleCashPayment(transaksi)}
+                disabled={isProcessingCash}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isProcessingCash ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Banknote className="h-4 w-4 mr-1" />
+                    Bayar Cash
+                  </>
+                )}
+              </Button>
+            )}
+            {isLunas && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openReceiptDialog(transaksi)}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Struk
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => openEditDialog(row.original)}
+              onClick={() => openEditDialog(transaksi)}
             >
               Edit
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => openDeleteDialog(row.original)}
+              onClick={() => openDeleteDialog(transaksi)}
             >
               Hapus
             </Button>
@@ -1069,6 +1144,16 @@ export function BendaharaTransaksiBukuPendamping() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Receipt Dialog */}
+      <ReceiptPrinting
+        transaksi={receiptTransaksi}
+        isOpen={isReceiptDialogOpen}
+        onClose={() => {
+          setIsReceiptDialogOpen(false);
+          setReceiptTransaksi(null);
+        }}
+      />
     </div>
   );
 }

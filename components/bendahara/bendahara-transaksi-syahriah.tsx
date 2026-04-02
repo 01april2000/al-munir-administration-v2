@@ -26,8 +26,9 @@ import {
   PERIODE_PEMBAYARAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, Banknote, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useReceiptPrinting } from "@/components/shared/receipt-printing";
 import {
   Pagination,
   PaginationContent,
@@ -96,6 +97,12 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState<Transaksi | null>(null);
+
+  // Cash payment state
+  const [isCashPaymentLoading, setIsCashPaymentLoading] = useState<string | null>(null);
+  
+  // Receipt printing hook
+  const { isReceiptOpen, selectedTransaksi: receiptTransaksi, openReceipt, closeReceipt, ReceiptDialog } = useReceiptPrinting();
 
   // Form states
   const [formData, setFormData] = useState<FormData>(getDefaultFormData());
@@ -318,11 +325,181 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
     setIsDeleteDialogOpen(true);
   };
 
+  // Handle cash payment
+  const handleCashPayment = async (transaksi: Transaksi) => {
+    try {
+      setIsCashPaymentLoading(transaksi.id);
+      const response = await fetch("/api/transaksi/cash-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaksiId: transaksi.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal mengkonfirmasi pembayaran cash");
+      }
+
+      // Refresh the transaction list
+      fetchTransaksi();
+      
+      // Open receipt dialog with updated transaction
+      if (data.transaksi) {
+        openReceipt(data.transaksi);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setIsCashPaymentLoading(null);
+    }
+  };
+
   // Get columns with actions
-  const columns = getTransaksiColumns("SYAHRIAH", {
-    onEdit: openEditDialog,
-    onDelete: openDeleteDialog,
-  });
+  const columns = [
+    {
+      accessorKey: "kode",
+      header: "Kode",
+    },
+    {
+      id: "santri",
+      header: "Santri",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const santri = row.original.santri;
+        return (
+          <div>
+            <div className="font-medium">{santri.nama}</div>
+            <div className="text-xs text-muted-foreground">{santri.nis}</div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "bulan",
+      header: "Bulan",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const bulan = row.original.bulan;
+        return bulan || "-";
+      },
+    },
+    {
+      accessorKey: "tahun",
+      header: "Tahun",
+    },
+    {
+      accessorKey: "periodePembayaran",
+      header: "Periode",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const periode = row.original.periodePembayaran;
+        if (!periode) return "-";
+        const labels: Record<string, string> = {
+          BULANAN: "Bulanan",
+          SEMESTER: "Semester",
+          TAHUNAN: "Tahunan",
+        };
+        return labels[periode] || periode;
+      },
+    },
+    {
+      accessorKey: "jumlah",
+      header: "Jumlah",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const jumlah = row.original.jumlah;
+        return <div className="font-medium">{formatCurrency(jumlah)}</div>;
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const status = row.original.status;
+        const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+          LUNAS: "default",
+          PENDING: "secondary",
+          BELUM_BAYAR: "destructive",
+          DITOLAK: "outline",
+        };
+        const labels: Record<string, string> = {
+          LUNAS: "Lunas",
+          PENDING: "Pending",
+          BELUM_BAYAR: "Belum Bayar",
+          DITOLAK: "Ditolak",
+        };
+        return (
+          <Badge variant={variants[status] || "outline"}>
+            {labels[status] || status}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "tanggalBayar",
+      header: "Tgl. Bayar",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const tanggalBayar = row.original.tanggalBayar;
+        if (!tanggalBayar) return "-";
+        const d = typeof tanggalBayar === "string" ? new Date(tanggalBayar) : tanggalBayar;
+        return new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(d);
+      },
+    },
+    {
+      id: "actions",
+      header: "Aksi",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const transaksi = row.original;
+        const isNotPaid = transaksi.status !== "LUNAS";
+        
+        return (
+          <div className="flex gap-2">
+            {isNotPaid && (
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => handleCashPayment(transaksi)}
+                disabled={isCashPaymentLoading === transaksi.id}
+              >
+                {isCashPaymentLoading === transaksi.id ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Banknote className="mr-1 h-3 w-3" />
+                )}
+                Cash
+              </Button>
+            )}
+            {transaksi.status === "LUNAS" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openReceipt(transaksi)}
+              >
+                <Printer className="mr-1 h-3 w-3" />
+                Cetak
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openEditDialog(row.original)}
+            >
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openDeleteDialog(row.original)}
+            >
+              Hapus
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
 
   // Summary cards
   const getSummaryCards = () => {
@@ -767,6 +944,9 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Receipt Dialog */}
+      <ReceiptDialog />
     </div>
   );
 }

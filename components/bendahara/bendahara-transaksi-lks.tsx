@@ -25,8 +25,9 @@ import {
   PERIODE_PEMBAYARAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, Trophy, Sparkles } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, Trophy, Sparkles, Banknote, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useReceiptPrinting } from "@/components/shared/receipt-printing";
 import {
   Pagination,
   PaginationContent,
@@ -113,6 +114,10 @@ export function BendaharaTransaksiLKS() {
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState<Transaksi | null>(null);
+  const [isCashPaymentLoading, setIsCashPaymentLoading] = useState<string | null>(null);
+  
+  // Receipt printing hook
+  const { isReceiptOpen, selectedTransaksi: receiptTransaksi, openReceipt, closeReceipt, ReceiptDialog } = useReceiptPrinting();
 
   // Generate form states
   const [generateKelas, setGenerateKelas] = useState<string[]>([]);
@@ -431,6 +436,36 @@ export function BendaharaTransaksiLKS() {
     setGenerateResult(null);
   };
 
+  // Handle cash payment
+  const handleCashPayment = async (transaksi: Transaksi) => {
+    try {
+      setIsCashPaymentLoading(transaksi.id);
+      const response = await fetch("/api/transaksi/cash-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaksiId: transaksi.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal mengkonfirmasi pembayaran cash");
+      }
+
+      // Refresh the transaction list
+      fetchTransaksi();
+      
+      // Open receipt dialog with updated transaction
+      if (data.transaksi) {
+        openReceipt(data.transaksi);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setIsCashPaymentLoading(null);
+    }
+  };
+
   // Get columns with actions
   const columns = [
     {
@@ -534,8 +569,37 @@ export function BendaharaTransaksiLKS() {
       id: "actions",
       header: "Aksi",
       cell: ({ row }: { row: { original: Transaksi } }) => {
+        const transaksi = row.original;
+        const isNotPaid = transaksi.status !== "LUNAS";
+        
         return (
           <div className="flex gap-2">
+            {isNotPaid && (
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => handleCashPayment(transaksi)}
+                disabled={isCashPaymentLoading === transaksi.id}
+              >
+                {isCashPaymentLoading === transaksi.id ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Banknote className="mr-1 h-3 w-3" />
+                )}
+                Cash
+              </Button>
+            )}
+            {transaksi.status === "LUNAS" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openReceipt(transaksi)}
+              >
+                <Printer className="mr-1 h-3 w-3" />
+                Cetak
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -1201,6 +1265,9 @@ export function BendaharaTransaksiLKS() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Receipt Dialog */}
+      <ReceiptDialog />
     </div>
   );
 }

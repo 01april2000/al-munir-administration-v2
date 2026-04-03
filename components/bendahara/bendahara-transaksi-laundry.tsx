@@ -576,7 +576,6 @@ export function BendaharaTransaksiLaundry() {
             <>
               <DataTable
                 columns={getTransaksiColumns("LAUNDRY", {
-                  onEdit: openEditDialog,
                   onDelete: openDeleteDialog,
                 })}
                 data={transaksiList}

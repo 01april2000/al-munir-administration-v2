@@ -29,7 +29,7 @@ import {
   JENIS_LAUNDRY_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi, JenisTransaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Shirt, Check } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Shirt, Check, Briefcase, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useReceiptPrinting } from "@/components/shared/receipt-printing";
 import {

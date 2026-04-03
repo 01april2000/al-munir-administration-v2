@@ -9,7 +9,6 @@ import {
   ChevronRight,
   ChevronDown,
   LayoutDashboard,
-  FileText,
   Receipt,
   BarChart3,
   Wallet,
@@ -38,8 +37,8 @@ export function AdminSidebar() {
   const isTransaksiPath = pathname === "/dashboard/admin/transaksi"
   const activeTab = searchParams.get("tab") || "SPP"
   
-  // Only open dropdown if on transaksi path AND on SPP or SYAHRIAH tab
-  const isTransaksiSubmenuActive = isTransaksiPath && (activeTab === "SPP" || activeTab === "SYAHRIAH")
+  // Only open dropdown if on transaksi path AND on SPP, SYAHRIAH, or PKL tab
+  const isTransaksiSubmenuActive = isTransaksiPath && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL")
   const [isTransaksiOpen, setIsTransaksiOpen] = React.useState(isTransaksiSubmenuActive)
 
   React.useEffect(() => {
@@ -140,7 +139,7 @@ export function AdminSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTransaksiOpen(!isTransaksiOpen)}
-                  isActive={isTransaksiOpen && (activeTab === "SPP" || activeTab === "SYAHRIAH")}
+                  isActive={isTransaksiOpen && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL")}
                 >
                   {isTransaksiOpen ? (
                     <ChevronDown className="h-4 w-4" />
@@ -167,6 +166,16 @@ export function AdminSidebar() {
                         render={
                           <Link href="/dashboard/admin/transaksi?tab=SYAHRIAH">
                             <span>Syahriah</span>
+                          </Link>
+                        }
+                      />
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        isActive={isTransaksiPath && activeTab === "PKL"}
+                        render={
+                          <Link href="/dashboard/admin/transaksi?tab=PKL">
+                            <span>PKL</span>
                           </Link>
                         }
                       />

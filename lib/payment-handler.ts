@@ -1,4 +1,4 @@
-import { StatusTransaksi, StatusTagihan, JenisTransaksi, StatusUangSaku } from "@/lib/generated/prisma";
+import { StatusTransaksi, StatusTagihan, JenisTransaksi, StatusUangSaku, MetodePembayaran } from "@/lib/generated/prisma";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -14,12 +14,13 @@ export async function handleSuccessfulPayment(transaksiId: string, paymentTime: 
   try {
     // Use transaction for atomicity - all updates succeed or none do
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Update transaksi status to LUNAS
+      // 1. Update transaksi status to LUNAS and set payment method to MIDTRANS
       const updatedTransaksi = await tx.transaksi.update({
         where: { id: transaksiId },
         data: {
           status: StatusTransaksi.LUNAS,
           tanggalBayar: paymentTime ? new Date(paymentTime) : new Date(),
+          metodePembayaran: MetodePembayaran.MIDTRANS,
         },
       });
       console.log("handleSuccessfulPayment: Transaksi updated to LUNAS:", updatedTransaksi.id);
@@ -112,7 +113,7 @@ export async function handleFailedPayment(transaksiId: string, tagihanId?: strin
 }
 
 /**
- * Handle pending payment - updates transaksi status
+ * Handle pending payment - updates transaksi status and sets payment method to MIDTRANS
  * This function is shared between webhook and check-status endpoints
  */
 export async function handlePendingPayment(transaksiId: string) {
@@ -120,7 +121,10 @@ export async function handlePendingPayment(transaksiId: string) {
   
   await prisma.transaksi.update({
     where: { id: transaksiId },
-    data: { status: StatusTransaksi.PENDING },
+    data: {
+      status: StatusTransaksi.PENDING,
+      metodePembayaran: MetodePembayaran.MIDTRANS,
+    },
   });
 }
 

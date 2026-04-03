@@ -70,6 +70,31 @@ export function StatusUangSakuBadge({ status }: { status: string }) {
   );
 }
 
+// Metode Pembayaran labels and variants
+const metodePembayaranVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  CASH: "default",
+  MIDTRANS: "secondary",
+  TRANSFER: "outline",
+  SALDO: "secondary",
+};
+
+const metodePembayaranLabels: Record<string, string> = {
+  CASH: "Cash",
+  MIDTRANS: "Midtrans",
+  TRANSFER: "Transfer",
+  SALDO: "Saldo",
+};
+
+// Metode Pembayaran Badge Component
+export function MetodePembayaranBadge({ metode }: { metode: string | null }) {
+  if (!metode) return <span className="text-muted-foreground">-</span>;
+  return (
+    <Badge variant={metodePembayaranVariants[metode] || "outline"}>
+      {metodePembayaranLabels[metode] || metode}
+    </Badge>
+  );
+}
+
 interface ColumnOptions {
   onDelete?: (transaksi: Transaksi) => void;
   onCashPayment?: (transaksi: Transaksi) => void;
@@ -129,6 +154,14 @@ const baseColumns: ColumnDef<Transaksi>[] = [
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       return <StatusBadge status={status} />;
+    },
+  },
+  {
+    accessorKey: "metodePembayaran",
+    header: "Metode",
+    cell: ({ row }) => {
+      const metode = row.getValue("metodePembayaran") as string | null;
+      return <MetodePembayaranBadge metode={metode} />;
     },
   },
   {

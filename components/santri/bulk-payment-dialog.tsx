@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Loader2, CreditCard, AlertCircle, CheckCircle2, Wallet } from "lucide-react"
 
 interface TagihanItem {
   tagihanId: string
@@ -48,6 +48,31 @@ export function BulkPaymentDialog({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [snapLoaded, setSnapLoaded] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<"midtrans" | "saldo">("midtrans")
+  const [santriSaldo, setSantriSaldo] = useState<number>(0)
+  const [saldoLoading, setSaldoLoading] = useState(true)
+  const [success, setSuccess] = useState(false)
+
+  // Fetch santri saldo
+  useEffect(() => {
+    async function fetchSaldo() {
+      try {
+        const res = await fetch("/api/santri/saldo")
+        if (res.ok) {
+          const data = await res.json()
+          setSantriSaldo(data.saldo)
+        }
+      } catch (error) {
+        console.error("Error fetching saldo:", error)
+      } finally {
+        setSaldoLoading(false)
+      }
+    }
+    
+    if (open) {
+      fetchSaldo()
+    }
+  }, [open])
 
   // Load Midtrans Snap script
   useEffect(() => {
@@ -68,6 +93,15 @@ export function BulkPaymentDialog({
       setSnapLoaded(true)
     }
   }, [])
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setError(null)
+      setSuccess(false)
+      setPaymentMethod("midtrans")
+    }
+  }, [open])
 
   const handleSelectAll = () => {
     const allIds = tagihanList.map(t => t.tagihanId)
@@ -98,7 +132,58 @@ export function BulkPaymentDialog({
     }).format(amount)
   }
 
-  const handlePayment = async () => {
+  const isSaldoSufficient = santriSaldo >= totalAmount
+
+  const handleSaldoPayment = async () => {
+    if (selectedIds.length === 0) {
+      setError("Pilih minimal satu tagihan untuk dibayar")
+      return
+    }
+
+    if (!isSaldoSufficient) {
+      setError("Saldo tidak mencukupi untuk pembayaran ini")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/payment/saldo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tagihanIds: selectedIds,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Pembayaran gagal")
+      }
+
+      // Show success state
+      setSuccess(true)
+      setSantriSaldo(data.remainingSaldo)
+      
+      // Call completion callback and close dialog after delay
+      setTimeout(() => {
+        onSelectionChange([])
+        onPaymentComplete?.()
+        setOpen(false)
+      }, 1500)
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat pembayaran")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMidtransPayment = async () => {
     if (!snapLoaded) {
       setError("Payment gateway belum siap. Silakan coba lagi.")
       return
@@ -203,6 +288,14 @@ export function BulkPaymentDialog({
     }
   }
 
+  const handlePayment = async () => {
+    if (paymentMethod === "saldo") {
+      await handleSaldoPayment()
+    } else {
+      await handleMidtransPayment()
+    }
+  }
+
   return (
     <>
       <div onClick={() => setOpen(true)} className="cursor-pointer">
@@ -238,33 +331,26 @@ export function BulkPaymentDialog({
                 onClick={handleDeselectAll}
                 className="flex-1"
               >
-                Hapus Pilihan
+                Batal Pilih
               </Button>
             </div>
 
             {/* Tagihan List */}
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-48 overflow-y-auto">
               {tagihanList.map((tagihan) => (
                 <div
                   key={tagihan.tagihanId}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                    selectedIds.includes(tagihan.tagihanId)
-                      ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-700"
-                      : "bg-muted/50 border-border hover:bg-muted"
-                  }`}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer"
+                  onClick={() => handleToggle(tagihan.tagihanId)}
                 >
                   <Checkbox
-                    id={tagihan.tagihanId}
                     checked={selectedIds.includes(tagihan.tagihanId)}
                     onCheckedChange={() => handleToggle(tagihan.tagihanId)}
                   />
-                  <label
-                    htmlFor={tagihan.tagihanId}
-                    className="flex-1 cursor-pointer"
-                  >
+                  <div className="flex-1">
                     <p className="font-medium text-sm">{tagihan.label}</p>
                     <p className="text-xs text-muted-foreground">{tagihan.jenis}</p>
-                  </label>
+                  </div>
                   <p className="font-semibold text-sm">{tagihan.amount}</p>
                 </div>
               ))}
@@ -280,6 +366,14 @@ export function BulkPaymentDialog({
               </p>
             </div>
 
+            {/* Success Message */}
+            {success && (
+              <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <CheckCircle2 className="h-5 w-5 shrink-0" />
+                <p className="text-sm font-medium">Pembayaran berhasil! Sisa saldo: {formatCurrency(santriSaldo)}</p>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
@@ -288,13 +382,116 @@ export function BulkPaymentDialog({
               </div>
             )}
 
+            {/* Payment Method Selection */}
+            {!success && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">Pilih Metode Pembayaran:</p>
+                
+                {/* Saldo Option */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("saldo")}
+                  disabled={saldoLoading || !isSaldoSufficient || selectedIds.length === 0}
+                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                    paymentMethod === "saldo"
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
+                      : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                  } ${(!isSaldoSufficient && !saldoLoading) || selectedIds.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        paymentMethod === "saldo" 
+                          ? "bg-emerald-100 dark:bg-emerald-900" 
+                          : "bg-gray-100 dark:bg-gray-800"
+                      }`}>
+                        <Wallet className={`h-5 w-5 ${
+                          paymentMethod === "saldo" 
+                            ? "text-emerald-600" 
+                            : "text-gray-600 dark:text-gray-400"
+                        }`} />
+                      </div>
+                      <div>
+                        <p className="font-medium">Bayar dengan Saldo</p>
+                        <p className="text-xs text-muted-foreground">
+                          {saldoLoading ? "Memuat..." : `Saldo: ${formatCurrency(santriSaldo)}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      paymentMethod === "saldo"
+                        ? "border-emerald-500 bg-emerald-500"
+                        : "border-gray-300 dark:border-gray-600"
+                    }`}>
+                      {paymentMethod === "saldo" && (
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      )}
+                    </div>
+                  </div>
+                  {!isSaldoSufficient && !saldoLoading && totalAmount > 0 && (
+                    <p className="text-xs text-red-500 mt-2">
+                      Saldo tidak mencukupi. Kekurangan: {formatCurrency(totalAmount - santriSaldo)}
+                    </p>
+                  )}
+                </button>
+
+                {/* Midtrans Option */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("midtrans")}
+                  disabled={selectedIds.length === 0}
+                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                    paymentMethod === "midtrans"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                      : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                  } ${selectedIds.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        paymentMethod === "midtrans" 
+                          ? "bg-blue-100 dark:bg-blue-900" 
+                          : "bg-gray-100 dark:bg-gray-800"
+                      }`}>
+                        <CreditCard className={`h-5 w-5 ${
+                          paymentMethod === "midtrans" 
+                            ? "text-blue-600" 
+                            : "text-gray-600 dark:text-gray-400"
+                        }`} />
+                      </div>
+                      <div>
+                        <p className="font-medium">Bayar dengan Midtrans</p>
+                        <p className="text-xs text-muted-foreground">
+                          QRIS, Transfer Bank, E-Wallet, dll
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      paymentMethod === "midtrans"
+                        ? "border-blue-500 bg-blue-500"
+                        : "border-gray-300 dark:border-gray-600"
+                    }`}>
+                      {paymentMethod === "midtrans" && (
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+
             {/* Payment Info */}
-            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Catatan:</strong> Setelah klik "Bayar Sekarang", Anda akan diarahkan ke halaman pembayaran Midtrans. 
-                Selesaikan pembayaran dan Anda akan otomatis diarahkan kembali ke halaman ini dengan notifikasi hasil pembayaran.
-              </p>
-            </div>
+            {!success && (
+              <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  {paymentMethod === "saldo" ? (
+                    <><strong>Catatan:</strong> Saldo akan langsung dipotong untuk membayar tagihan terpilih.</>
+                  ) : (
+                    <><strong>Catatan:</strong> Setelah klik "Bayar Sekarang", Anda akan diarahkan ke halaman pembayaran Midtrans. Selesaikan pembayaran dan Anda akan otomatis diarahkan kembali.</>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="pt-4">
@@ -304,25 +501,35 @@ export function BulkPaymentDialog({
               disabled={loading}
               className="flex-1"
             >
-              Batal
+              {success ? "Tutup" : "Batal"}
             </Button>
-            <Button
-              onClick={handlePayment}
-              disabled={loading || !snapLoaded || selectedIds.length === 0}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Memproses...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Bayar {selectedIds.length > 0 ? `(${selectedIds.length})` : ""}
-                </>
-              )}
-            </Button>
+            {!success && (
+              <Button
+                onClick={handlePayment}
+                disabled={loading || selectedIds.length === 0 || (paymentMethod === "midtrans" && !snapLoaded) || (paymentMethod === "saldo" && !isSaldoSufficient)}
+                className={`flex-1 ${
+                  paymentMethod === "saldo" 
+                    ? "bg-emerald-600 hover:bg-emerald-700" 
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    {paymentMethod === "saldo" ? (
+                      <Wallet className="h-4 w-4 mr-2" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    Bayar {paymentMethod === "saldo" ? "dengan Saldo" : "Sekarang"}
+                  </>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,18 +1,20 @@
-import { 
-  JenisTransaksi, 
-  StatusTransaksi, 
+import {
+  JenisTransaksi,
+  StatusTransaksi,
   StatusUangSaku,
   PeriodePembayaran,
-  Role 
+  Role,
+  MetodePembayaran
 } from '@/lib/generated/prisma';
 
 // Re-export types
-export type { 
-  JenisTransaksi, 
-  StatusTransaksi, 
+export type {
+  JenisTransaksi,
+  StatusTransaksi,
   StatusUangSaku,
   PeriodePembayaran,
-  Role 
+  Role,
+  MetodePembayaran
 };
 
 // Transaksi type for API responses
@@ -31,6 +33,7 @@ export interface Transaksi {
   jenisLaundry: string | null;
   keterangan: string | null;
   managedBy: Role | null;
+  metodePembayaran: MetodePembayaran | null;
   createdAt: Date;
   updatedAt: Date;
   santri: {

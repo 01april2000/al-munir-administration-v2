@@ -16,9 +16,22 @@ export const midtransSnap = new Snap({
 });
 
 // Generate order ID
+// Midtrans has a 50 character limit for order_id
+// So we use a shorter format: TRX-{shortId}-{timestamp}
+// where shortId is first 8 chars of tagihanId or a counter
 export function generateOrderId(tagihanId: string): string {
   const timestamp = Date.now();
-  return `ORDER-${tagihanId}-${timestamp}`;
+  // Use only first 8 characters of the ID to keep it short
+  const shortId = tagihanId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
+  return `TRX-${shortId}-${timestamp}`;
+}
+
+// Generate order ID for combined payments (multiple tagihan)
+export function generateCombinedOrderId(santriNis: string): string {
+  const timestamp = Date.now();
+  // Use NIS (student ID) which is typically short
+  const shortNis = santriNis.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+  return `COMBINED-${shortNis}-${timestamp}`;
 }
 
 // Create Snap transaction

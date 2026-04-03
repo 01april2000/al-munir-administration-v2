@@ -118,6 +118,7 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  isActive={pathname === basePath}
                   render={
                     <Link href={basePath}>
                       <Home className="h-4 w-4" />
@@ -129,6 +130,7 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
 
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  isActive={pathname?.startsWith(`${basePath}/santri-management`) ?? false}
                   render={
                     <Link href={`${basePath}/santri-management`}>
                       <GraduationCap className="h-4 w-4" />
@@ -140,7 +142,7 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTransaksiOpen(!isTransaksiOpen)}
-                  isActive={isTransaksiOpen}
+                  isActive={isTransaksiPath}
                 >
                   <Wallet className="h-4 w-4" />
                   <span>Transaksi</span>
@@ -154,11 +156,14 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
                   <SidebarMenuSub>
                     {transaksiItems.map((item) => {
                       const Icon = item.icon
+                      const itemHref = `${basePath}/transaksi/${item.href}`
+                      const isItemActive = pathname?.startsWith(itemHref) ?? false
                       return (
                         <SidebarMenuSubItem key={item.href}>
                           <SidebarMenuSubButton
+                            isActive={isItemActive}
                             render={
-                              <Link href={`${basePath}/transaksi/${item.href}`}>
+                              <Link href={itemHref}>
                                 <Icon className="h-4 w-4" />
                                 <span>{item.label}</span>
                               </Link>
@@ -175,6 +180,7 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
               {role !== "pondok" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
+                    isActive={pathname?.startsWith(`${basePath}/tagihan-management`) ?? false}
                     render={
                       <Link href={`${basePath}/tagihan-management`}>
                         <Sparkles className="h-4 w-4" />

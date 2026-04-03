@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, Pencil, Trash2, Banknote, Printer } from "lucide-react";
+import { ArrowUpDown, Trash2, Banknote, Printer } from "lucide-react";
 import { Transaksi, JenisTransaksi, STATUS_TRANSAKSI_OPTIONS, STATUS_UANG_SAKU_OPTIONS, BULAN_OPTIONS } from "@/lib/types/transaksi";
 
 // Format currency to Indonesian Rupiah
@@ -71,7 +71,6 @@ export function StatusUangSakuBadge({ status }: { status: string }) {
 }
 
 interface ColumnOptions {
-  onEdit?: (transaksi: Transaksi) => void;
   onDelete?: (transaksi: Transaksi) => void;
   onCashPayment?: (transaksi: Transaksi) => void;
   onPrintReceipt?: (transaksi: Transaksi) => void;
@@ -262,16 +261,6 @@ function createActionsColumn(options: ColumnOptions): ColumnDef<Transaksi> {
               <Printer className="h-4 w-4 text-blue-600" />
             </Button>
           )}
-          {options.onEdit && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => options.onEdit!(transaksi)}
-              title="Edit"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
           {options.onDelete && (
             <Button
               variant="ghost"
@@ -312,7 +301,7 @@ export function getTransaksiColumns(
   }
 
   // Add actions column if callbacks provided
-  if (options.onEdit || options.onDelete || options.onCashPayment || options.onPrintReceipt) {
+  if (options.onDelete || options.onCashPayment || options.onPrintReceipt) {
     columns.push(createActionsColumn(options));
   }
 

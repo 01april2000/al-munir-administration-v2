@@ -116,7 +116,6 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
 
   // Dialog states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -327,36 +326,6 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
     }
   };
 
-  // Handle edit transaksi
-  const handleEdit = async () => {
-    if (!selectedTransaksi || !formData.jumlah) {
-      setError("Mohon lengkapi semua field yang diperlukan");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const response = await fetch(`/api/transaksi/${selectedTransaksi.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRequestBody(formData, true)),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update transaksi");
-      }
-
-      setIsEditDialogOpen(false);
-      setSelectedTransaksi(null);
-      resetForm();
-      fetchTransaksi();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Handle delete transaksi
   const handleDelete = async () => {
@@ -383,25 +352,6 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
     }
   };
 
-  // Open edit dialog with data
-  const openEditDialog = (transaksi: Transaksi) => {
-    setSelectedTransaksi(transaksi);
-    setFormData({
-      santriId: transaksi.santriId,
-      bulan: transaksi.bulan || bulanList[currentMonthIndex],
-      tahun: transaksi.tahun?.toString() || currentYear.toString(),
-      jumlah: transaksi.jumlah.toString(),
-      periodePembayaran: transaksi.periodePembayaran || "BULANAN",
-      status: transaksi.status,
-      tanggalBayar: transaksi.tanggalBayar
-        ? new Date(transaksi.tanggalBayar).toISOString().split("T")[0]
-        : "",
-      statusUangSaku: transaksi.statusUangSaku || "DITAMBAH",
-      jenisLaundry: transaksi.jenisLaundry || "REGULAR",
-      keterangan: transaksi.keterangan || "",
-    });
-    setIsEditDialogOpen(true);
-  };
 
   // Open delete dialog
   const openDeleteDialog = (transaksi: Transaksi) => {
@@ -456,7 +406,6 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
 
   // Get columns with actions
   const columns = getTransaksiColumns(jenis, {
-    onEdit: openEditDialog,
     onDelete: openDeleteDialog,
     onCashPayment: openCashPaymentDialog,
     onPrintReceipt: handlePrintReceipt,
@@ -725,257 +674,85 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   };
 
   // Render type-specific form fields
-  const getFormFields = (isEdit: boolean = false) => {
-    if (jenis === "SPP" || jenis === "SYAHRIAH") {
-      return (
-        <>
-          {!isEdit && (
-            <div className="relative" ref={santriDropdownRef}>
-              <Label htmlFor="santri">Santri</Label>
-              <div className="relative">
-                <Input
-                  id="santri-search"
-                  placeholder="Ketik nama atau NIS santri..."
-                  value={santriSearch}
-                  onChange={(e) => handleSantriSearch(e.target.value)}
-                  className={formData.santriId ? "border-green-500 pr-10" : ""}
-                />
-                {loadingSantri && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                )}
-                {formData.santriId && !loadingSantri && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
-                    <Check className="h-4 w-4" />
-                  </div>
-                )}
-              </div>
-              
-              {/* Autocomplete Dropdown */}
-              {showSantriDropdown && santriSearch.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
-                  {loadingSantri ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : santriList.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                      {santriSearch ? "Tidak ada santri ditemukan" : "Ketik untuk mencari santri..."}
-                    </div>
-                  ) : (
-                    santriList.map((santri) => (
-                      <div
-                        key={santri.id}
-                        className={`px-4 py-2 cursor-pointer hover:bg-accent flex items-center justify-between ${
-                          formData.santriId === santri.id ? "bg-accent" : ""
-                        }`}
-                        onClick={() => handleSelectSantri(santri)}
-                      >
-                        <div>
-                          <div className="font-medium">{santri.nama}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {santri.nis} • {santri.kelas} • {santri.asrama}
-                          </div>
-                        </div>
-                        {formData.santriId === santri.id && (
-                          <Check className="h-4 w-4 text-green-500" />
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-              
-              {/* Selected santri info */}
-              {formData.santriId && getSelectedSantriInfo() && (
-                <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-sm">
-                  <span className="font-medium text-green-700 dark:text-green-300">
-                    {getSelectedSantriInfo()?.nama}
-                  </span>
-                  <span className="text-green-600 dark:text-green-400"> - </span>
-                  <span className="text-green-600 dark:text-green-400">
-                    {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas})
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-          {isEdit && selectedTransaksi && (
-            <div className="text-sm text-muted-foreground mb-2">
-              <strong>{selectedTransaksi.santri.nama}</strong> ({selectedTransaksi.santri.nis})
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={isEdit ? "edit-bulan" : "bulan"}>Bulan</Label>
-              <select
-                id={isEdit ? "edit-bulan" : "bulan"}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={formData.bulan}
-                onChange={(e) => handleFormChange("bulan", e.target.value)}
-              >
-                {BULAN_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor={isEdit ? "edit-tahun" : "tahun"}>Tahun</Label>
-              <Input
-                id={isEdit ? "edit-tahun" : "tahun"}
-                type="number"
-                value={formData.tahun}
-                onChange={(e) => handleFormChange("tahun", e.target.value)}
-                min="2020"
-                max="2100"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={isEdit ? "edit-jumlah" : "jumlah"}>Jumlah (Rp)</Label>
-              <Input
-                id={isEdit ? "edit-jumlah" : "jumlah"}
-                type="number"
-                value={formData.jumlah}
-                onChange={(e) => handleFormChange("jumlah", e.target.value)}
-                placeholder="Masukkan jumlah"
-              />
-            </div>
-            <div>
-              <Label htmlFor={isEdit ? "edit-periode" : "periode"}>Periode Pembayaran</Label>
-              <select
-                id={isEdit ? "edit-periode" : "periode"}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={formData.periodePembayaran}
-                onChange={(e) => handleFormChange("periodePembayaran", e.target.value)}
-              >
-                {PERIODE_PEMBAYARAN_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={isEdit ? "edit-status" : "status"}>Status</Label>
-              <select
-                id={isEdit ? "edit-status" : "status"}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={formData.status}
-                onChange={(e) => handleFormChange("status", e.target.value)}
-              >
-                {STATUS_TRANSAKSI_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}>Tanggal Bayar</Label>
-              <Input
-                id={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}
-                type="date"
-                value={formData.tanggalBayar}
-                onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
-              />
-            </div>
-          </div>
-        </>
-      );
-    }
-
+  const getFormFields = () => {
     if (jenis === "UANG_SAKU") {
       return (
         <>
-          {!isEdit && (
-            <div className="relative" ref={santriDropdownRef}>
-              <Label htmlFor="santri">Santri</Label>
-              <div className="relative">
-                <Input
-                  id="santri-search"
-                  placeholder="Ketik nama atau NIS santri..."
-                  value={santriSearch}
-                  onChange={(e) => handleSantriSearch(e.target.value)}
-                  className={formData.santriId ? "border-green-500 pr-10" : ""}
-                />
-                {loadingSantri && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+          <div className="relative" ref={santriDropdownRef}>
+            <Label htmlFor="santri">Santri</Label>
+            <div className="relative">
+              <Input
+                id="santri-search"
+                placeholder="Ketik nama atau NIS santri..."
+                value={santriSearch}
+                onChange={(e) => handleSantriSearch(e.target.value)}
+                className={formData.santriId ? "border-green-500 pr-10" : ""}
+              />
+              {loadingSantri && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
+              {formData.santriId && !loadingSantri && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                  <Check className="h-4 w-4" />
+                </div>
+              )}
+            </div>
+            
+            {/* Autocomplete Dropdown */}
+            {showSantriDropdown && santriSearch.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
+                {loadingSantri ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
-                )}
-                {formData.santriId && !loadingSantri && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
-                    <Check className="h-4 w-4" />
+                ) : santriList.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                    {santriSearch ? "Tidak ada santri ditemukan" : "Ketik untuk mencari santri..."}
                   </div>
+                ) : (
+                  santriList.map((santri) => (
+                    <div
+                      key={santri.id}
+                      className={`px-4 py-2 cursor-pointer hover:bg-accent flex items-center justify-between ${
+                        formData.santriId === santri.id ? "bg-accent" : ""
+                      }`}
+                      onClick={() => handleSelectSantri(santri)}
+                    >
+                      <div>
+                        <div className="font-medium">{santri.nama}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {santri.nis} • {santri.kelas} • Saldo: {formatCurrency(santri.saldo)}
+                        </div>
+                      </div>
+                      {formData.santriId === santri.id && (
+                        <Check className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
-              
-              {/* Autocomplete Dropdown */}
-              {showSantriDropdown && santriSearch.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
-                  {loadingSantri ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : santriList.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                      {santriSearch ? "Tidak ada santri ditemukan" : "Ketik untuk mencari santri..."}
-                    </div>
-                  ) : (
-                    santriList.map((santri) => (
-                      <div
-                        key={santri.id}
-                        className={`px-4 py-2 cursor-pointer hover:bg-accent flex items-center justify-between ${
-                          formData.santriId === santri.id ? "bg-accent" : ""
-                        }`}
-                        onClick={() => handleSelectSantri(santri)}
-                      >
-                        <div>
-                          <div className="font-medium">{santri.nama}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {santri.nis} • {santri.kelas} • Saldo: {formatCurrency(santri.saldo)}
-                          </div>
-                        </div>
-                        {formData.santriId === santri.id && (
-                          <Check className="h-4 w-4 text-green-500" />
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-              
-              {/* Selected santri info */}
-              {formData.santriId && getSelectedSantriInfo() && (
-                <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-sm">
-                  <span className="font-medium text-green-700 dark:text-green-300">
-                    {getSelectedSantriInfo()?.nama}
-                  </span>
-                  <span className="text-green-600 dark:text-green-400"> - </span>
-                  <span className="text-green-600 dark:text-green-400">
-                    {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas}) - Saldo: {formatCurrency(getSelectedSantriInfo()?.saldo || 0)}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-          {isEdit && selectedTransaksi && (
-            <div className="text-sm text-muted-foreground mb-2">
-              <strong>{selectedTransaksi.santri.nama}</strong> ({selectedTransaksi.santri.nis})
-            </div>
-          )}
+            )}
+            
+            {/* Selected santri info */}
+            {formData.santriId && getSelectedSantriInfo() && (
+              <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-sm">
+                <span className="font-medium text-green-700 dark:text-green-300">
+                  {getSelectedSantriInfo()?.nama}
+                </span>
+                <span className="text-green-600 dark:text-green-400"> - </span>
+                <span className="text-green-600 dark:text-green-400">
+                  {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas}) - Saldo: {formatCurrency(getSelectedSantriInfo()?.saldo || 0)}
+                </span>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor={isEdit ? "edit-status-uang-saku" : "status-uang-saku"}>Jenis Transaksi</Label>
+              <Label htmlFor="status-uang-saku">Jenis Transaksi</Label>
               <select
-                id={isEdit ? "edit-status-uang-saku" : "status-uang-saku"}
+                id="status-uang-saku"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={formData.statusUangSaku}
                 onChange={(e) => handleFormChange("statusUangSaku", e.target.value)}
@@ -988,9 +765,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
               </select>
             </div>
             <div>
-              <Label htmlFor={isEdit ? "edit-jumlah" : "jumlah"}>Jumlah (Rp)</Label>
+              <Label htmlFor="jumlah">Jumlah (Rp)</Label>
               <Input
-                id={isEdit ? "edit-jumlah" : "jumlah"}
+                id="jumlah"
                 type="number"
                 value={formData.jumlah}
                 onChange={(e) => handleFormChange("jumlah", e.target.value)}
@@ -1000,9 +777,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor={isEdit ? "edit-status" : "status"}>Status</Label>
+              <Label htmlFor="status">Status</Label>
               <select
-                id={isEdit ? "edit-status" : "status"}
+                id="status"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={formData.status}
                 onChange={(e) => handleFormChange("status", e.target.value)}
@@ -1015,9 +792,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
               </select>
             </div>
             <div>
-              <Label htmlFor={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}>Tanggal</Label>
+              <Label htmlFor="tanggalBayar">Tanggal</Label>
               <Input
-                id={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}
+                id="tanggalBayar"
                 type="date"
                 value={formData.tanggalBayar}
                 onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
@@ -1025,9 +802,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
             </div>
           </div>
           <div>
-            <Label htmlFor={isEdit ? "edit-keterangan" : "keterangan"}>Keterangan</Label>
+            <Label htmlFor="keterangan">Keterangan</Label>
             <Input
-              id={isEdit ? "edit-keterangan" : "keterangan"}
+              id="keterangan"
               value={formData.keterangan}
               onChange={(e) => handleFormChange("keterangan", e.target.value)}
               placeholder="Keterangan (opsional)"
@@ -1040,88 +817,81 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
     if (jenis === "LAUNDRY") {
       return (
         <>
-          {!isEdit && (
-            <div className="relative" ref={santriDropdownRef}>
-              <Label htmlFor="santri">Santri</Label>
-              <div className="relative">
-                <Input
-                  id="santri-search"
-                  placeholder="Ketik nama atau NIS santri..."
-                  value={santriSearch}
-                  onChange={(e) => handleSantriSearch(e.target.value)}
-                  className={formData.santriId ? "border-green-500 pr-10" : ""}
-                />
-                {loadingSantri && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+          <div className="relative" ref={santriDropdownRef}>
+            <Label htmlFor="santri">Santri</Label>
+            <div className="relative">
+              <Input
+                id="santri-search"
+                placeholder="Ketik nama atau NIS santri..."
+                value={santriSearch}
+                onChange={(e) => handleSantriSearch(e.target.value)}
+                className={formData.santriId ? "border-green-500 pr-10" : ""}
+              />
+              {loadingSantri && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
+              {formData.santriId && !loadingSantri && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                  <Check className="h-4 w-4" />
+                </div>
+              )}
+            </div>
+            
+            {/* Autocomplete Dropdown */}
+            {showSantriDropdown && santriSearch.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
+                {loadingSantri ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
-                )}
-                {formData.santriId && !loadingSantri && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
-                    <Check className="h-4 w-4" />
+                ) : santriList.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                    {santriSearch ? "Tidak ada santri ditemukan" : "Ketik untuk mencari santri..."}
                   </div>
+                ) : (
+                  santriList.map((santri) => (
+                    <div
+                      key={santri.id}
+                      className={`px-4 py-2 cursor-pointer hover:bg-accent flex items-center justify-between ${
+                        formData.santriId === santri.id ? "bg-accent" : ""
+                      }`}
+                      onClick={() => handleSelectSantri(santri)}
+                    >
+                      <div>
+                        <div className="font-medium">{santri.nama}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {santri.nis} • {santri.kelas} • {santri.asrama}
+                        </div>
+                      </div>
+                      {formData.santriId === santri.id && (
+                        <Check className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
-              
-              {/* Autocomplete Dropdown */}
-              {showSantriDropdown && santriSearch.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
-                  {loadingSantri ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : santriList.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                      {santriSearch ? "Tidak ada santri ditemukan" : "Ketik untuk mencari santri..."}
-                    </div>
-                  ) : (
-                    santriList.map((santri) => (
-                      <div
-                        key={santri.id}
-                        className={`px-4 py-2 cursor-pointer hover:bg-accent flex items-center justify-between ${
-                          formData.santriId === santri.id ? "bg-accent" : ""
-                        }`}
-                        onClick={() => handleSelectSantri(santri)}
-                      >
-                        <div>
-                          <div className="font-medium">{santri.nama}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {santri.nis} • {santri.kelas} • {santri.asrama}
-                          </div>
-                        </div>
-                        {formData.santriId === santri.id && (
-                          <Check className="h-4 w-4 text-green-500" />
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-              
-              {/* Selected santri info */}
-              {formData.santriId && getSelectedSantriInfo() && (
-                <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-sm">
-                  <span className="font-medium text-green-700 dark:text-green-300">
-                    {getSelectedSantriInfo()?.nama}
-                  </span>
-                  <span className="text-green-600 dark:text-green-400"> - </span>
-                  <span className="text-green-600 dark:text-green-400">
-                    {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas})
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-          {isEdit && selectedTransaksi && (
-            <div className="text-sm text-muted-foreground mb-2">
-              <strong>{selectedTransaksi.santri.nama}</strong> ({selectedTransaksi.santri.nis})
-            </div>
-          )}
+            )}
+            
+            {/* Selected santri info */}
+            {formData.santriId && getSelectedSantriInfo() && (
+              <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-sm">
+                <span className="font-medium text-green-700 dark:text-green-300">
+                  {getSelectedSantriInfo()?.nama}
+                </span>
+                <span className="text-green-600 dark:text-green-400"> - </span>
+                <span className="text-green-600 dark:text-green-400">
+                  {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas})
+                </span>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor={isEdit ? "edit-jenis-laundry" : "jenis-laundry"}>Jenis Laundry</Label>
+              <Label htmlFor="jenis-laundry">Jenis Laundry</Label>
               <select
-                id={isEdit ? "edit-jenis-laundry" : "jenis-laundry"}
+                id="jenis-laundry"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={formData.jenisLaundry}
                 onChange={(e) => handleFormChange("jenisLaundry", e.target.value)}
@@ -1134,9 +904,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
               </select>
             </div>
             <div>
-              <Label htmlFor={isEdit ? "edit-jumlah" : "jumlah"}>Jumlah (Rp)</Label>
+              <Label htmlFor="jumlah">Jumlah (Rp)</Label>
               <Input
-                id={isEdit ? "edit-jumlah" : "jumlah"}
+                id="jumlah"
                 type="number"
                 value={formData.jumlah}
                 onChange={(e) => handleFormChange("jumlah", e.target.value)}
@@ -1146,9 +916,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor={isEdit ? "edit-status" : "status"}>Status</Label>
+              <Label htmlFor="status">Status</Label>
               <select
-                id={isEdit ? "edit-status" : "status"}
+                id="status"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={formData.status}
                 onChange={(e) => handleFormChange("status", e.target.value)}
@@ -1161,9 +931,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
               </select>
             </div>
             <div>
-              <Label htmlFor={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}>Tanggal Bayar</Label>
+              <Label htmlFor="tanggalBayar">Tanggal Bayar</Label>
               <Input
-                id={isEdit ? "edit-tanggalBayar" : "tanggalBayar"}
+                id="tanggalBayar"
                 type="date"
                 value={formData.tanggalBayar}
                 onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
@@ -1171,9 +941,9 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
             </div>
           </div>
           <div>
-            <Label htmlFor={isEdit ? "edit-keterangan" : "keterangan"}>Keterangan</Label>
+            <Label htmlFor="keterangan">Keterangan</Label>
             <Input
-              id={isEdit ? "edit-keterangan" : "keterangan"}
+              id="keterangan"
               value={formData.keterangan}
               onChange={(e) => handleFormChange("keterangan", e.target.value)}
               placeholder="Keterangan (opsional)"
@@ -1199,15 +969,23 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
         </div>
         <div className="flex gap-2">
           {jenis === "UANG_SAKU" && (
-            <Button variant="destructive" onClick={openAmbilSaldoDialog}>
-              <ArrowDownCircle className="mr-2 h-4 w-4" />
-              Ambil Saldo
+            <>
+              <Button variant="destructive" onClick={openAmbilSaldoDialog}>
+                <ArrowDownCircle className="mr-2 h-4 w-4" />
+                Ambil Saldo
+              </Button>
+              <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Tambah Transaksi
+              </Button>
+            </>
+          )}
+          {jenis === "LAUNDRY" && (
+            <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Transaksi
             </Button>
           )}
-          <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Transaksi
-          </Button>
         </div>
       </div>
 
@@ -1329,7 +1107,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
             <DialogTitle>{isAmbilSaldoDialog ? "Ambil Saldo" : `Tambah Transaksi ${title}`}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {getFormFields(false)}
+            {getFormFields()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -1349,32 +1127,6 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Transaksi {title}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {getFormFields(true)}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleEdit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

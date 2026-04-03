@@ -12,6 +12,8 @@ import {
   FileText,
   Receipt,
   BarChart3,
+  Wallet,
+  Shirt,
 } from "lucide-react"
 
 import {
@@ -34,15 +36,17 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const isTransaksiPath = pathname === "/dashboard/admin/transaksi"
-  const [isTransaksiOpen, setIsTransaksiOpen] = React.useState(isTransaksiPath ?? false)
+  const activeTab = searchParams.get("tab") || "SPP"
+  
+  // Only open dropdown if on transaksi path AND on SPP or SYAHRIAH tab
+  const isTransaksiSubmenuActive = isTransaksiPath && (activeTab === "SPP" || activeTab === "SYAHRIAH")
+  const [isTransaksiOpen, setIsTransaksiOpen] = React.useState(isTransaksiSubmenuActive)
 
   React.useEffect(() => {
-    if (isTransaksiPath) {
+    if (isTransaksiSubmenuActive) {
       setIsTransaksiOpen(true)
     }
-  }, [isTransaksiPath])
-
-  const activeTab = searchParams.get("tab") || "SPP"
+  }, [isTransaksiSubmenuActive])
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -111,15 +115,39 @@ export function AdminSidebar() {
 
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  isActive={isTransaksiPath && activeTab === "UANG_SAKU"}
+                  render={
+                    <Link href="/dashboard/admin/transaksi?tab=UANG_SAKU">
+                      <Wallet className="h-4 w-4" />
+                      <span>Uang Saku</span>
+                    </Link>
+                  }
+                />
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={isTransaksiPath && activeTab === "LAUNDRY"}
+                  render={
+                    <Link href="/dashboard/admin/transaksi?tab=LAUNDRY">
+                      <Shirt className="h-4 w-4" />
+                      <span>Laundry</span>
+                    </Link>
+                  }
+                />
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
                   onClick={() => setIsTransaksiOpen(!isTransaksiOpen)}
-                  isActive={isTransaksiOpen}
+                  isActive={isTransaksiOpen && (activeTab === "SPP" || activeTab === "SYAHRIAH")}
                 >
                   {isTransaksiOpen ? (
                     <ChevronDown className="h-4 w-4" />
                   ) : (
                     <ChevronRight className="h-4 w-4" />
                   )}
-                  <span>Transaksi</span>
+                  <span>Transaksi Tagihan</span>
                 </SidebarMenuButton>
                 {isTransaksiOpen && (
                   <SidebarMenuSub>
@@ -139,26 +167,6 @@ export function AdminSidebar() {
                         render={
                           <Link href="/dashboard/admin/transaksi?tab=SYAHRIAH">
                             <span>Syahriah</span>
-                          </Link>
-                        }
-                      />
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        isActive={isTransaksiPath && activeTab === "UANG_SAKU"}
-                        render={
-                          <Link href="/dashboard/admin/transaksi?tab=UANG_SAKU">
-                            <span>Uang Saku</span>
-                          </Link>
-                        }
-                      />
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        isActive={isTransaksiPath && activeTab === "LAUNDRY"}
-                        render={
-                          <Link href="/dashboard/admin/transaksi?tab=LAUNDRY">
-                            <span>Laundry</span>
                           </Link>
                         }
                       />

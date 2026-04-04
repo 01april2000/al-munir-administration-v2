@@ -24,6 +24,13 @@ enum Role {
 enum JenisTagihan {
   SPP
   SYAHRIAH
+  UANG_SAKU
+  LAUNDRY
+  UJIAN
+  PKL
+  LKS
+  BUKU_PENDAMPING
+  TKA
 }
 
 enum StatusTagihan {

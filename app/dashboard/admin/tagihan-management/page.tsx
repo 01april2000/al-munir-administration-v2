@@ -20,8 +20,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import { columns, selectColumn, Tagihan, bulanOptions } from "./columns";
-import { Plus, FileText, Loader2, RefreshCw, Sparkles, Trash2, AlertTriangle, Search } from "lucide-react";
+import { columns, selectColumn, Tagihan, bulanOptions, JenisTagihanType } from "./columns";
+import { Plus, FileText, Loader2, RefreshCw, Sparkles, Trash2, AlertTriangle, Search, Receipt } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -49,9 +49,29 @@ const jenisSantriOptions = [
 ];
 
 const jenisTagihanOptions = [
-  { value: "ALL", label: "SPP & Syahriah" },
-  { value: "SPP", label: "SPP saja" },
-  { value: "SYAHRIAH", label: "Syahriah saja" },
+  { value: "", label: "Semua Jenis" },
+  { value: "SPP", label: "SPP" },
+  { value: "SYAHRIAH", label: "Syahriah" },
+  { value: "UANG_SAKU", label: "Uang Saku" },
+  { value: "LAUNDRY", label: "Laundry" },
+  { value: "UJIAN", label: "Ujian" },
+  { value: "PKL", label: "PKL" },
+  { value: "LKS", label: "LKS" },
+  { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
+  { value: "TKA", label: "TKA" },
+];
+
+// All transaction types for creating tagihan
+const jenisTransaksiOptions = [
+  { value: "SPP", label: "SPP" },
+  { value: "SYAHRIAH", label: "Syahriah" },
+  { value: "UANG_SAKU", label: "Uang Saku" },
+  { value: "LAUNDRY", label: "Laundry" },
+  { value: "UJIAN", label: "Ujian" },
+  { value: "PKL", label: "PKL" },
+  { value: "LKS", label: "LKS" },
+  { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
+  { value: "TKA", label: "TKA" },
 ];
 
 export default function TagihanManagementPage() {
@@ -99,12 +119,31 @@ export default function TagihanManagementPage() {
     };
   } | null>(null);
 
+  // Create tagihan states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createResult, setCreateResult] = useState<{
+    success?: boolean;
+    message?: string;
+  } | null>(null);
+  const [santriList, setSantriList] = useState<{ id: string; nis: string; nama: string; kelas: string; jenisSantri: string }[]>([]);
+  const [santriSearch, setSantriSearch] = useState("");
+  const [selectedSantriId, setSelectedSantriId] = useState("");
+  const [createJenisTransaksi, setCreateJenisTransaksi] = useState("SPP");
+  const [createJumlah, setCreateJumlah] = useState("");
+  const [createBulan, setCreateBulan] = useState(bulanList[currentMonthIndex]);
+  const [createTahun, setCreateTahun] = useState(currentYear.toString());
+  const [createKeterangan, setCreateKeterangan] = useState("");
+
   const fetchTagihan = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (filterBulan) params.append("bulan", filterBulan);
       if (filterTahun) params.append("tahun", filterTahun);
+      if (filterJenisTagihan) params.append("jenis", filterJenisTagihan);
+      if (filterJenisSantri) params.append("jenisSantri", filterJenisSantri);
+      if (filterStatus) params.append("status", filterStatus);
 
       const response = await fetch(`/api/tagihan?${params.toString()}`);
       if (!response.ok) {
@@ -118,7 +157,7 @@ export default function TagihanManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterBulan, filterTahun]);
+  }, [filterBulan, filterTahun, filterJenisTagihan, filterJenisSantri, filterStatus]);
 
   useEffect(() => {
     fetchTagihan();
@@ -162,6 +201,95 @@ export default function TagihanManagementPage() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  // Fetch santri list for create dialog
+  const fetchSantriList = useCallback(async () => {
+    try {
+      const response = await fetch("/api/santri?limit=1000");
+      if (!response.ok) {
+        throw new Error("Failed to fetch santri");
+      }
+      const data = await response.json();
+      setSantriList(data.santri || data);
+    } catch (err) {
+      console.error("Error fetching santri:", err);
+    }
+  }, []);
+
+  // Filter santri based on search
+  const filteredSantri = useMemo(() => {
+    if (!santriSearch.trim()) return santriList;
+    const query = santriSearch.toLowerCase();
+    return santriList.filter(
+      (s) =>
+        s.nis.toLowerCase().includes(query) ||
+        s.nama.toLowerCase().includes(query) ||
+        s.kelas.toLowerCase().includes(query)
+    );
+  }, [santriList, santriSearch]);
+
+  const handleCreateTagihan = async () => {
+    if (!selectedSantriId || !createJumlah) {
+      setCreateResult({
+        success: false,
+        message: "Santri dan jumlah harus diisi",
+      });
+      return;
+    }
+
+    try {
+      setCreating(true);
+      setCreateResult(null);
+
+      const response = await fetch("/api/tagihan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          santriId: selectedSantriId,
+          jenis: createJenisTransaksi,
+          jumlah: parseInt(createJumlah),
+          bulan: createBulan,
+          tahun: parseInt(createTahun),
+          keterangan: createKeterangan || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create tagihan");
+      }
+
+      setCreateResult({
+        success: true,
+        message: "Tagihan berhasil dibuat",
+      });
+
+      // Reset form
+      setSelectedSantriId("");
+      setCreateJumlah("");
+      setCreateKeterangan("");
+      setSantriSearch("");
+
+      // Refresh the list
+      await fetchTagihan();
+    } catch (err) {
+      setCreateResult({
+        success: false,
+        message: err instanceof Error ? err.message : "An error occurred",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Open create dialog and fetch santri list
+  const handleOpenCreateDialog = () => {
+    fetchSantriList();
+    setIsCreateDialogOpen(true);
   };
 
   const handleDeleteTagihan = (tagihan: Tagihan) => {
@@ -309,10 +437,16 @@ export default function TagihanManagementPage() {
             Kelola tagihan bulanan santri (SPP & Syahriah)
           </p>
         </div>
-        <Button onClick={() => setIsGenerateDialogOpen(true)}>
-          <Sparkles className="mr-2 h-4 w-4" />
-          Generate Tagihan
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleOpenCreateDialog}>
+            <Receipt className="mr-2 h-4 w-4" />
+            Buat Tagihan
+          </Button>
+          <Button onClick={() => setIsGenerateDialogOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate Tagihan
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -404,9 +538,11 @@ export default function TagihanManagementPage() {
                 value={filterJenisTagihan}
                 onChange={(e) => setFilterJenisTagihan(e.target.value)}
               >
-                <option value="">Semua Jenis</option>
-                <option value="SPP">SPP</option>
-                <option value="SYAHRIAH">Syahriah</option>
+                {jenisTagihanOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex-1">
@@ -744,6 +880,143 @@ export default function TagihanManagementPage() {
                 <>
                   <Sparkles className="mr-2 h-4 w-4" />
                   Generate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Tagihan Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Buat Tagihan Baru</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Santri Search and Select */}
+            <div className="space-y-2">
+              <Label htmlFor="santri-search">Cari Santri</Label>
+              <Input
+                id="santri-search"
+                type="text"
+                placeholder="Ketik NIS, nama, atau kelas..."
+                value={santriSearch}
+                onChange={(e) => setSantriSearch(e.target.value)}
+              />
+              <select
+                id="selected-santri"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={selectedSantriId}
+                onChange={(e) => setSelectedSantriId(e.target.value)}
+              >
+                <option value="">Pilih Santri</option>
+                {filteredSantri.slice(0, 50).map((santri) => (
+                  <option key={santri.id} value={santri.id}>
+                    {santri.nis} - {santri.nama} ({santri.kelas}) - {santri.jenisSantri}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Jenis Transaksi Dropdown */}
+            <div className="space-y-2">
+              <Label htmlFor="jenis-transaksi">Jenis Transaksi</Label>
+              <select
+                id="jenis-transaksi"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={createJenisTransaksi}
+                onChange={(e) => setCreateJenisTransaksi(e.target.value)}
+              >
+                {jenisTransaksiOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="create-jumlah">Jumlah (Rp) *</Label>
+              <Input
+                id="create-jumlah"
+                type="number"
+                placeholder="Masukkan jumlah"
+                value={createJumlah}
+                onChange={(e) => setCreateJumlah(e.target.value)}
+              />
+            </div>
+
+            {/* Bulan and Tahun */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-bulan">Bulan</Label>
+                <select
+                  id="create-bulan"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={createBulan}
+                  onChange={(e) => setCreateBulan(e.target.value)}
+                >
+                  {bulanOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-tahun">Tahun</Label>
+                <Input
+                  id="create-tahun"
+                  type="number"
+                  value={createTahun}
+                  onChange={(e) => setCreateTahun(e.target.value)}
+                  min="2020"
+                  max="2100"
+                />
+              </div>
+            </div>
+
+            {/* Keterangan */}
+            <div className="space-y-2">
+              <Label htmlFor="create-keterangan">Keterangan (Opsional)</Label>
+              <Input
+                id="create-keterangan"
+                type="text"
+                placeholder="Keterangan tambahan"
+                value={createKeterangan}
+                onChange={(e) => setCreateKeterangan(e.target.value)}
+              />
+            </div>
+
+            {/* Result Message */}
+            {createResult && (
+              <div
+                className={`p-4 rounded-md ${
+                  createResult.success
+                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                }`}
+              >
+                <p className="font-medium">{createResult.message}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleCreateTagihan} disabled={creating}>
+              {creating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Membuat...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Buat Tagihan
                 </>
               )}
             </Button>

@@ -5,10 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpDown, Eye, Trash2 } from "lucide-react";
 
+export type JenisTagihanType =
+  | "SPP"
+  | "SYAHRIAH"
+  | "UANG_SAKU"
+  | "LAUNDRY"
+  | "UJIAN"
+  | "PKL"
+  | "LKS"
+  | "BUKU_PENDAMPING"
+  | "TKA";
+
 export type Tagihan = {
   id: string;
   kode: string;
-  jenis: "SPP" | "SYAHRIAH";
+  jenis: JenisTagihanType;
   bulan: string;
   tahun: number;
   jumlah: number;
@@ -51,8 +62,19 @@ export const columns: ColumnDef<Tagihan>[] = [
     header: "Jenis",
     cell: ({ row }) => {
       const jenis = row.getValue("jenis") as string;
+      const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+        SPP: "default",
+        SYAHRIAH: "secondary",
+        UANG_SAKU: "outline",
+        LAUNDRY: "outline",
+        UJIAN: "destructive",
+        PKL: "secondary",
+        LKS: "secondary",
+        BUKU_PENDAMPING: "default",
+        TKA: "default",
+      };
       return (
-        <Badge variant={jenis === "SPP" ? "default" : "secondary"}>
+        <Badge variant={variants[jenis] || "default"}>
           {jenis}
         </Badge>
       );

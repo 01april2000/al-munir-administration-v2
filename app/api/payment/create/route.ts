@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
           data: {
             kode: `TRX-${santri.nis}-${Date.now()}`,
             santriId: santri.id,
-            jenis: jenis === "SPP" ? JenisTransaksi.SPP : JenisTransaksi.SYAHRIAH,
+            jenis: jenis as JenisTransaksi,
             bulan: tagihan.bulan,
             tahun: tagihan.tahun,
             jumlah: amount,

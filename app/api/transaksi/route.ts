@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Build filter
     const filter: {
       jenis?: JenisTransaksi;
-      status?: StatusTransaksi;
+      status?: StatusTransaksi | { in: StatusTransaksi[] };
       santriId?: string;
       bulan?: string;
       tahun?: number;
@@ -59,15 +59,12 @@ export async function GET(request: NextRequest) {
       }>;
     } = {};
 
-    if (jenis && Object.values(JenisTransaksi).includes(jenis)) {
-      filter.jenis = jenis;
-    }
-    if (status && Object.values(StatusTransaksi).includes(status)) {
-      filter.status = status;
-    }
     if (santriId) filter.santriId = santriId;
     if (bulan) filter.bulan = bulan;
     if (tahun) filter.tahun = parseInt(tahun);
+    if (jenis && Object.values(JenisTransaksi).includes(jenis)) {
+      filter.jenis = jenis;
+    }
     if (jenisSantri && Object.values(JenisSantri).includes(jenisSantri)) {
       filter.santri = { jenisSantri };
     }

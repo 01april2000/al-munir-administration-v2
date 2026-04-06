@@ -55,6 +55,7 @@ interface RawTransaksi {
   jenisLaundry?: string | null
   tanggalBayar?: Date | null
   createdAt: Date
+  tagihan?: { id: string }[] // To check if this transaksi is linked to tagihan
 }
 
 // Paginated fetch for tagihan
@@ -117,6 +118,9 @@ async function getTransaksi(
           jenisSantri: true,
         },
       },
+      tagihan: {
+        select: { id: true }
+      }
     },
     orderBy: {
       createdAt: "desc",
@@ -173,6 +177,9 @@ async function getTransaksiInitial(santriId: string): Promise<RawTransaksi[]> {
           jenisSantri: true,
         },
       },
+      tagihan: {
+        select: { id: true }
+      }
     },
     orderBy: {
       createdAt: "desc",
@@ -287,10 +294,14 @@ function processSantriData(
   })
 
   // Process transaksi (skip SPP and SYAHRIAH as they're handled via tagihan)
+  // Also skip transaksi that are linked to tagihan to avoid duplicates
   const transaksiByType: Record<string, RawTransaksi[]> = {}
   transaksi.forEach((t) => {
     const type = t.jenis.toLowerCase().replace("_", "-")
+    // Skip SPP and SYAHRIAH as they're handled via tagihan
     if (type === "spp" || type === "syahriah") return
+    // Skip transaksi that are linked to tagihan (to avoid duplicates with tagihan display)
+    if (t.tagihan && t.tagihan.length > 0) return
     if (!transaksiByType[type]) transaksiByType[type] = []
     transaksiByType[type].push(t)
   })
@@ -596,10 +607,14 @@ function processAktivitasOnly(
   const processedTransactionsMap: Record<string, TransactionData> = {}
 
   // Process transaksi (skip SPP and SYAHRIAH as they're handled via tagihan)
+  // Also skip transaksi that are linked to tagihan to avoid duplicates
   const transaksiByType: Record<string, RawTransaksi[]> = {}
   transaksi.forEach((t) => {
     const type = t.jenis.toLowerCase().replace("_", "-")
+    // Skip SPP and SYAHRIAH as they're handled via tagihan
     if (type === "spp" || type === "syahriah") return
+    // Skip transaksi that are linked to tagihan (to avoid duplicates with tagihan display)
+    if (t.tagihan && t.tagihan.length > 0) return
     if (!transaksiByType[type]) transaksiByType[type] = []
     transaksiByType[type].push(t)
   })

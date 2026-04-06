@@ -51,25 +51,38 @@ export async function getTagihanSummary(santriId: string): Promise<TagihanSummar
 /**
  * Get transaksi summary using Prisma aggregation
  * Excludes SPP and SYAHRIAH as they are handled via tagihan
+ * Also excludes transaksi that are linked to tagihan to avoid double counting
  */
 export async function getTransaksiSummary(santriId: string): Promise<TransaksiSummary> {
-  // Aggregate unpaid transaksi (excluding SPP/Syahriah)
+  // Get all transaksi IDs that are linked to tagihan
+  const transaksiWithTagihan = await prisma.transaksi.findMany({
+    where: {
+      santriId,
+      tagihan: { some: {} } // Has at least one linked tagihan
+    },
+    select: { id: true }
+  })
+  const transaksiIdsToExclude = transaksiWithTagihan.map(t => t.id)
+
+  // Aggregate unpaid transaksi (excluding SPP/Syahriah and those linked to tagihan)
   const unpaid = await prisma.transaksi.aggregate({
     where: {
       santriId,
       status: { not: StatusTransaksi.LUNAS },
-      jenis: { notIn: [JenisTransaksi.SPP, JenisTransaksi.SYAHRIAH] }
+      jenis: { notIn: [JenisTransaksi.SPP, JenisTransaksi.SYAHRIAH] },
+      id: { notIn: transaksiIdsToExclude }
     },
     _sum: { jumlah: true },
     _count: true,
   })
   
-  // Aggregate paid transaksi (excluding SPP/Syahriah)
+  // Aggregate paid transaksi (excluding SPP/Syahriah and those linked to tagihan)
   const paid = await prisma.transaksi.aggregate({
     where: {
       santriId,
       status: StatusTransaksi.LUNAS,
-      jenis: { notIn: [JenisTransaksi.SPP, JenisTransaksi.SYAHRIAH] }
+      jenis: { notIn: [JenisTransaksi.SPP, JenisTransaksi.SYAHRIAH] },
+      id: { notIn: transaksiIdsToExclude }
     },
     _sum: { jumlah: true },
     _count: true,

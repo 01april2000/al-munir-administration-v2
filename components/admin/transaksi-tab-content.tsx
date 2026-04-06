@@ -209,7 +209,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
       params.append("limit", limit.toString());
 
       // Add type-specific filters
-      if (jenis === "SPP" || jenis === "SYAHRIAH") {
+      if (jenis === "SPP" || jenis === "SYAHRIAH" || jenis === "PKL") {
         if (filterBulan) params.append("bulan", filterBulan);
         if (filterTahun) params.append("tahun", filterTahun);
       }
@@ -277,7 +277,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
       base.jenis = jenis;
     }
 
-    if (jenis === "SPP" || jenis === "SYAHRIAH") {
+    if (jenis === "SPP" || jenis === "SYAHRIAH" || jenis === "PKL") {
       base.bulan = data.bulan;
       base.tahun = parseInt(data.tahun);
       base.periodePembayaran = data.periodePembayaran;
@@ -611,7 +611,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
 
   // Render type-specific filter fields
   const getFilterFields = () => {
-    if (jenis === "SPP" || jenis === "SYAHRIAH") {
+    if (jenis === "SPP" || jenis === "SYAHRIAH" || jenis === "PKL") {
       return (
         <>
           <div>

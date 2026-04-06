@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 const transaksiTabs: { value: JenisTransaksi; label: string; description: string }[] = [
   { value: "SPP", label: "SPP", description: "Kelola pembayaran SPP santri" },
   { value: "SYAHRIAH", label: "Syahriah", description: "Kelola pembayaran syahriah santri" },
+  { value: "PKL", label: "PKL", description: "Kelola pembayaran PKL santri" },
   { value: "UANG_SAKU", label: "Uang Saku", description: "Kelola uang saku santri (setoran & penarikan)" },
   { value: "LAUNDRY", label: "Laundry", description: "Kelola pembayaran laundry santri" },
 ];

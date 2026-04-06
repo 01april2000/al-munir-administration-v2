@@ -83,6 +83,7 @@ export interface TransaksiFilter {
 export const JENIS_TRANSAKSI_OPTIONS = [
   { value: 'SPP', label: 'SPP' },
   { value: 'SYAHRIAH', label: 'Syahriah' },
+  { value: 'PKL', label: 'PKL' },
   { value: 'UANG_SAKU', label: 'Uang Saku' },
   { value: 'LAUNDRY', label: 'Laundry' },
 ] as const;

@@ -13,6 +13,7 @@ import {
   BarChart3,
   Wallet,
   Shirt,
+  FileBarChart,
 } from "lucide-react"
 
 import {
@@ -212,6 +213,19 @@ export function AdminSidebar() {
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
+              </SidebarMenuItem>
+
+              {/* Rekap Transaksi Menu */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname === "/dashboard/admin/rekap-transaksi"}
+                  render={
+                    <Link href="/dashboard/admin/rekap-transaksi">
+                      <FileBarChart className="h-4 w-4" />
+                      <span>Rekap Transaksi</span>
+                    </Link>
+                  }
+                />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

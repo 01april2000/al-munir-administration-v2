@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JenisTransaksi, StatusTransaksi, StatusUangSaku, JenisSantri, Role, JenisTagihan, StatusTagihan } from "@/lib/generated/prisma";
+import { JenisTransaksi, StatusTransaksi, StatusUangSaku, JenisSantri, Role, JenisTagihan, StatusTagihan, Prisma, KelasSantri } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     let jenisSantri = searchParams.get("jenisSantri") as JenisSantri | null;
     const managedBy = searchParams.get("managedBy") as Role | null;
     const search = searchParams.get("search");
+    const kelas = searchParams.get("kelas");
     const allJenisSantri = searchParams.get("allJenisSantri") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -41,23 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build filter
-    const filter: {
-      jenis?: JenisTransaksi;
-      status?: StatusTransaksi | { in: StatusTransaksi[] };
-      santriId?: string;
-      bulan?: string;
-      tahun?: number;
-      santri?: { jenisSantri?: JenisSantri };
-      managedBy?: Role;
-      OR?: Array<{
-        santri?: {
-          OR?: Array<{
-            nama?: { contains: string; mode: "insensitive" };
-            nis?: { contains: string; mode: "insensitive" };
-          }>;
-        };
-      }>;
-    } = {};
+    const filter: Prisma.TransaksiWhereInput = {};
 
     if (santriId) filter.santriId = santriId;
     if (bulan) filter.bulan = bulan;
@@ -65,8 +50,19 @@ export async function GET(request: NextRequest) {
     if (jenis && Object.values(JenisTransaksi).includes(jenis)) {
       filter.jenis = jenis;
     }
+    if (status && Object.values(StatusTransaksi).includes(status)) {
+      filter.status = status;
+    }
+    // Build santri filter combining jenisSantri and kelas if provided
+    const santriFilter: Prisma.SantriWhereInput = {};
     if (jenisSantri && Object.values(JenisSantri).includes(jenisSantri)) {
-      filter.santri = { jenisSantri };
+      santriFilter.jenisSantri = jenisSantri;
+    }
+    if (kelas && Object.values(KelasSantri).includes(kelas as KelasSantri)) {
+      santriFilter.kelas = kelas as KelasSantri;
+    }
+    if (Object.keys(santriFilter).length > 0) {
+      filter.santri = santriFilter;
     }
     if (managedBy && Object.values(Role).includes(managedBy)) {
       filter.managedBy = managedBy;

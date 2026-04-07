@@ -37,8 +37,8 @@ export function AdminSidebar() {
   const isTransaksiPath = pathname === "/dashboard/admin/transaksi"
   const activeTab = searchParams.get("tab") || "SPP"
   
-  // Only open dropdown if on transaksi path AND on SPP, SYAHRIAH, or PKL tab
-  const isTransaksiSubmenuActive = isTransaksiPath && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL")
+  // Only open dropdown if on transaksi path AND on SPP, SYAHRIAH, PKL, UJIAN, BUKU_PENDAMPING, or LKS tab
+  const isTransaksiSubmenuActive = isTransaksiPath && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL" || activeTab === "UJIAN" || activeTab === "BUKU_PENDAMPING" || activeTab === "LKS")
   const [isTransaksiOpen, setIsTransaksiOpen] = React.useState(isTransaksiSubmenuActive)
 
   React.useEffect(() => {
@@ -139,7 +139,7 @@ export function AdminSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTransaksiOpen(!isTransaksiOpen)}
-                  isActive={isTransaksiOpen && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL")}
+                  isActive={isTransaksiOpen && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL" || activeTab === "UJIAN" || activeTab === "BUKU_PENDAMPING" || activeTab === "LKS")}
                 >
                   {isTransaksiOpen ? (
                     <ChevronDown className="h-4 w-4" />
@@ -176,6 +176,36 @@ export function AdminSidebar() {
                         render={
                           <Link href="/dashboard/admin/transaksi?tab=PKL">
                             <span>PKL</span>
+                          </Link>
+                        }
+                      />
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        isActive={isTransaksiPath && activeTab === "UJIAN"}
+                        render={
+                          <Link href="/dashboard/admin/transaksi?tab=UJIAN">
+                            <span>Ujian</span>
+                          </Link>
+                        }
+                      />
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        isActive={isTransaksiPath && activeTab === "BUKU_PENDAMPING"}
+                        render={
+                          <Link href="/dashboard/admin/transaksi?tab=BUKU_PENDAMPING">
+                            <span>Buku Pendamping</span>
+                          </Link>
+                        }
+                      />
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        isActive={isTransaksiPath && activeTab === "LKS"}
+                        render={
+                          <Link href="/dashboard/admin/transaksi?tab=LKS">
+                            <span>LKS</span>
                           </Link>
                         }
                       />

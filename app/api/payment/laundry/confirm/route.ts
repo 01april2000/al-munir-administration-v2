@@ -53,19 +53,46 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update transaksi status to LUNAS
-    await prisma.transaksi.update({
-      where: { id: midtransTransaction.transaksiId },
-      data: {
-        status: StatusTransaksi.LUNAS,
-        tanggalBayar: new Date(),
-      },
-    });
+    // Determine transaction IDs to process
+    // Support both new format (transaksiIds JSON array) and legacy format (single transaksiId)
+    let transaksiIds: string[] = [];
+    
+    if (midtransTransaction.transaksiIds) {
+      try {
+        transaksiIds = JSON.parse(midtransTransaction.transaksiIds);
+      } catch (e) {
+        console.error("Failed to parse transaksiIds:", midtransTransaction.transaksiIds);
+      }
+    }
+    
+    // Fallback to single transaksiId if no transaksiIds
+    if (transaksiIds.length === 0 && midtransTransaction.transaksiId) {
+      transaksiIds = [midtransTransaction.transaksiId];
+    }
 
-    console.log("Payment confirmed successfully for transaksi:", midtransTransaction.transaksiId);
+    if (transaksiIds.length === 0) {
+      return NextResponse.json(
+        { error: "No transaction IDs found" },
+        { status: 400 }
+      );
+    }
+
+    // Update all transaksi status to LUNAS
+    for (const transaksiId of transaksiIds) {
+      await prisma.transaksi.update({
+        where: { id: transaksiId },
+        data: {
+          status: StatusTransaksi.LUNAS,
+          tanggalBayar: new Date(),
+        },
+      });
+    }
+
+    console.log("Payment confirmed successfully for transaksi:", transaksiIds);
 
     return NextResponse.json({
       success: true,
+      transactionsCount: transaksiIds.length,
       transaksiStatus: StatusTransaksi.LUNAS,
     });
   } catch (error) {

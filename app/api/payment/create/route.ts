@@ -255,7 +255,8 @@ export async function POST(request: NextRequest) {
 
 /**
  * Handle combined payment for multiple tagihan (SPP + SYAHRIAH)
- * Creates a single transaction that combines all tagihan into one payment
+ * Creates SEPARATE transactions for each tagihan but ONE Midtrans payment with combined total
+ * This allows for better tracking per jenis tagihan while still providing single payment experience
  */
 async function handleCombinedPayment(
   request: NextRequest,
@@ -310,10 +311,6 @@ async function handleCombinedPayment(
   const totalAmount = tagihanList.reduce((sum, t) => sum + t.jumlah, 0);
   console.log("Combined payment total amount:", totalAmount);
 
-  // Determine primary jenis (prefer SPP as primary if both exist)
-  const hasSPP = tagihanList.some((t) => t.jenis === JenisTagihan.SPP);
-  const primaryJenis = hasSPP ? JenisTransaksi.SPP : JenisTransaksi.SYAHRIAH;
-
   // Build item details for Midtrans
   const itemDetails = tagihanList.map((t) => ({
     id: t.id,
@@ -325,9 +322,9 @@ async function handleCombinedPayment(
   // Generate order ID for combined payment (uses santri NIS for shorter ID)
   const orderId = generateCombinedOrderId(santri.nis);
 
-  // Find and mark old individual transactions as DITOLAK
-  // This happens when santri previously initiated payment for individual tagihan
-  // but then decided to pay them all together
+  // Find and mark ALL old transactions (individual or combined) as DITOLAK
+  // This happens when santri previously initiated payment for any of these tagihan
+  // but then decided to pay them all together with new separate transactions
   const oldTransactions = await prisma.transaksi.findMany({
     where: {
       santriId: santri.id,
@@ -343,115 +340,75 @@ async function handleCombinedPayment(
     },
   });
 
-  // Mark old individual transactions as DITOLAK if they don't cover all tagihan
+  // Mark ALL old transactions as DITOLAK (including old TRX-COMBINED-... ones)
   for (const oldTx of oldTransactions) {
-    const coversAllTagihan = tagihanIds.every(id =>
-      oldTx.tagihan.some(t => t.id === id)
-    );
-    if (!coversAllTagihan && oldTx.tagihan.length < tagihanIds.length) {
-      await prisma.transaksi.update({
-        where: { id: oldTx.id },
-        data: { status: StatusTransaksi.DITOLAK },
-      });
-      console.log(`Marked old transaction ${oldTx.id} as DITOLAK (replaced by combined payment)`);
-    }
+    await prisma.transaksi.update({
+      where: { id: oldTx.id },
+      data: { status: StatusTransaksi.DITOLAK },
+    });
+    console.log(`Marked old transaction ${oldTx.id} (${oldTx.kode}) as DITOLAK (replaced by new separate transactions)`);
   }
 
-  // Check if a combined transaction already exists for these tagihan
-  const existingTransaksi = await prisma.transaksi.findFirst({
-    where: {
-      santriId: santri.id,
-      tagihan: {
-        some: {
-          id: { in: tagihanIds },
-        },
-      },
-      status: StatusTransaksi.LUNAS, // Only reuse if already paid
-    },
-    include: {
-      tagihan: true,
-    },
-  });
-
-  let finalTransaksiId: string;
-
-  if (existingTransaksi) {
-    // Check if all tagihan are linked to this transaction
-    const existingTagihanIds = existingTransaksi.tagihan.map((t) => t.id);
-    const allLinked = tagihanIds.every((id) => existingTagihanIds.includes(id));
-
-    if (allLinked) {
-      // Use existing transaction
-      finalTransaksiId = existingTransaksi.id;
-      console.log("Using existing combined transaction:", finalTransaksiId);
-
-      // Update status to PENDING
-      await prisma.transaksi.update({
-        where: { id: finalTransaksiId },
-        data: { status: StatusTransaksi.PENDING },
-      });
-    } else {
-      // Create new transaction linking all tagihan
-      const newTransaksi = await prisma.transaksi.create({
+  // Create SEPARATE transactions for each tagihan
+  // This is the key change - each tagihan gets its own transaction record
+  // IMPORTANT: We ALWAYS create new transactions to ensure proper separation
+  // Old combined transactions (TRX-COMBINED-...) are marked as DITOLAK above
+  const createdTransactions = await prisma.$transaction(async (tx) => {
+    const transactions = [];
+    
+    for (const tagihan of tagihanList) {
+      // ALWAYS create new transaction for each tagihan
+      // This ensures each tagihan has its own transaction record for proper reporting
+      const newTx = await tx.transaksi.create({
         data: {
-          kode: `TRX-COMBINED-${santri.nis}-${Date.now()}`,
+          kode: `TRX-${tagihan.jenis}-${santri.nis}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           santriId: santri.id,
-          jenis: primaryJenis,
-          jumlah: totalAmount,
+          jenis: tagihan.jenis as JenisTransaksi,
+          bulan: tagihan.bulan,
+          tahun: tagihan.tahun,
+          jumlah: tagihan.jumlah, // Individual amount per tagihan
           status: StatusTransaksi.PENDING,
           managedBy: (session.user.role as Role) || Role.ADMIN,
           tagihan: {
-            connect: tagihanIds.map((id) => ({ id })),
+            connect: { id: tagihan.id },
           },
         },
       });
-      finalTransaksiId = newTransaksi.id;
-      console.log("Created new combined transaction:", finalTransaksiId);
+      transactions.push(newTx);
+      console.log(`Created new transaction ${newTx.id} (${newTx.kode}) for tagihan ${tagihan.id} (${tagihan.jenis}): ${tagihan.jumlah}`);
     }
-  } else {
-    // Create new combined transaction
-    const newTransaksi = await prisma.transaksi.create({
-      data: {
-        kode: `TRX-COMBINED-${santri.nis}-${Date.now()}`,
-        santriId: santri.id,
-        jenis: primaryJenis,
-        jumlah: totalAmount,
-        status: StatusTransaksi.PENDING,
-        managedBy: (session.user.role as Role) || Role.ADMIN,
-        tagihan: {
-          connect: tagihanIds.map((id) => ({ id })),
-        },
-      },
-    });
-    finalTransaksiId = newTransaksi.id;
-    console.log("Created new combined transaction:", finalTransaksiId);
-  }
+    
+    return transactions;
+  });
+
+  const transaksiIds = createdTransactions.map(t => t.id);
+  console.log("Created/separated transactions:", transaksiIds);
 
   // Build finish redirect URL
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get("origin") || "https://al-munir-administration-v2.vercel.app/";
   const finishRedirectUrl = `${appUrl}/santri?payment_status=success&payment_type=COMBINED&amount=${totalAmount}&order_id=${orderId}&refresh=${Date.now()}`;
 
-  // Create Midtrans Snap transaction
+  // Create Midtrans Snap transaction with combined total
   const midtransTransaction = await createSnapTransaction({
     orderId,
-    grossAmount: totalAmount,
+    grossAmount: totalAmount, // Combined total for single payment
     customerDetails: {
       firstName: santri.nama.split(" ")[0],
       lastName: santri.nama.split(" ").slice(1).join(" ") || undefined,
       email: `${santri.nis}@santri.com`,
       phone: undefined,
     },
-    itemDetails,
+    itemDetails, // Shows breakdown per tagihan
     tagihanId: tagihanIds.join(","), // Store all tagihan IDs
     santriName: santri.nama,
     finishRedirectUrl,
   });
 
-  // Store Midtrans transaction details
+  // Store Midtrans transaction with ALL transaksi IDs as JSON array
   await prisma.midtransTransaction.create({
     data: {
       orderId,
-      transaksiId: finalTransaksiId,
+      transaksiIds: JSON.stringify(transaksiIds), // Store array of transaction IDs
       grossAmount: totalAmount,
       transactionStatus: "PENDING",
     },
@@ -459,9 +416,10 @@ async function handleCombinedPayment(
 
   console.log("Combined payment created successfully:", {
     orderId,
-    transaksiId: finalTransaksiId,
+    transaksiIds,
     totalAmount,
     tagihanCount: tagihanList.length,
+    breakdown: tagihanList.map(t => `${t.jenis}: ${t.jumlah}`),
   });
 
   return NextResponse.json({
@@ -469,12 +427,17 @@ async function handleCombinedPayment(
     token: midtransTransaction.token,
     redirectUrl: midtransTransaction.redirect_url,
     orderId,
-    transaksiId: finalTransaksiId,
+    transaksiIds, // Return all transaction IDs
     isCombined: true,
     combinedDetails: {
       totalAmount,
       tagihanCount: tagihanList.length,
       items: itemDetails,
+      transactions: createdTransactions.map(t => ({
+        id: t.id,
+        jenis: t.jenis,
+        jumlah: t.jumlah,
+      })),
     },
   });
 }

@@ -68,25 +68,66 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Handle different transaction statuses using shared handlers
-    if (transaction_status === "capture") {
-      if (fraud_status === "challenge") {
-        await handlePendingPayment(midtransTransaction.transaksiId);
-      } else if (fraud_status === "accept") {
-        await handleSuccessfulPayment(midtransTransaction.transaksiId, settlement_time || transaction_time);
+    // Determine transaction IDs to process
+    // Support both new format (transaksiIds JSON array) and legacy format (single transaksiId)
+    let transaksiIds: string[] = [];
+    
+    if (midtransTransaction.transaksiIds) {
+      // New format: multiple transactions stored as JSON array
+      try {
+        transaksiIds = JSON.parse(midtransTransaction.transaksiIds);
+        console.log("Check-status: Using transaksiIds (multiple transactions):", transaksiIds);
+      } catch (e) {
+        console.error("Check-status: Failed to parse transaksiIds:", midtransTransaction.transaksiIds);
+        transaksiIds = [];
       }
-    } else if (transaction_status === "settlement") {
-      await handleSuccessfulPayment(midtransTransaction.transaksiId, settlement_time || transaction_time);
-    } else if (transaction_status === "cancel" || transaction_status === "deny" || transaction_status === "expire") {
-      const tagihanId = midtransTransaction.transaksi.tagihan[0]?.id;
-      await handleFailedPayment(midtransTransaction.transaksiId, tagihanId);
-    } else if (transaction_status === "pending") {
-      await handlePendingPayment(midtransTransaction.transaksiId);
+    } else if (midtransTransaction.transaksiId) {
+      // Legacy format: single transaction
+      transaksiIds = [midtransTransaction.transaksiId];
+      console.log("Check-status: Using transaksiId (single transaction):", midtransTransaction.transaksiId);
     }
 
-    // Get updated transaksi with tagihan
-    const updatedTransaksi = await prisma.transaksi.findUnique({
-      where: { id: midtransTransaction.transaksiId },
+    if (transaksiIds.length === 0) {
+      return NextResponse.json(
+        { error: "No transaction IDs found" },
+        { status: 400 }
+      );
+    }
+
+    // Handle different transaction statuses using shared handlers
+    // Process ALL transactions (both single and combined payments)
+    if (transaction_status === "capture") {
+      if (fraud_status === "challenge") {
+        for (const transaksiId of transaksiIds) {
+          await handlePendingPayment(transaksiId);
+        }
+      } else if (fraud_status === "accept") {
+        for (const transaksiId of transaksiIds) {
+          await handleSuccessfulPayment(transaksiId, settlement_time || transaction_time);
+        }
+      }
+    } else if (transaction_status === "settlement") {
+      for (const transaksiId of transaksiIds) {
+        await handleSuccessfulPayment(transaksiId, settlement_time || transaction_time);
+      }
+    } else if (transaction_status === "cancel" || transaction_status === "deny" || transaction_status === "expire") {
+      for (const transaksiId of transaksiIds) {
+        const tx = await prisma.transaksi.findUnique({
+          where: { id: transaksiId },
+          include: { tagihan: true },
+        });
+        const tagihanId = tx?.tagihan[0]?.id;
+        await handleFailedPayment(transaksiId, tagihanId);
+      }
+    } else if (transaction_status === "pending") {
+      for (const transaksiId of transaksiIds) {
+        await handlePendingPayment(transaksiId);
+      }
+    }
+
+    // Get updated transaksi records
+    const updatedTransaksiList = await prisma.transaksi.findMany({
+      where: { id: { in: transaksiIds } },
       include: {
         tagihan: true,
       },
@@ -96,8 +137,14 @@ export async function POST(request: NextRequest) {
       success: true,
       transactionStatus: transaction_status,
       fraudStatus: fraud_status,
-      transaksiStatus: updatedTransaksi?.status,
-      tagihanStatus: updatedTransaksi?.tagihan[0]?.status,
+      transactionsCount: transaksiIds.length,
+      transactions: updatedTransaksiList.map(t => ({
+        id: t.id,
+        jenis: t.jenis,
+        status: t.status,
+        jumlah: t.jumlah,
+        tagihanStatus: t.tagihan[0]?.status,
+      })),
     });
   } catch (error) {
     console.error("Error checking payment status:", error);

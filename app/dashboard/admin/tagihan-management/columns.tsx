@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, Eye, Trash2 } from "lucide-react";
+import { ArrowUpDown, Eye, Trash2, Banknote } from "lucide-react";
 
 export type JenisTagihanType =
   | "SPP"
@@ -211,13 +211,33 @@ export const columns: ColumnDef<Tagihan>[] = [
         }
       };
       
+      const handleCashPayment = () => {
+        if (typeof window !== "undefined" && (window as any).handleCashPayment) {
+          (window as any).handleCashPayment(tagihan);
+        }
+      };
+      
+      const isPaid = tagihan.status === "LUNAS";
+      
       return (
         <div className="flex items-center gap-2">
+          {!isPaid && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCashPayment}
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-100"
+              title="Bayar Cash"
+            >
+              <Banknote className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
             onClick={handleDelete}
             className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+            title="Hapus"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { columns, selectColumn, Tagihan, bulanOptions, JenisTagihanType } from "./columns";
-import { Plus, FileText, Loader2, RefreshCw, Sparkles, Trash2, AlertTriangle, Search, Receipt } from "lucide-react";
+import { Plus, FileText, Loader2, RefreshCw, Sparkles, Trash2, AlertTriangle, Search, Receipt, Banknote, CheckCircle } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -85,6 +85,13 @@ export default function TagihanManagementPage() {
   const [tagihanToDelete, setTagihanToDelete] = useState<Tagihan | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Cash payment state
+  const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
+  const [tagihanToPay, setTagihanToPay] = useState<Tagihan | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [cashPaymentError, setCashPaymentError] = useState<string | null>(null);
+  const [cashPaymentSuccess, setCashPaymentSuccess] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -326,6 +333,54 @@ export default function TagihanManagementPage() {
     }
   };
 
+  // Handle cash payment
+  const handleCashPayment = (tagihan: Tagihan) => {
+    setTagihanToPay(tagihan);
+    setCashPaymentError(null);
+    setCashPaymentSuccess(false);
+    setIsCashPaymentDialogOpen(true);
+  };
+
+  const confirmCashPayment = async () => {
+    if (!tagihanToPay) return;
+
+    try {
+      setProcessingPayment(true);
+      setCashPaymentError(null);
+
+      const response = await fetch("/api/transaksi/cash-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tagihanIds: [tagihanToPay.id],
+          santriId: tagihanToPay.santri.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to process cash payment");
+      }
+
+      setCashPaymentSuccess(true);
+      
+      // Refresh the list after a short delay
+      setTimeout(async () => {
+        await fetchTagihan();
+        setIsCashPaymentDialogOpen(false);
+        setTagihanToPay(null);
+        setCashPaymentSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setCashPaymentError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
   // Register handleDeleteTagihan on window object for columns.tsx to access
   useEffect(() => {
     (window as any).handleDeleteTagihan = handleDeleteTagihan;
@@ -333,6 +388,14 @@ export default function TagihanManagementPage() {
       delete (window as any).handleDeleteTagihan;
     };
   }, [handleDeleteTagihan]);
+
+  // Register handleCashPayment on window object for columns.tsx to access
+  useEffect(() => {
+    (window as any).handleCashPayment = handleCashPayment;
+    return () => {
+      delete (window as any).handleCashPayment;
+    };
+  }, [handleCashPayment]);
 
   const columnsWithSelect = [selectColumn, ...columns];
 
@@ -1021,6 +1084,92 @@ export default function TagihanManagementPage() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cash Payment Dialog */}
+      <Dialog open={isCashPaymentDialogOpen} onOpenChange={setIsCashPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <Banknote className="h-5 w-5" />
+              Pembayaran Cash
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {tagihanToPay && (
+              <div className="space-y-3">
+                {cashPaymentSuccess ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-green-600">
+                    <CheckCircle className="h-16 w-16 mb-4" />
+                    <p className="text-lg font-medium">Pembayaran Berhasil!</p>
+                    <p className="text-sm text-muted-foreground">Memuat ulang data...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Konfirmasi pembayaran cash untuk tagihan ini?
+                    </p>
+                    <div className="bg-muted rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Kode:</span>
+                        <span>{tagihanToPay.kode}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Jenis:</span>
+                        <span>{tagihanToPay.jenis}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Santri:</span>
+                        <span>{tagihanToPay.santri.nama}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">NIS:</span>
+                        <span>{tagihanToPay.santri.nis}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Bulan/Tahun:</span>
+                        <span>{tagihanToPay.bulan} {tagihanToPay.tahun}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-bold text-green-600">
+                        <span>Jumlah:</span>
+                        <span>Rp {tagihanToPay.jumlah.toLocaleString("id-ID")}</span>
+                      </div>
+                    </div>
+                    {cashPaymentError && (
+                      <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                        {cashPaymentError}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          {!cashPaymentSuccess && (
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCashPaymentDialogOpen(false)} disabled={processingPayment}>
+                Batal
+              </Button>
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={confirmCashPayment}
+                disabled={processingPayment}
+              >
+                {processingPayment ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Banknote className="mr-2 h-4 w-4" />
+                    Konfirmasi Bayar
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>

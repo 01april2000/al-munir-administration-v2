@@ -63,8 +63,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Webhook: Found transaction:", {
-      transaksiId: midtransTransaction.transaksiId,
+    // Determine transaction IDs to process
+    // Support both new format (transaksiIds JSON array) and legacy format (single transaksiId)
+    let transaksiIds: string[] = [];
+    
+    if (midtransTransaction.transaksiIds) {
+      // New format: multiple transactions stored as JSON array
+      try {
+        transaksiIds = JSON.parse(midtransTransaction.transaksiIds);
+        console.log("Webhook: Using transaksiIds (multiple transactions):", transaksiIds);
+      } catch (e) {
+        console.error("Webhook: Failed to parse transaksiIds:", midtransTransaction.transaksiIds);
+        transaksiIds = [];
+      }
+    } else if (midtransTransaction.transaksiId) {
+      // Legacy format: single transaction
+      transaksiIds = [midtransTransaction.transaksiId];
+      console.log("Webhook: Using transaksiId (single transaction):", midtransTransaction.transaksiId);
+    }
+
+    if (transaksiIds.length === 0) {
+      console.error("Webhook: No transaction IDs found");
+      return NextResponse.json(
+        { error: "No transaction IDs found" },
+        { status: 400 }
+      );
+    }
+
+    console.log("Webhook: Found transaction(s) to process:", {
+      transaksiIds,
+      count: transaksiIds.length,
       currentStatus: midtransTransaction.transactionStatus,
     });
 
@@ -84,25 +112,42 @@ export async function POST(request: NextRequest) {
     console.log("Webhook: Processing transaction status:", transaction_status);
 
     // Handle different transaction statuses using shared handlers
+    // Process ALL transactions (both single and combined payments)
     if (transaction_status === "capture") {
       if (fraud_status === "challenge") {
         // Payment is being challenged
-        await handlePendingPayment(midtransTransaction.transaksiId);
+        for (const transaksiId of transaksiIds) {
+          await handlePendingPayment(transaksiId);
+        }
       } else if (fraud_status === "accept") {
-        // Payment is successful
-        await handleSuccessfulPayment(midtransTransaction.transaksiId, settlement_time || transaction_time);
+        // Payment is successful - update all transactions
+        for (const transaksiId of transaksiIds) {
+          await handleSuccessfulPayment(transaksiId, settlement_time || transaction_time);
+        }
       }
     } else if (transaction_status === "settlement") {
-      // Payment is settled
-      console.log("Webhook: Payment settled, updating status to LUNAS");
-      await handleSuccessfulPayment(midtransTransaction.transaksiId, settlement_time || transaction_time);
+      // Payment is settled - update all transactions
+      console.log("Webhook: Payment settled, updating all transactions to LUNAS");
+      for (const transaksiId of transaksiIds) {
+        console.log(`Webhook: Updating transaction ${transaksiId} to LUNAS`);
+        await handleSuccessfulPayment(transaksiId, settlement_time || transaction_time);
+      }
     } else if (transaction_status === "cancel" || transaction_status === "deny" || transaction_status === "expire") {
-      // Payment failed or cancelled
-      const tagihanId = midtransTransaction.transaksi.tagihan[0]?.id;
-      await handleFailedPayment(midtransTransaction.transaksiId, tagihanId);
+      // Payment failed or cancelled - update all transactions
+      for (const transaksiId of transaksiIds) {
+        // Get tagihan ID for this transaction
+        const tx = await prisma.transaksi.findUnique({
+          where: { id: transaksiId },
+          include: { tagihan: true },
+        });
+        const tagihanId = tx?.tagihan[0]?.id;
+        await handleFailedPayment(transaksiId, tagihanId);
+      }
     } else if (transaction_status === "pending") {
-      // Payment is pending
-      await handlePendingPayment(midtransTransaction.transaksiId);
+      // Payment is pending - update all transactions
+      for (const transaksiId of transaksiIds) {
+        await handlePendingPayment(transaksiId);
+      }
     }
 
     console.log("Webhook: Processed successfully");

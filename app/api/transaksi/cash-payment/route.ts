@@ -172,15 +172,26 @@ async function handleCombinedCashPayment(
     );
   }
 
-  // Only allow SPP and SYAHRIAH to be combined
-  const invalidTagihan = tagihanList.filter(
-    (t) => t.jenis !== JenisTagihan.SPP && t.jenis !== JenisTagihan.SYAHRIAH
-  );
-  if (invalidTagihan.length > 0) {
-    return NextResponse.json(
-      { error: "Only SPP and SYAHRIAH can be combined in a single payment" },
-      { status: 400 }
-    );
+  // Validation rules for combining tagihan:
+  // 1. Single tagihan of any type is allowed
+  // 2. Multiple tagihan: allow SPP + SYAHRIAH combination, or same type combination
+  if (tagihanList.length > 1) {
+    const jenisSet = new Set(tagihanList.map((t) => t.jenis));
+    const uniqueJenis = Array.from(jenisSet);
+    
+    // If there are multiple different types, only allow SPP + SYAHRIAH combination
+    if (uniqueJenis.length > 1) {
+      const hasInvalidTypes = uniqueJenis.filter(
+        (j) => j !== JenisTagihan.SPP && j !== JenisTagihan.SYAHRIAH
+      );
+      
+      if (hasInvalidTypes.length > 0) {
+        return NextResponse.json(
+          { error: "Only SPP and SYAHRIAH can be combined together. Other tagihan types must be paid separately or combined with the same type only." },
+          { status: 400 }
+        );
+      }
+    }
   }
 
   // Get santri data
@@ -208,9 +219,11 @@ async function handleCombinedCashPayment(
   const totalAmount = tagihanList.reduce((sum, t) => sum + t.jumlah, 0);
   console.log("Combined cash payment total amount:", totalAmount);
 
-  // Determine primary jenis (prefer SPP as primary if both exist)
+  // Determine primary jenis:
+  // - If SPP exists, use SPP
+  // - Otherwise use the first tagihan's jenis
   const hasSPP = tagihanList.some((t) => t.jenis === JenisTagihan.SPP);
-  const primaryJenis = hasSPP ? "SPP" : "SYAHRIAH";
+  const primaryJenis = hasSPP ? "SPP" : tagihanList[0].jenis;
 
   // Find and mark old individual transactions as DITOLAK
   // This happens when there were previous payment attempts for individual tagihan
@@ -243,7 +256,7 @@ async function handleCombinedCashPayment(
     data: {
       kode: `TRX-CASH-COMBINED-${santri.nis}-${Date.now()}`,
       santriId: santri.id,
-      jenis: hasSPP ? "SPP" : "SYAHRIAH",
+      jenis: primaryJenis,
       jumlah: totalAmount,
       status: StatusTransaksi.LUNAS,
       metodePembayaran: MetodePembayaran.CASH,

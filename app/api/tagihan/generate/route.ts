@@ -4,12 +4,18 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-// Default amounts per jenisSantri (can be configured later in a settings table)
+// Default amounts per jenisSantri for SPP and SYAHRIAH (can be configured later in a settings table)
 const DEFAULT_AMOUNTS: Record<JenisSantri, { SPP: number; SYAHRIAH: number }> = {
   SMK: { SPP: 250000, SYAHRIAH: 300000 },
   SMP: { SPP: 300000, SYAHRIAH: 200000 },
   PONDOK: { SPP: 250000, SYAHRIAH: 150000 },
 };
+
+// All available JenisTagihan types
+const ALL_JENIS_TAGIHAN: JenisTagihan[] = [
+  "SPP", "SYAHRIAH", "UANG_SAKU", "LAUNDRY",
+  "UJIAN", "PKL", "LKS", "BUKU_PENDAMPING", "TKA"
+];
 
 // POST - Generate tagihan for all active santri for a specific month/year
 export async function POST(request: NextRequest) {
@@ -38,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bulan, tahun, jenisSantri, jenisTagihan, sppAmount, syahriahAmount } = body;
+    const { bulan, tahun, jenisSantri, jenisTagihan, sppAmount, syahriahAmount, customAmount } = body;
 
     // Validate input
     if (!bulan || !tahun) {
@@ -63,6 +69,28 @@ export async function POST(request: NextRequest) {
     if (typeof tahun !== "number" || tahun < 2020 || tahun > 2100) {
       return NextResponse.json(
         { error: "Tahun tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    // Validate jenisTagihan - must be a valid JenisTagihan or "ALL"
+    const validJenisTagihan = jenisTagihan === "ALL" || ALL_JENIS_TAGIHAN.includes(jenisTagihan);
+    if (jenisTagihan && !validJenisTagihan) {
+      return NextResponse.json(
+        { error: `Jenis tagihan tidak valid. Pilihan: ${ALL_JENIS_TAGIHAN.join(", ")} atau ALL` },
+        { status: 400 }
+      );
+    }
+
+    // For non-SPP/SYAHRIAH types, customAmount is required
+    const isOtherTagihanType = jenisTagihan &&
+      jenisTagihan !== "ALL" &&
+      jenisTagihan !== "SPP" &&
+      jenisTagihan !== "SYAHRIAH";
+    
+    if (isOtherTagihanType && (!customAmount || customAmount <= 0)) {
+      return NextResponse.json(
+        { error: `Jumlah untuk tagihan ${jenisTagihan} wajib diisi` },
         { status: 400 }
       );
     }
@@ -107,8 +135,12 @@ export async function POST(request: NextRequest) {
     const jatuhTempo = new Date(tahun, bulanIndex, 15);
 
     // Determine which tagihan types to generate
-    const generateSPP = !jenisTagihan || jenisTagihan === "SPP" || jenisTagihan === "ALL";
-    const generateSyahriah = !jenisTagihan || jenisTagihan === "SYAHRIAH" || jenisTagihan === "ALL";
+    const generateAll = !jenisTagihan || jenisTagihan === "ALL";
+    const generateSPP = generateAll || jenisTagihan === "SPP";
+    const generateSyahriah = generateAll || jenisTagihan === "SYAHRIAH";
+    
+    // For other tagihan types (UJIAN, PKL, LKS, etc.)
+    const generateOtherType: JenisTagihan | null = isOtherTagihanType ? jenisTagihan as JenisTagihan : null;
 
     const tagihanData: {
       kode: string;
@@ -130,7 +162,7 @@ export async function POST(request: NextRequest) {
       // Generate SPP tagihan
       if (generateSPP) {
         // Skip if santri has full or SPP scholarship
-        const skipSPP = santri.beasiswa && 
+        const skipSPP = santri.beasiswa &&
           (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SPP");
 
         if (!skipSPP && sppAmountFinal > 0) {
@@ -150,7 +182,7 @@ export async function POST(request: NextRequest) {
       // Generate SYAHRIAH tagihan
       if (generateSyahriah) {
         // Skip if santri has full or SYAHRIAH scholarship
-        const skipSyahriah = santri.beasiswa && 
+        const skipSyahriah = santri.beasiswa &&
           (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SYAHRIAH");
 
         if (!skipSyahriah && syahriahAmountFinal > 0) {
@@ -165,6 +197,20 @@ export async function POST(request: NextRequest) {
             jatuhTempo,
           });
         }
+      }
+
+      // Generate other tagihan types (UJIAN, PKL, LKS, BUKU_PENDAMPING, TKA, UANG_SAKU, LAUNDRY)
+      if (generateOtherType && customAmount > 0) {
+        tagihanData.push({
+          kode: `${generateOtherType}-${santri.nis}-${bulan}-${tahun}`,
+          santriId: santri.id,
+          jenis: generateOtherType,
+          bulan,
+          tahun,
+          jumlah: customAmount,
+          status: "BELUM_LUNAS",
+          jatuhTempo,
+        });
       }
     }
 

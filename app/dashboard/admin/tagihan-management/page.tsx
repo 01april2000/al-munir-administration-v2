@@ -114,6 +114,7 @@ export default function TagihanManagementPage() {
   const [jenisTagihan, setJenisTagihan] = useState("ALL");
   const [sppAmount, setSppAmount] = useState("");
   const [syahriahAmount, setSyahriahAmount] = useState("");
+  const [customAmount, setCustomAmount] = useState("");
   const [generateResult, setGenerateResult] = useState<{
     success?: boolean;
     message?: string;
@@ -175,6 +176,21 @@ export default function TagihanManagementPage() {
       setGenerating(true);
       setGenerateResult(null);
 
+      // Check if custom amount is required for non-SPP/SYAHRIAH types
+      const isOtherTagihanType = jenisTagihan &&
+        jenisTagihan !== "ALL" &&
+        jenisTagihan !== "SPP" &&
+        jenisTagihan !== "SYAHRIAH";
+      
+      if (isOtherTagihanType && !customAmount) {
+        setGenerateResult({
+          success: false,
+          message: `Jumlah untuk tagihan ${jenisTagihan} wajib diisi`,
+        });
+        setGenerating(false);
+        return;
+      }
+
       const response = await fetch("/api/tagihan/generate", {
         method: "POST",
         headers: {
@@ -187,6 +203,7 @@ export default function TagihanManagementPage() {
           jenisTagihan: jenisTagihan,
           sppAmount: sppAmount ? parseInt(sppAmount) : undefined,
           syahriahAmount: syahriahAmount ? parseInt(syahriahAmount) : undefined,
+          customAmount: customAmount ? parseInt(customAmount) : undefined,
         }),
       });
 
@@ -878,37 +895,61 @@ export default function TagihanManagementPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="spp-amount">Jumlah SPP (Rp) - Opsional</Label>
-                <Input
-                  id="spp-amount"
-                  type="number"
-                  placeholder="Default per jenis santri"
-                  value={sppAmount}
-                  onChange={(e) => setSppAmount(e.target.value)}
-                />
+            {/* Show SPP/Syahriah fields only for ALL, SPP, or SYAHRIAH */}
+            {(!jenisTagihan || jenisTagihan === "ALL" || jenisTagihan === "SPP" || jenisTagihan === "SYAHRIAH") && (
+              <div className="grid grid-cols-2 gap-4">
+                {(jenisTagihan === "ALL" || jenisTagihan === "SPP" || !jenisTagihan) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="spp-amount">Jumlah SPP (Rp) - Opsional</Label>
+                    <Input
+                      id="spp-amount"
+                      type="number"
+                      placeholder="Default per jenis santri"
+                      value={sppAmount}
+                      onChange={(e) => setSppAmount(e.target.value)}
+                    />
+                  </div>
+                )}
+                {(jenisTagihan === "ALL" || jenisTagihan === "SYAHRIAH" || !jenisTagihan) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="syahriah-amount">Jumlah Syahriah (Rp) - Opsional</Label>
+                    <Input
+                      id="syahriah-amount"
+                      type="number"
+                      placeholder="Default per jenis santri"
+                      value={syahriahAmount}
+                      onChange={(e) => setSyahriahAmount(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="syahriah-amount">Jumlah Syahriah (Rp) - Opsional</Label>
-                <Input
-                  id="syahriah-amount"
-                  type="number"
-                  placeholder="Default per jenis santri"
-                  value={syahriahAmount}
-                  onChange={(e) => setSyahriahAmount(e.target.value)}
-                />
-              </div>
-            </div>
+            )}
 
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium">Default amounts per jenis santri:</p>
-              <ul className="list-disc list-inside mt-1">
-                <li>SMK: SPP Rp 350.000, Syahriah Rp 250.000</li>
-                <li>SMP: SPP Rp 300.000, Syahriah Rp 200.000</li>
-                <li>Pondok: SPP Rp 250.000, Syahriah Rp 150.000</li>
-              </ul>
-            </div>
+            {/* Show custom amount field for other tagihan types */}
+            {jenisTagihan && jenisTagihan !== "ALL" && jenisTagihan !== "SPP" && jenisTagihan !== "SYAHRIAH" && (
+              <div className="space-y-2">
+                <Label htmlFor="custom-amount">Jumlah {jenisTagihanOptions.find(o => o.value === jenisTagihan)?.label} (Rp) *</Label>
+                <Input
+                  id="custom-amount"
+                  type="number"
+                  placeholder="Masukkan jumlah"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Show default amounts info only for SPP/SYAHRIAH */}
+            {(!jenisTagihan || jenisTagihan === "ALL" || jenisTagihan === "SPP" || jenisTagihan === "SYAHRIAH") && (
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium">Default amounts per jenis santri:</p>
+                <ul className="list-disc list-inside mt-1">
+                  <li>SMK: SPP Rp 350.000, Syahriah Rp 250.000</li>
+                  <li>SMP: SPP Rp 300.000, Syahriah Rp 200.000</li>
+                  <li>Pondok: SPP Rp 250.000, Syahriah Rp 150.000</li>
+                </ul>
+              </div>
+            )}
 
             {generateResult && (
               <div

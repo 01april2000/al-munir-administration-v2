@@ -5,14 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
   Card,
   CardHeader,
   CardTitle,
@@ -20,8 +12,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import { columns, selectColumn, Tagihan, bulanOptions, JenisTagihanType } from "./columns";
-import { Plus, FileText, Loader2, RefreshCw, Sparkles, Trash2, AlertTriangle, Search, Receipt, Banknote, CheckCircle } from "lucide-react";
+import { columns, selectColumn, bulanOptions } from "./columns";
+import { FileText, Loader2, RefreshCw, Sparkles, Search, Receipt } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,13 +25,23 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  DeleteTagihanDialog,
+  GenerateTagihanDialog,
+  CreateTagihanDialog,
+  CashPaymentDialog,
+} from "@/components/admin/tagihan";
+import {
+  Tagihan,
+  GenerateTagihanData,
+  CreateTagihanData,
+  SantriOption,
+  GenerateResult,
+  CreateResult,
+} from "@/lib/types/tagihan-dialogs";
 
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
-const bulanList = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-];
 
 const jenisSantriOptions = [
   { value: "", label: "Semua" },
@@ -61,44 +63,30 @@ const jenisTagihanOptions = [
   { value: "TKA", label: "TKA" },
 ];
 
-// Jenis ujian options
-const jenisUjianOptions = [
-  { value: "UTS", label: "UTS (Ujian Tengah Semester)" },
-  { value: "UAS", label: "UAS (Ujian Akhir Semester)" },
-  { value: "UJIAN_NASIONAL", label: "Ujian Nasional" },
-  { value: "UJIAN_SEKOLAH", label: "Ujian Sekolah" },
-  { value: "UJIAN_PRAKTIK", label: "Ujian Praktik" },
-  { value: "ANBK", label: "ANBK (Asesmen Nasional Berbasis Komputer)" },
-  { value: "TKA", label: "TKA (Tes Kompetensi Akademik)" },
-  { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
-];
-
-// All transaction types for creating tagihan
-const jenisTransaksiOptions = [
-  { value: "SPP", label: "SPP" },
-  { value: "SYAHRIAH", label: "Syahriah" },
-  { value: "UANG_SAKU", label: "Uang Saku" },
-  { value: "LAUNDRY", label: "Laundry" },
-  { value: "UJIAN", label: "Ujian" },
-  { value: "PKL", label: "PKL" },
-  { value: "LKS", label: "LKS" },
-  { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
-  { value: "TKA", label: "TKA" },
-];
-
 export default function TagihanManagementPage() {
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<Tagihan | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Cash payment state
+  // Generate dialog state
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
+
+  // Create dialog state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createResult, setCreateResult] = useState<CreateResult | null>(null);
+  const [santriList, setSantriList] = useState<SantriOption[]>([]);
+
+  // Cash payment dialog state
   const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
   const [tagihanToPay, setTagihanToPay] = useState<Tagihan | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -118,43 +106,6 @@ export default function TagihanManagementPage() {
   const [filterJenisTagihan, setFilterJenisTagihan] = useState("");
   const [filterJenisSantri, setFilterJenisSantri] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-
-  // Generate form states
-  const [generateBulan, setGenerateBulan] = useState(bulanList[currentMonthIndex]);
-  const [generateTahun, setGenerateTahun] = useState(currentYear.toString());
-  const [jenisSantri, setJenisSantri] = useState("");
-  const [jenisTagihan, setJenisTagihan] = useState("ALL");
-  const [sppAmount, setSppAmount] = useState("");
-  const [syahriahAmount, setSyahriahAmount] = useState("");
-  const [customAmount, setCustomAmount] = useState("");
-  const [jenisUjian, setJenisUjian] = useState("");
-  const [generateResult, setGenerateResult] = useState<{
-    success?: boolean;
-    message?: string;
-    data?: {
-      totalSantri: number;
-      created: number;
-      skipped: number;
-      bulan: string;
-      tahun: number;
-    };
-  } | null>(null);
-
-  // Create tagihan states
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [createResult, setCreateResult] = useState<{
-    success?: boolean;
-    message?: string;
-  } | null>(null);
-  const [santriList, setSantriList] = useState<{ id: string; nis: string; nama: string; kelas: string; jenisSantri: string }[]>([]);
-  const [santriSearch, setSantriSearch] = useState("");
-  const [selectedSantriId, setSelectedSantriId] = useState("");
-  const [createJenisTransaksi, setCreateJenisTransaksi] = useState("SPP");
-  const [createJumlah, setCreateJumlah] = useState("");
-  const [createBulan, setCreateBulan] = useState(bulanList[currentMonthIndex]);
-  const [createTahun, setCreateTahun] = useState(currentYear.toString());
-  const [createKeterangan, setCreateKeterangan] = useState("");
 
   const fetchTagihan = useCallback(async () => {
     try {
@@ -184,73 +135,6 @@ export default function TagihanManagementPage() {
     fetchTagihan();
   }, [fetchTagihan]);
 
-  const handleGenerateTagihan = async () => {
-    try {
-      setGenerating(true);
-      setGenerateResult(null);
-
-      // Check if custom amount is required for non-SPP/SYAHRIAH types
-      const isOtherTagihanType = jenisTagihan &&
-        jenisTagihan !== "ALL" &&
-        jenisTagihan !== "SPP" &&
-        jenisTagihan !== "SYAHRIAH";
-      
-      if (isOtherTagihanType && !customAmount) {
-        setGenerateResult({
-          success: false,
-          message: `Jumlah untuk tagihan ${jenisTagihan} wajib diisi`,
-        });
-        setGenerating(false);
-        return;
-      }
-
-      // Check if jenis ujian is required for UJIAN type
-      if (jenisTagihan === "UJIAN" && !jenisUjian) {
-        setGenerateResult({
-          success: false,
-          message: "Jenis ujian wajib dipilih",
-        });
-        setGenerating(false);
-        return;
-      }
-
-      const response = await fetch("/api/tagihan/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          bulan: generateBulan,
-          tahun: parseInt(generateTahun),
-          jenisSantri: jenisSantri || undefined,
-          jenisTagihan: jenisTagihan,
-          jenisUjian: jenisTagihan === "UJIAN" ? jenisUjian : undefined,
-          sppAmount: sppAmount ? parseInt(sppAmount) : undefined,
-          syahriahAmount: syahriahAmount ? parseInt(syahriahAmount) : undefined,
-          customAmount: customAmount ? parseInt(customAmount) : undefined,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate tagihan");
-      }
-
-      setGenerateResult(data);
-      
-      // Refresh the list
-      await fetchTagihan();
-    } catch (err) {
-      setGenerateResult({
-        success: false,
-        message: err instanceof Error ? err.message : "An error occurred",
-      });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   // Fetch santri list for create dialog
   const fetchSantriList = useCallback(async () => {
     try {
@@ -265,27 +149,42 @@ export default function TagihanManagementPage() {
     }
   }, []);
 
-  // Filter santri based on search
-  const filteredSantri = useMemo(() => {
-    if (!santriSearch.trim()) return santriList;
-    const query = santriSearch.toLowerCase();
-    return santriList.filter(
-      (s) =>
-        s.nis.toLowerCase().includes(query) ||
-        s.nama.toLowerCase().includes(query) ||
-        s.kelas.toLowerCase().includes(query)
-    );
-  }, [santriList, santriSearch]);
+  // Handle generate tagihan
+  const handleGenerateTagihan = async (data: GenerateTagihanData) => {
+    try {
+      setGenerating(true);
+      setGenerateResult(null);
 
-  const handleCreateTagihan = async () => {
-    if (!selectedSantriId || !createJumlah) {
-      setCreateResult({
-        success: false,
-        message: "Santri dan jumlah harus diisi",
+      const response = await fetch("/api/tagihan/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       });
-      return;
-    }
 
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to generate tagihan");
+      }
+
+      setGenerateResult(result);
+      
+      // Refresh the list
+      await fetchTagihan();
+    } catch (err) {
+      setGenerateResult({
+        success: false,
+        message: err instanceof Error ? err.message : "An error occurred",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Handle create tagihan
+  const handleCreateTagihan = async (data: CreateTagihanData) => {
     try {
       setCreating(true);
       setCreateResult(null);
@@ -295,32 +194,19 @@ export default function TagihanManagementPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          santriId: selectedSantriId,
-          jenis: createJenisTransaksi,
-          jumlah: parseInt(createJumlah),
-          bulan: createBulan,
-          tahun: parseInt(createTahun),
-          keterangan: createKeterangan || undefined,
-        }),
+        body: JSON.stringify(data),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create tagihan");
+        throw new Error(result.error || "Failed to create tagihan");
       }
 
       setCreateResult({
         success: true,
         message: "Tagihan berhasil dibuat",
       });
-
-      // Reset form
-      setSelectedSantriId("");
-      setCreateJumlah("");
-      setCreateKeterangan("");
-      setSantriSearch("");
 
       // Refresh the list
       await fetchTagihan();
@@ -334,12 +220,7 @@ export default function TagihanManagementPage() {
     }
   };
 
-  // Open create dialog and fetch santri list
-  const handleOpenCreateDialog = () => {
-    fetchSantriList();
-    setIsCreateDialogOpen(true);
-  };
-
+  // Handle delete tagihan
   const handleDeleteTagihan = (tagihan: Tagihan) => {
     setTagihanToDelete(tagihan);
     setDeleteError(null);
@@ -542,7 +423,7 @@ export default function TagihanManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleOpenCreateDialog}>
+          <Button variant="outline" onClick={() => { fetchSantriList(); setIsCreateDialogOpen(true); }}>
             <Receipt className="mr-2 h-4 w-4" />
             Buat Tagihan
           </Button>
@@ -657,10 +538,11 @@ export default function TagihanManagementPage() {
                 value={filterJenisSantri}
                 onChange={(e) => setFilterJenisSantri(e.target.value)}
               >
-                <option value="">Semua Jenis</option>
-                <option value="SMK">SMK</option>
-                <option value="SMP">SMP</option>
-                <option value="PONDOK">Pondok</option>
+                {jenisSantriOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex-1">
@@ -783,480 +665,45 @@ export default function TagihanManagementPage() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Hapus Tagihan
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {tagihanToDelete && (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Apakah Anda yakin ingin menghapus tagihan ini?
-                </p>
-                <div className="bg-muted rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Kode:</span>
-                    <span>{tagihanToDelete.kode}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Jenis:</span>
-                    <span>{tagihanToDelete.jenis}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Santri:</span>
-                    <span>{tagihanToDelete.santri.nama}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Jumlah:</span>
-                    <span>Rp {tagihanToDelete.jumlah.toLocaleString("id-ID")}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Status:</span>
-                    <Badge variant={tagihanToDelete.status === "LUNAS" ? "default" : tagihanToDelete.status === "OVERDUE" ? "destructive" : "secondary"}>
-                      {tagihanToDelete.status === "LUNAS" ? "Lunas" : tagihanToDelete.status === "OVERDUE" ? "Terlambat" : "Belum Lunas"}
-                    </Badge>
-                  </div>
-                </div>
-                {deleteError && (
-                  <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                    {deleteError}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={deleting}>
-              Batal
-            </Button>
-            <Button variant="destructive" onClick={confirmDeleteTagihan} disabled={deleting}>
-              {deleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menghapus...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Hapus
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteTagihanDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        tagihan={tagihanToDelete}
+        onConfirm={confirmDeleteTagihan}
+        isDeleting={deleting}
+        error={deleteError}
+      />
 
       {/* Generate Dialog */}
-      <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Generate Tagihan Bulanan</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="generate-bulan">Bulan</Label>
-                <select
-                  id="generate-bulan"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={generateBulan}
-                  onChange={(e) => setGenerateBulan(e.target.value)}
-                >
-                  {bulanOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="generate-tahun">Tahun</Label>
-                <Input
-                  id="generate-tahun"
-                  type="number"
-                  value={generateTahun}
-                  onChange={(e) => setGenerateTahun(e.target.value)}
-                  min="2020"
-                  max="2100"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="jenis-santri">Jenis Santri</Label>
-                <select
-                  id="jenis-santri"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={jenisSantri}
-                  onChange={(e) => setJenisSantri(e.target.value)}
-                >
-                  {jenisSantriOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="jenis-tagihan">Jenis Tagihan</Label>
-                <select
-                  id="jenis-tagihan"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={jenisTagihan}
-                  onChange={(e) => setJenisTagihan(e.target.value)}
-                >
-                  {jenisTagihanOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Show jenis ujian dropdown only for UJIAN type */}
-            {jenisTagihan === "UJIAN" && (
-              <div className="space-y-2">
-                <Label htmlFor="jenis-ujian">Jenis Ujian</Label>
-                <select
-                  id="jenis-ujian"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={jenisUjian}
-                  onChange={(e) => setJenisUjian(e.target.value)}
-                >
-                  <option value="">Pilih Jenis Ujian</option>
-                  {jenisUjianOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Show SPP/Syahriah fields only for ALL, SPP, or SYAHRIAH */}
-            {(!jenisTagihan || jenisTagihan === "ALL" || jenisTagihan === "SPP" || jenisTagihan === "SYAHRIAH") && (
-              <div className="grid grid-cols-2 gap-4">
-                {(jenisTagihan === "ALL" || jenisTagihan === "SPP" || !jenisTagihan) && (
-                  <div className="space-y-2">
-                    <Label htmlFor="spp-amount">Jumlah SPP (Rp) - Opsional</Label>
-                    <Input
-                      id="spp-amount"
-                      type="number"
-                      placeholder="Default per jenis santri"
-                      value={sppAmount}
-                      onChange={(e) => setSppAmount(e.target.value)}
-                    />
-                  </div>
-                )}
-                {(jenisTagihan === "ALL" || jenisTagihan === "SYAHRIAH" || !jenisTagihan) && (
-                  <div className="space-y-2">
-                    <Label htmlFor="syahriah-amount">Jumlah Syahriah (Rp) - Opsional</Label>
-                    <Input
-                      id="syahriah-amount"
-                      type="number"
-                      placeholder="Default per jenis santri"
-                      value={syahriahAmount}
-                      onChange={(e) => setSyahriahAmount(e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Show custom amount field for other tagihan types */}
-            {jenisTagihan && jenisTagihan !== "ALL" && jenisTagihan !== "SPP" && jenisTagihan !== "SYAHRIAH" && (
-              <div className="space-y-2">
-                <Label htmlFor="custom-amount">Jumlah {jenisTagihanOptions.find(o => o.value === jenisTagihan)?.label} (Rp) *</Label>
-                <Input
-                  id="custom-amount"
-                  type="number"
-                  placeholder="Masukkan jumlah"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                />
-              </div>
-            )}
-
-            {/* Show default amounts info only for SPP/SYAHRIAH */}
-            {(!jenisTagihan || jenisTagihan === "ALL" || jenisTagihan === "SPP" || jenisTagihan === "SYAHRIAH") && (
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium">Default amounts per jenis santri:</p>
-                <ul className="list-disc list-inside mt-1">
-                  <li>SMK: SPP Rp 350.000, Syahriah Rp 250.000</li>
-                  <li>SMP: SPP Rp 300.000, Syahriah Rp 200.000</li>
-                  <li>Pondok: SPP Rp 250.000, Syahriah Rp 150.000</li>
-                </ul>
-              </div>
-            )}
-
-            {generateResult && (
-              <div
-                className={`p-4 rounded-md ${
-                  generateResult.success
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                }`}
-              >
-                <p className="font-medium">{generateResult.message}</p>
-                {generateResult.data && (
-                  <div className="mt-2 text-sm">
-                    <p>Total Santri: {generateResult.data.totalSantri}</p>
-                    <p>Dibuat: {generateResult.data.created}</p>
-                    <p>Dilewati (sudah ada): {generateResult.data.skipped}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleGenerateTagihan} disabled={generating}>
-              {generating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GenerateTagihanDialog
+        open={isGenerateDialogOpen}
+        onOpenChange={setIsGenerateDialogOpen}
+        onGenerate={handleGenerateTagihan}
+        isGenerating={generating}
+        result={generateResult}
+      />
 
       {/* Create Tagihan Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Buat Tagihan Baru</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Santri Search and Select */}
-            <div className="space-y-2">
-              <Label htmlFor="santri-search">Cari Santri</Label>
-              <Input
-                id="santri-search"
-                type="text"
-                placeholder="Ketik NIS, nama, atau kelas..."
-                value={santriSearch}
-                onChange={(e) => setSantriSearch(e.target.value)}
-              />
-              <select
-                id="selected-santri"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={selectedSantriId}
-                onChange={(e) => setSelectedSantriId(e.target.value)}
-              >
-                <option value="">Pilih Santri</option>
-                {filteredSantri.slice(0, 50).map((santri) => (
-                  <option key={santri.id} value={santri.id}>
-                    {santri.nis} - {santri.nama} ({santri.kelas}) - {santri.jenisSantri}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Jenis Transaksi Dropdown */}
-            <div className="space-y-2">
-              <Label htmlFor="jenis-transaksi">Jenis Transaksi</Label>
-              <select
-                id="jenis-transaksi"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={createJenisTransaksi}
-                onChange={(e) => setCreateJenisTransaksi(e.target.value)}
-              >
-                {jenisTransaksiOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Amount */}
-            <div className="space-y-2">
-              <Label htmlFor="create-jumlah">Jumlah (Rp) *</Label>
-              <Input
-                id="create-jumlah"
-                type="number"
-                placeholder="Masukkan jumlah"
-                value={createJumlah}
-                onChange={(e) => setCreateJumlah(e.target.value)}
-              />
-            </div>
-
-            {/* Bulan and Tahun */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="create-bulan">Bulan</Label>
-                <select
-                  id="create-bulan"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={createBulan}
-                  onChange={(e) => setCreateBulan(e.target.value)}
-                >
-                  {bulanOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-tahun">Tahun</Label>
-                <Input
-                  id="create-tahun"
-                  type="number"
-                  value={createTahun}
-                  onChange={(e) => setCreateTahun(e.target.value)}
-                  min="2020"
-                  max="2100"
-                />
-              </div>
-            </div>
-
-            {/* Keterangan */}
-            <div className="space-y-2">
-              <Label htmlFor="create-keterangan">Keterangan (Opsional)</Label>
-              <Input
-                id="create-keterangan"
-                type="text"
-                placeholder="Keterangan tambahan"
-                value={createKeterangan}
-                onChange={(e) => setCreateKeterangan(e.target.value)}
-              />
-            </div>
-
-            {/* Result Message */}
-            {createResult && (
-              <div
-                className={`p-4 rounded-md ${
-                  createResult.success
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                }`}
-              >
-                <p className="font-medium">{createResult.message}</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleCreateTagihan} disabled={creating}>
-              {creating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Membuat...
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Buat Tagihan
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateTagihanDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onCreate={handleCreateTagihan}
+        isCreating={creating}
+        result={createResult}
+        santriList={santriList}
+        onSantriListLoad={fetchSantriList}
+      />
 
       {/* Cash Payment Dialog */}
-      <Dialog open={isCashPaymentDialogOpen} onOpenChange={setIsCashPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
-              <Banknote className="h-5 w-5" />
-              Pembayaran Cash
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {tagihanToPay && (
-              <div className="space-y-3">
-                {cashPaymentSuccess ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-green-600">
-                    <CheckCircle className="h-16 w-16 mb-4" />
-                    <p className="text-lg font-medium">Pembayaran Berhasil!</p>
-                    <p className="text-sm text-muted-foreground">Memuat ulang data...</p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm text-muted-foreground">
-                      Konfirmasi pembayaran cash untuk tagihan ini?
-                    </p>
-                    <div className="bg-muted rounded-lg p-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Kode:</span>
-                        <span>{tagihanToPay.kode}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Jenis:</span>
-                        <span>{tagihanToPay.jenis}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Santri:</span>
-                        <span>{tagihanToPay.santri.nama}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">NIS:</span>
-                        <span>{tagihanToPay.santri.nis}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Bulan/Tahun:</span>
-                        <span>{tagihanToPay.bulan} {tagihanToPay.tahun}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-bold text-green-600">
-                        <span>Jumlah:</span>
-                        <span>Rp {tagihanToPay.jumlah.toLocaleString("id-ID")}</span>
-                      </div>
-                    </div>
-                    {cashPaymentError && (
-                      <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                        {cashPaymentError}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          {!cashPaymentSuccess && (
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCashPaymentDialogOpen(false)} disabled={processingPayment}>
-                Batal
-              </Button>
-              <Button
-                className="bg-green-600 hover:bg-green-700"
-                onClick={confirmCashPayment}
-                disabled={processingPayment}
-              >
-                {processingPayment ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <Banknote className="mr-2 h-4 w-4" />
-                    Konfirmasi Bayar
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CashPaymentDialog
+        open={isCashPaymentDialogOpen}
+        onOpenChange={setIsCashPaymentDialogOpen}
+        tagihan={tagihanToPay}
+        onConfirm={confirmCashPayment}
+        isProcessing={processingPayment}
+        error={cashPaymentError}
+        success={cashPaymentSuccess}
+      />
     </div>
   );
 }

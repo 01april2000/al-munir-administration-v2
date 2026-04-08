@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import { FileBarChart, Download, Filter } from "lucide-react"
 
 
@@ -111,7 +112,7 @@ function formatDate(dateString: string | null): string {
   })
 }
 
-export default function RekapTransaksiPage() {
+function RekapTransaksiContent() {
   const searchParams = useSearchParams()
   const kelasParam = searchParams.get("kelas") || ""
   
@@ -457,5 +458,13 @@ export default function RekapTransaksiPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export default function RekapTransaksiPage() {
+  return (
+    <Suspense fallback={<LoadingState message="Memuat rekap transaksi..." />}>
+      <RekapTransaksiContent />
+    </Suspense>
   )
 }

@@ -55,10 +55,10 @@ export function ReceiptPrinting({ transaksi, isOpen, onClose }: ReceiptPrintProp
               background-color: #fff;
             }
             .ticket {
-              width: 100%;
-              max-width: 48mm; /* Batas aman lebar konten */
+              width: 48mm;
+              max-width: 48mm;
               margin: 0 auto;
-              padding: 2mm; /* Beri jarak aman dari tepi kertas */
+              padding: 0 2mm
             }
             .header {
               text-align: center;
@@ -67,46 +67,44 @@ export function ReceiptPrinting({ transaksi, isOpen, onClose }: ReceiptPrintProp
               border-bottom: 1px dashed #000;
             }
             .title {
-              font-size: 14px;
+              font-size: 12px; /* Dikurangi dari 14px */
               font-weight: bold;
               margin: 0;
             }
             .subtitle {
-              font-size: 10px;
+              font-size: 9px; /* Dikurangi dari 10px */
               margin: 0;
             }
             .content {
-              font-size: 11px;
+              font-size: 8px; /* Dikurangi dari 11px */
               line-height: 1.3;
             }
             .row {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start; /* Jika value panjang, turun ke bawah dengan rapi */
-              margin-bottom: 2px;
-              gap: 4px; /* Jarak aman antara label dan value */
+              display: block;
             }
             .label {
-              flex-shrink: 0; /* Mencegah label mengecil */
+              flex-shrink: 0;
               text-align: left;
+              max-width: 45%; /* Batasi lebar label */
             }
             .value {
               text-align: right;
-              word-break: break-word; /* Memaksa kata panjang turun */
+              word-break: break-word;
               white-space: pre-wrap;
+              max-width: 55%; /* Batasi lebar value */
             }
             .total-section {
               border-top: 1px dashed #000;
               margin-top: 4px;
               padding-top: 4px;
-              font-size: 12px;
+              font-size: 10px; /* Dikurangi dari 12px */
               font-weight: bold;
             }
             .footer {
               text-align: center;
               margin-top: 10px;
-              font-size: 10px;
-              padding-bottom: 15mm; 
+              font-size: 9px; /* Dikurangi dari 10px */
+              padding-bottom: 15mm;
             }
             .footer p {
               margin: 2px 0;

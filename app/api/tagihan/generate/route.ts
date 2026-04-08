@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bulan, tahun, jenisSantri, jenisTagihan, sppAmount, syahriahAmount, customAmount } = body;
+    const { bulan, tahun, jenisSantri, jenisTagihan, jenisUjian, sppAmount, syahriahAmount, customAmount } = body;
 
     // Validate input
     if (!bulan || !tahun) {
@@ -91,6 +91,14 @@ export async function POST(request: NextRequest) {
     if (isOtherTagihanType && (!customAmount || customAmount <= 0)) {
       return NextResponse.json(
         { error: `Jumlah untuk tagihan ${jenisTagihan} wajib diisi` },
+        { status: 400 }
+      );
+    }
+
+    // For UJIAN type, jenisUjian is required
+    if (jenisTagihan === "UJIAN" && !jenisUjian) {
+      return NextResponse.json(
+        { error: "Jenis ujian wajib dipilih" },
         { status: 400 }
       );
     }
@@ -201,8 +209,13 @@ export async function POST(request: NextRequest) {
 
       // Generate other tagihan types (UJIAN, PKL, LKS, BUKU_PENDAMPING, TKA, UANG_SAKU, LAUNDRY)
       if (generateOtherType && customAmount > 0) {
+        // For UJIAN type, include jenisUjian in the kode
+        const kodeSuffix = generateOtherType === "UJIAN" && jenisUjian
+          ? `${jenisUjian}-${bulan}-${tahun}`
+          : `${bulan}-${tahun}`;
+        
         tagihanData.push({
-          kode: `${generateOtherType}-${santri.nis}-${bulan}-${tahun}`,
+          kode: `${generateOtherType}-${santri.nis}-${kodeSuffix}`,
           santriId: santri.id,
           jenis: generateOtherType,
           bulan,

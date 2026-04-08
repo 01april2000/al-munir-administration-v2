@@ -61,6 +61,18 @@ const jenisTagihanOptions = [
   { value: "TKA", label: "TKA" },
 ];
 
+// Jenis ujian options
+const jenisUjianOptions = [
+  { value: "UTS", label: "UTS (Ujian Tengah Semester)" },
+  { value: "UAS", label: "UAS (Ujian Akhir Semester)" },
+  { value: "UJIAN_NASIONAL", label: "Ujian Nasional" },
+  { value: "UJIAN_SEKOLAH", label: "Ujian Sekolah" },
+  { value: "UJIAN_PRAKTIK", label: "Ujian Praktik" },
+  { value: "ANBK", label: "ANBK (Asesmen Nasional Berbasis Komputer)" },
+  { value: "TKA", label: "TKA (Tes Kompetensi Akademik)" },
+  { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
+];
+
 // All transaction types for creating tagihan
 const jenisTransaksiOptions = [
   { value: "SPP", label: "SPP" },
@@ -115,6 +127,7 @@ export default function TagihanManagementPage() {
   const [sppAmount, setSppAmount] = useState("");
   const [syahriahAmount, setSyahriahAmount] = useState("");
   const [customAmount, setCustomAmount] = useState("");
+  const [jenisUjian, setJenisUjian] = useState("");
   const [generateResult, setGenerateResult] = useState<{
     success?: boolean;
     message?: string;
@@ -191,6 +204,16 @@ export default function TagihanManagementPage() {
         return;
       }
 
+      // Check if jenis ujian is required for UJIAN type
+      if (jenisTagihan === "UJIAN" && !jenisUjian) {
+        setGenerateResult({
+          success: false,
+          message: "Jenis ujian wajib dipilih",
+        });
+        setGenerating(false);
+        return;
+      }
+
       const response = await fetch("/api/tagihan/generate", {
         method: "POST",
         headers: {
@@ -201,6 +224,7 @@ export default function TagihanManagementPage() {
           tahun: parseInt(generateTahun),
           jenisSantri: jenisSantri || undefined,
           jenisTagihan: jenisTagihan,
+          jenisUjian: jenisTagihan === "UJIAN" ? jenisUjian : undefined,
           sppAmount: sppAmount ? parseInt(sppAmount) : undefined,
           syahriahAmount: syahriahAmount ? parseInt(syahriahAmount) : undefined,
           customAmount: customAmount ? parseInt(customAmount) : undefined,
@@ -894,6 +918,26 @@ export default function TagihanManagementPage() {
                 </select>
               </div>
             </div>
+
+            {/* Show jenis ujian dropdown only for UJIAN type */}
+            {jenisTagihan === "UJIAN" && (
+              <div className="space-y-2">
+                <Label htmlFor="jenis-ujian">Jenis Ujian</Label>
+                <select
+                  id="jenis-ujian"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={jenisUjian}
+                  onChange={(e) => setJenisUjian(e.target.value)}
+                >
+                  <option value="">Pilih Jenis Ujian</option>
+                  {jenisUjianOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Show SPP/Syahriah fields only for ALL, SPP, or SYAHRIAH */}
             {(!jenisTagihan || jenisTagihan === "ALL" || jenisTagihan === "SPP" || jenisTagihan === "SYAHRIAH") && (

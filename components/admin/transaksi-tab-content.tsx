@@ -27,6 +27,7 @@ import {
   BULAN_OPTIONS,
   PERIODE_PEMBAYARAN_OPTIONS,
   JENIS_LAUNDRY_OPTIONS,
+  JENIS_UJIAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi, JenisTransaksi } from "@/lib/types/transaksi";
 import { Plus, RefreshCw, Loader2, FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Shirt, Check, Briefcase, Sparkles } from "lucide-react";
@@ -112,6 +113,8 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   const [filterTahun, setFilterTahun] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterStatusUangSaku, setFilterStatusUangSaku] = useState("");
+  const [filterJenisSantri, setFilterJenisSantri] = useState("");
+  const [filterJenisUjian, setFilterJenisUjian] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog states
@@ -213,6 +216,12 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
         if (filterBulan) params.append("bulan", filterBulan);
         if (filterTahun) params.append("tahun", filterTahun);
       }
+      if (jenis === "UJIAN") {
+        if (filterBulan) params.append("bulan", filterBulan);
+        if (filterTahun) params.append("tahun", filterTahun);
+        if (filterJenisSantri) params.append("jenisSantri", filterJenisSantri);
+        if (filterJenisUjian) params.append("keterangan", filterJenisUjian);
+      }
       if (jenis === "UANG_SAKU" && filterStatusUangSaku) {
         params.append("statusUangSaku", filterStatusUangSaku);
       }
@@ -233,7 +242,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
     } finally {
       setLoading(false);
     }
-  }, [jenis, page, limit, filterBulan, filterTahun, filterStatus, filterStatusUangSaku, searchQuery]);
+  }, [jenis, page, limit, filterBulan, filterTahun, filterStatus, filterStatusUangSaku, filterJenisSantri, filterJenisUjian, searchQuery]);
 
   useEffect(() => {
     fetchTransaksi();
@@ -667,6 +676,74 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
             ))}
           </select>
         </div>
+      );
+    }
+
+    if (jenis === "UJIAN") {
+      return (
+        <>
+          <div>
+            <Label htmlFor="filter-jenis-santri">Jenis Santri</Label>
+            <select
+              id="filter-jenis-santri"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={filterJenisSantri}
+              onChange={(e) => setFilterJenisSantri(e.target.value)}
+            >
+              <option value="">Semua Jenis</option>
+              <option value="SMK">SMK</option>
+              <option value="SMP">SMP</option>
+              <option value="PONDOK">Pondok</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="filter-jenis-ujian">Jenis Ujian</Label>
+            <select
+              id="filter-jenis-ujian"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={filterJenisUjian}
+              onChange={(e) => setFilterJenisUjian(e.target.value)}
+            >
+              <option value="">Semua Ujian</option>
+              {JENIS_UJIAN_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="filter-bulan-ujian">Bulan</Label>
+            <select
+              id="filter-bulan-ujian"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={filterBulan}
+              onChange={(e) => setFilterBulan(e.target.value)}
+            >
+              {BULAN_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="filter-tahun-ujian">Tahun</Label>
+            <select
+              id="filter-tahun-ujian"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={filterTahun}
+              onChange={(e) => setFilterTahun(e.target.value)}
+            >
+              <option value="">Semua Tahun</option>
+              {Array.from({ length: 10 }, (_, i) => currentYear - 5 + i).map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
       );
     }
 

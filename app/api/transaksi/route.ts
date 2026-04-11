@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
     const managedBy = searchParams.get("managedBy") as Role | null;
     const search = searchParams.get("search");
     const kelas = searchParams.get("kelas");
+    const keterangan = searchParams.get("keterangan");
+    const statusUangSaku = searchParams.get("statusUangSaku") as StatusUangSaku | null;
     const allJenisSantri = searchParams.get("allJenisSantri") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -52,6 +54,10 @@ export async function GET(request: NextRequest) {
     }
     if (status && Object.values(StatusTransaksi).includes(status)) {
       filter.status = status;
+    }
+    if (keterangan) filter.keterangan = keterangan;
+    if (statusUangSaku && Object.values(StatusUangSaku).includes(statusUangSaku)) {
+      filter.statusUangSaku = statusUangSaku;
     }
     // Build santri filter combining jenisSantri and kelas if provided
     const santriFilter: Prisma.SantriWhereInput = {};

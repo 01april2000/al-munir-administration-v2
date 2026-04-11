@@ -264,6 +264,16 @@ const ujianColumns: ColumnDef<Transaksi>[] = [
     },
   },
   {
+    accessorKey: "bulan",
+    header: "Bulan",
+    cell: ({ row }) => {
+      const bulan = row.getValue("bulan") as string;
+      if (!bulan) return "-";
+      const bulanOption = BULAN_OPTIONS.find((opt) => opt.value === bulan);
+      return bulanOption ? bulanOption.label : bulan;
+    },
+  },
+  {
     accessorKey: "tahun",
     header: ({ column }) => {
       return (

@@ -184,6 +184,7 @@ export async function POST(request: NextRequest) {
             bulan: tagihan.bulan,
             tahun: tagihan.tahun,
             jumlah: amount,
+            keterangan: tagihan.keterangan,
             status: StatusTransaksi.PENDING,
             managedBy: (session.user.role as Role) || Role.ADMIN,
             tagihan: {
@@ -367,6 +368,7 @@ async function handleCombinedPayment(
           bulan: tagihan.bulan,
           tahun: tagihan.tahun,
           jumlah: tagihan.jumlah, // Individual amount per tagihan
+          keterangan: tagihan.keterangan,
           status: StatusTransaksi.PENDING,
           managedBy: (session.user.role as Role) || Role.ADMIN,
           tagihan: {

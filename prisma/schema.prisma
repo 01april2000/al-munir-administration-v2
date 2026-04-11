@@ -225,6 +225,7 @@ model Tagihan {
   jumlah          Int
   status          StatusTagihan       @default(BELUM_LUNAS)
   jatuhTempo      DateTime
+  keterangan      String?
   transaksiId     String?
   transaksi       Transaksi?          @relation(fields: [transaksiId], references: [id], onDelete: SetNull)
   createdAt       DateTime            @default(now())

@@ -188,6 +188,7 @@ export async function POST(request: NextRequest) {
         tahun: finalTahun,
         status: StatusTagihan.BELUM_LUNAS,
         jatuhTempo,
+        keterangan: keterangan || null,
       },
       include: {
         santri: {

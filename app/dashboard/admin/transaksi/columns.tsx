@@ -238,6 +238,47 @@ const uangSakuColumns: ColumnDef<Transaksi>[] = [
   },
 ];
 
+// Ujian specific columns
+const JENIS_UJIAN_OPTIONS = [
+  { value: "UTS", label: "UTS (Ujian Tengah Semester)" },
+  { value: "UAS", label: "UAS (Ujian Akhir Semester)" },
+  { value: "UJIAN_NASIONAL", label: "Ujian Nasional" },
+  { value: "UJIAN_SEKOLAH", label: "Ujian Sekolah" },
+  { value: "UJIAN_PRAKTIK", label: "Ujian Praktik" },
+  { value: "ANBK", label: "ANBK (Asesmen Nasional Berbasis Komputer)" },
+  { value: "TKA", label: "TKA (Tes Kompetensi Akademik)" },
+  { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
+] as const;
+
+const ujianColumns: ColumnDef<Transaksi>[] = [
+  {
+    id: "jenisUjian",
+    accessorKey: "keterangan",
+    header: "Jenis Ujian",
+    cell: ({ row }) => {
+      const keterangan = row.original.keterangan;
+      const jenisUjianOption = JENIS_UJIAN_OPTIONS.find(
+        (opt) => opt.value === keterangan
+      );
+      return jenisUjianOption ? jenisUjianOption.label : keterangan || "-";
+    },
+  },
+  {
+    accessorKey: "tahun",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Tahun
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  },
+];
+
 // Laundry specific columns
 const laundryColumns: ColumnDef<Transaksi>[] = [
   {
@@ -331,6 +372,9 @@ export function getTransaksiColumns(
     columns.splice(2, 0, ...laundryColumns.filter((_, i) => i === 0));
     // Insert keterangan after status column
     columns.splice(6, 0, ...laundryColumns.filter((_, i) => i === 1));
+  } else if (jenis === "UJIAN") {
+    // Insert jenisUjian and tahun after santri column
+    columns.splice(2, 0, ...ujianColumns);
   }
 
   // Add actions column if callbacks provided
@@ -343,6 +387,7 @@ export function getTransaksiColumns(
 
 // Export constants for use in pages
 export { STATUS_TRANSAKSI_OPTIONS, STATUS_UANG_SAKU_OPTIONS, BULAN_OPTIONS };
+export { JENIS_UJIAN_OPTIONS };
 
 // Periode pembayaran options
 export const PERIODE_PEMBAYARAN_OPTIONS = [

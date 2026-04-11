@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
       jumlah: number;
       status: StatusTagihan;
       jatuhTempo: Date;
+      keterangan?: string | null;
     }[] = [];
 
     for (const santri of activeSantri) {
@@ -223,6 +224,7 @@ export async function POST(request: NextRequest) {
           jumlah: customAmount,
           status: "BELUM_LUNAS",
           jatuhTempo,
+          keterangan: generateOtherType === "UJIAN" ? jenisUjian : null,
         });
       }
     }

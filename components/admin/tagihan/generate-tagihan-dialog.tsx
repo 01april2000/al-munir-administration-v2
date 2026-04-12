@@ -287,6 +287,18 @@ export function GenerateTagihanDialog({
               </div>
             )}
 
+          {/* Show PKL class restriction info */}
+          {jenisTagihan === "PKL" && (
+            <div className="p-3 rounded-md bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-sm">
+              <p className="font-medium">ℹ️ Keterangan PKL</p>
+              <p className="mt-1">
+                Tagihan PKL hanya akan digenerate untuk santri kelas{" "}
+                <strong>XII_RPL_A</strong>, <strong>XII_RPL_B</strong>, dan{" "}
+                <strong>XII_AKL</strong>.
+              </p>
+            </div>
+          )}
+
           {/* Show default amounts info only for SPP/SYAHRIAH */}
           {(!jenisTagihan ||
             jenisTagihan === "ALL" ||

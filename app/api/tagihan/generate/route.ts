@@ -17,6 +17,9 @@ const ALL_JENIS_TAGIHAN: JenisTagihan[] = [
   "UJIAN", "PKL", "LKS", "BUKU_PENDAMPING", "TKA"
 ];
 
+// PKL tagihan is only for kelas XII
+const PKL_ALLOWED_KELAS = ["XII_RPL_A", "XII_RPL_B", "XII_AKL"] as const;
+
 // POST - Generate tagihan for all active santri for a specific month/year
 export async function POST(request: NextRequest) {
   try {
@@ -125,6 +128,7 @@ export async function POST(request: NextRequest) {
         id: true,
         nis: true,
         nama: true,
+        kelas: true,
         jenisSantri: true,
         beasiswa: true,
         jenisBeasiswa: true,
@@ -210,6 +214,11 @@ export async function POST(request: NextRequest) {
 
       // Generate other tagihan types (UJIAN, PKL, LKS, BUKU_PENDAMPING, TKA, UANG_SAKU, LAUNDRY)
       if (generateOtherType && customAmount > 0) {
+        // For PKL, only generate for specific kelas (XII)
+        if (generateOtherType === "PKL" && !PKL_ALLOWED_KELAS.includes(santri.kelas as typeof PKL_ALLOWED_KELAS[number])) {
+          continue;
+        }
+
         // For UJIAN type, include jenisUjian in the kode
         const kodeSuffix = generateOtherType === "UJIAN" && jenisUjian
           ? `${jenisUjian}-${bulan}-${tahun}`

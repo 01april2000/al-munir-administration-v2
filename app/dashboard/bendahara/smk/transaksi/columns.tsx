@@ -171,8 +171,34 @@ const sppSyahriahColumns: ColumnDef<TransaksiSMK>[] = [
   },
 ];
 
-// LKS/PKL/Ujian specific columns
-const lksPklUjianColumns: ColumnDef<TransaksiSMK>[] = [
+// Semester options for LKS
+const SEMESTER_OPTIONS = [
+  { value: "SEMESTER_1", label: "Semester 1 (Ganjil)" },
+  { value: "SEMESTER_2", label: "Semester 2 (Genap)" },
+  { value: "Semester 1", label: "Semester 1" },
+  { value: "Semester 2", label: "Semester 2" },
+] as const;
+
+// LKS specific columns
+const lksColumns: ColumnDef<TransaksiSMK>[] = [
+  {
+    id: "semester",
+    header: "Semester",
+    cell: ({ row }) => {
+      const keterangan = row.original.keterangan;
+      const bulan = row.original.bulan;
+      // Check keterangan first (from tagihan generate), then bulan (from transaksi generate)
+      const semesterValue = keterangan || bulan;
+      const semesterOption = SEMESTER_OPTIONS.find(
+        (opt) => opt.value === semesterValue
+      );
+      return semesterOption ? semesterOption.label : semesterValue || "-";
+    },
+  },
+];
+
+// PKL/Ujian specific columns
+const pklUjianColumns: ColumnDef<TransaksiSMK>[] = [
   {
     accessorKey: "keterangan",
     header: "Keterangan",
@@ -231,9 +257,12 @@ export function getTransaksiColumns(
   if (jenis === "SPP" || jenis === "SYAHRIAH") {
     // Insert before status column (index 3)
     columns.splice(3, 0, ...sppSyahriahColumns);
-  } else if (jenis === "LKS" || jenis === "PKL" || jenis === "UJIAN") {
+  } else if (jenis === "LKS") {
+    // Insert semester column after status column
+    columns.splice(5, 0, ...lksColumns);
+  } else if (jenis === "PKL" || jenis === "UJIAN") {
     // Insert keterangan after status column
-    columns.splice(5, 0, ...lksPklUjianColumns);
+    columns.splice(5, 0, ...pklUjianColumns);
   }
 
   // Add actions column if callbacks provided

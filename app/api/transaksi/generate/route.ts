@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     } else if (jenisTransaksi === "PKL") {
       finalKeterangan = keterangan || "Praktik Kerja Lapangan";
     } else if (jenisTransaksi === "LKS") {
-      finalKeterangan = keterangan || "Lembar Kerja Siswa";
+      finalKeterangan = semester || keterangan || "Lembar Kerja Siswa";
     } else {
       finalKeterangan = keterangan || "Buku Pendamping";
     }

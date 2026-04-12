@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bulan, tahun, jenisSantri, jenisTagihan, jenisUjian, sppAmount, syahriahAmount, customAmount } = body;
+    const { bulan, tahun, jenisSantri, jenisTagihan, jenisUjian, semester, sppAmount, syahriahAmount, customAmount } = body;
 
     // Validate input
     if (!bulan || !tahun) {
@@ -102,6 +102,14 @@ export async function POST(request: NextRequest) {
     if (jenisTagihan === "UJIAN" && !jenisUjian) {
       return NextResponse.json(
         { error: "Jenis ujian wajib dipilih" },
+        { status: 400 }
+      );
+    }
+
+    // For LKS type, semester is required
+    if (jenisTagihan === "LKS" && !semester) {
+      return NextResponse.json(
+        { error: "Semester wajib dipilih untuk tagihan LKS" },
         { status: 400 }
       );
     }
@@ -220,9 +228,21 @@ export async function POST(request: NextRequest) {
         }
 
         // For UJIAN type, include jenisUjian in the kode
-        const kodeSuffix = generateOtherType === "UJIAN" && jenisUjian
-          ? `${jenisUjian}-${bulan}-${tahun}`
-          : `${bulan}-${tahun}`;
+        // For LKS type, include semester in the kode
+        let kodeSuffix = `${bulan}-${tahun}`;
+        if (generateOtherType === "UJIAN" && jenisUjian) {
+          kodeSuffix = `${jenisUjian}-${bulan}-${tahun}`;
+        } else if (generateOtherType === "LKS" && semester) {
+          kodeSuffix = `${semester}-${bulan}-${tahun}`;
+        }
+
+        // Determine keterangan based on type
+        let keteranganValue: string | null = null;
+        if (generateOtherType === "UJIAN") {
+          keteranganValue = jenisUjian || null;
+        } else if (generateOtherType === "LKS") {
+          keteranganValue = semester || null;
+        }
         
         tagihanData.push({
           kode: `${generateOtherType}-${santri.nis}-${kodeSuffix}`,
@@ -233,7 +253,7 @@ export async function POST(request: NextRequest) {
           jumlah: customAmount,
           status: "BELUM_LUNAS",
           jatuhTempo,
-          keterangan: generateOtherType === "UJIAN" ? jenisUjian : null,
+          keterangan: keteranganValue,
         });
       }
     }

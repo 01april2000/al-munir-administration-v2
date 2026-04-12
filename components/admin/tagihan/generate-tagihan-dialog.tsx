@@ -70,6 +70,11 @@ const jenisUjianOptions = [
   { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
 ];
 
+const semesterOptions = [
+  { value: "SEMESTER_1", label: "Semester 1 (Ganjil)" },
+  { value: "SEMESTER_2", label: "Semester 2 (Genap)" },
+];
+
 export function GenerateTagihanDialog({
   open,
   onOpenChange,
@@ -85,6 +90,7 @@ export function GenerateTagihanDialog({
   const [syahriahAmount, setSyahriahAmount] = useState("");
   const [customAmount, setCustomAmount] = useState("");
   const [jenisUjian, setJenisUjian] = useState("");
+  const [semester, setSemester] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Reset form when dialog opens
@@ -98,6 +104,7 @@ export function GenerateTagihanDialog({
       setSyahriahAmount("");
       setCustomAmount("");
       setJenisUjian("");
+      setSemester("");
       setLocalError(null);
     }
   }, [open]);
@@ -123,12 +130,19 @@ export function GenerateTagihanDialog({
       return;
     }
 
+    // Check if semester is required for LKS type
+    if (jenisTagihan === "LKS" && !semester) {
+      setLocalError("Semester wajib dipilih");
+      return;
+    }
+
     const data: GenerateTagihanData = {
       bulan,
       tahun: parseInt(tahun),
       jenisSantri: jenisSantri || undefined,
       jenisTagihan,
       jenisUjian: jenisTagihan === "UJIAN" ? jenisUjian : undefined,
+      semester: jenisTagihan === "LKS" ? semester : undefined,
       sppAmount: sppAmount ? parseInt(sppAmount) : undefined,
       syahriahAmount: syahriahAmount ? parseInt(syahriahAmount) : undefined,
       customAmount: customAmount ? parseInt(customAmount) : undefined,
@@ -218,6 +232,26 @@ export function GenerateTagihanDialog({
               >
                 <option value="">Pilih Jenis Ujian</option>
                 {jenisUjianOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Show semester dropdown only for LKS type */}
+          {jenisTagihan === "LKS" && (
+            <div className="space-y-2">
+              <Label htmlFor="semester-lks">Semester</Label>
+              <select
+                id="semester-lks"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+              >
+                <option value="">Pilih Semester</option>
+                {semesterOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

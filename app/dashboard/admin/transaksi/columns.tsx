@@ -289,6 +289,46 @@ const ujianColumns: ColumnDef<Transaksi>[] = [
   },
 ];
 
+// Semester options for LKS
+const SEMESTER_OPTIONS = [
+  { value: "SEMESTER_1", label: "Semester 1 (Ganjil)" },
+  { value: "SEMESTER_2", label: "Semester 2 (Genap)" },
+  { value: "Semester 1", label: "Semester 1" },
+  { value: "Semester 2", label: "Semester 2" },
+] as const;
+
+// LKS specific columns
+const lksColumns: ColumnDef<Transaksi>[] = [
+  {
+    id: "semester",
+    header: "Semester",
+    cell: ({ row }) => {
+      const keterangan = row.original.keterangan;
+      const bulan = row.original.bulan;
+      // Check keterangan first (from tagihan generate), then bulan (from transaksi generate)
+      const semesterValue = keterangan || bulan;
+      const semesterOption = SEMESTER_OPTIONS.find(
+        (opt) => opt.value === semesterValue
+      );
+      return semesterOption ? semesterOption.label : semesterValue || "-";
+    },
+  },
+  {
+    accessorKey: "tahun",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Tahun
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  },
+];
+
 // Laundry specific columns
 const laundryColumns: ColumnDef<Transaksi>[] = [
   {
@@ -385,6 +425,9 @@ export function getTransaksiColumns(
   } else if (jenis === "UJIAN") {
     // Insert jenisUjian and tahun after santri column
     columns.splice(2, 0, ...ujianColumns);
+  } else if (jenis === "LKS") {
+    // Insert semester, bulan, and tahun after santri column
+    columns.splice(2, 0, ...lksColumns);
   }
 
   // Add actions column if callbacks provided
@@ -398,6 +441,7 @@ export function getTransaksiColumns(
 // Export constants for use in pages
 export { STATUS_TRANSAKSI_OPTIONS, STATUS_UANG_SAKU_OPTIONS, BULAN_OPTIONS };
 export { JENIS_UJIAN_OPTIONS };
+export { SEMESTER_OPTIONS };
 
 // Periode pembayaran options
 export const PERIODE_PEMBAYARAN_OPTIONS = [

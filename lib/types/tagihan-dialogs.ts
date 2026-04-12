@@ -90,6 +90,7 @@ export interface GenerateTagihanData {
   jenisSantri?: string;
   jenisTagihan: string;
   jenisUjian?: string;
+  semester?: string;
   sppAmount?: number;
   syahriahAmount?: number;
   customAmount?: number;

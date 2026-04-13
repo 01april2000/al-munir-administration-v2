@@ -24,12 +24,16 @@ import { columns, selectColumn, Tagihan, bulanOptions } from "./columns";
 import { FileText, Loader2, RefreshCw, Sparkles, Plus } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import { CreateTagihanDialog } from "@/components/admin/tagihan/create-tagihan-dialog";
+import {
+  CreateTagihanDialog,
+  CashPaymentDialog,
+} from "@/components/admin/tagihan";
 import {
   CreateTagihanData,
   SantriOption,
   CreateResult,
   JenisTransaksiOption,
+  Tagihan as TagihanType,
 } from "@/lib/types/tagihan-dialogs";
 
 const smkJenisTransaksiOptions: JenisTransaksiOption[] = [
@@ -73,6 +77,13 @@ export default function TagihanManagementPage() {
   const [creating, setCreating] = useState(false);
   const [createResult, setCreateResult] = useState<CreateResult | null>(null);
   const [santriList, setSantriList] = useState<SantriOption[]>([]);
+
+  // Cash payment dialog state
+  const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
+  const [tagihanToPay, setTagihanToPay] = useState<Tagihan | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [cashPaymentError, setCashPaymentError] = useState<string | null>(null);
+  const [cashPaymentSuccess, setCashPaymentSuccess] = useState(false);
 
   // Filter states
   const [filterBulan, setFilterBulan] = useState(bulanList[currentMonthIndex]);
@@ -216,6 +227,62 @@ export default function TagihanManagementPage() {
       setGenerating(false);
     }
   };
+
+  // Handle cash payment
+  const handleCashPayment = (tagihan: Tagihan) => {
+    setTagihanToPay(tagihan);
+    setCashPaymentError(null);
+    setCashPaymentSuccess(false);
+    setIsCashPaymentDialogOpen(true);
+  };
+
+  const confirmCashPayment = async () => {
+    if (!tagihanToPay) return;
+
+    try {
+      setProcessingPayment(true);
+      setCashPaymentError(null);
+
+      const response = await fetch("/api/transaksi/cash-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tagihanIds: [tagihanToPay.id],
+          santriId: tagihanToPay.santri.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to process cash payment");
+      }
+
+      setCashPaymentSuccess(true);
+
+      // Refresh the list after a short delay
+      setTimeout(async () => {
+        await fetchTagihan();
+        setIsCashPaymentDialogOpen(false);
+        setTagihanToPay(null);
+        setCashPaymentSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setCashPaymentError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  // Register handleCashPayment on window object for columns.tsx to access
+  useEffect(() => {
+    (window as any).handleCashPayment = handleCashPayment;
+    return () => {
+      delete (window as any).handleCashPayment;
+    };
+  }, [handleCashPayment]);
 
   const columnsWithSelect = [selectColumn, ...columns];
 
@@ -506,6 +573,17 @@ export default function TagihanManagementPage() {
         santriList={santriList}
         onSantriListLoad={fetchSantriList}
         jenisTransaksiOptions={smkJenisTransaksiOptions}
+      />
+
+      {/* Cash Payment Dialog */}
+      <CashPaymentDialog
+        open={isCashPaymentDialogOpen}
+        onOpenChange={setIsCashPaymentDialogOpen}
+        tagihan={tagihanToPay as any}
+        onConfirm={confirmCashPayment}
+        isProcessing={processingPayment}
+        error={cashPaymentError}
+        success={cashPaymentSuccess}
       />
     </div>
   );

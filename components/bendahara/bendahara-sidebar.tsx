@@ -139,6 +139,19 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
                   }
                 />
               </SidebarMenuItem>
+                {role !== "pondok" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname?.startsWith(`${basePath}/tagihan-management`) ?? false}
+                    render={
+                      <Link href={`${basePath}/tagihan-management`}>
+                        <Sparkles className="h-4 w-4" />
+                        <span>Tagihan Management</span>
+                      </Link>
+                    }
+                  />
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTransaksiOpen(!isTransaksiOpen)}
@@ -175,21 +188,7 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
-
             
-              {role !== "pondok" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={pathname?.startsWith(`${basePath}/tagihan-management`) ?? false}
-                    render={
-                      <Link href={`${basePath}/tagihan-management`}>
-                        <Sparkles className="h-4 w-4" />
-                        <span>Tagihan Management</span>
-                      </Link>
-                    }
-                  />
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

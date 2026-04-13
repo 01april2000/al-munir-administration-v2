@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,7 @@ import {
   PERIODE_PEMBAYARAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, Banknote, Printer } from "lucide-react";
+import { RefreshCw, Loader2, FileText, Banknote, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useReceiptPrinting } from "@/components/shared/receipt-printing";
 import {
@@ -41,16 +41,6 @@ import {
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
 const bulanList = BULAN_OPTIONS.map((b) => b.value) as string[];
-
-interface Santri {
-  id: string;
-  nis: string;
-  nama: string;
-  kelas: string;
-  asrama: string;
-  jenisSantri: string;
-  saldo: number;
-}
 
 interface FormData {
   santriId: string;
@@ -85,13 +75,12 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
   const [limit, setLimit] = useState(10);
 
   // Filter states
-  const [filterBulan, setFilterBulan] = useState<string>(bulanList[currentMonthIndex]);
-  const [filterTahun, setFilterTahun] = useState(currentYear.toString());
+  const [filterBulan, setFilterBulan] = useState<string>("");
+  const [filterTahun, setFilterTahun] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog states
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,34 +94,6 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
 
   // Form states
   const [formData, setFormData] = useState<FormData>(getDefaultFormData());
-
-  // Santri search for dropdown
-  const [santriList, setSantriList] = useState<Santri[]>([]);
-  const [santriSearch, setSantriSearch] = useState("");
-  const [loadingSantri, setLoadingSantri] = useState(false);
-  const [showSantriDropdown, setShowSantriDropdown] = useState(false);
-  const santriDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Fetch santri for dropdown (based on jenisSantri prop)
-  const fetchSantri = useCallback(async (search: string = "") => {
-    try {
-      setLoadingSantri(true);
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      params.append("limit", "20");
-      params.append("jenisSantri", jenisSantri);
-
-      const response = await fetch(`/api/santri?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSantriList(data.santri || []);
-      }
-    } catch (err) {
-      console.error("Error fetching santri:", err);
-    } finally {
-      setLoadingSantri(false);
-    }
-  }, [jenisSantri]);
 
   // Fetch transaksi
   const fetchTransaksi = useCallback(async () => {
@@ -167,21 +128,6 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
     fetchTransaksi();
   }, [fetchTransaksi]);
 
-  useEffect(() => {
-    fetchSantri();
-  }, [fetchSantri]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (santriDropdownRef.current && !santriDropdownRef.current.contains(event.target as Node)) {
-        setShowSantriDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // Handle form change
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -190,8 +136,6 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
   // Reset form
   const resetForm = () => {
     setFormData(getDefaultFormData());
-    setSantriSearch("");
-    setShowSantriDropdown(false);
   };
 
   // Build request body
@@ -212,36 +156,6 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
     base.periodePembayaran = data.periodePembayaran;
 
     return base;
-  };
-
-  // Handle add transaksi
-  const handleAdd = async () => {
-    if (!formData.santriId || !formData.jumlah) {
-      setError("Mohon lengkapi semua field yang diperlukan");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const response = await fetch("/api/transaksi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRequestBody(formData)),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create transaksi");
-      }
-
-      setIsAddDialogOpen(false);
-      resetForm();
-      fetchTransaksi();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   // Handle edit transaksi
@@ -507,16 +421,10 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header with Add Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Pembayaran SPP</h2>
-          <p className="text-sm text-muted-foreground">Kelola pembayaran SPP santri {jenisSantri}</p>
-        </div>
-        <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Pembayaran
-        </Button>
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-semibold">Pembayaran SPP</h2>
+        <p className="text-sm text-muted-foreground">Data pembayaran SPP santri {jenisSantri}</p>
       </div>
 
       {/* Summary Cards */}
@@ -693,168 +601,6 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
           )}
         </CardContent>
       </Card>
-
-      {/* Add Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Pembayaran SPP</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label htmlFor="santri">Santri</Label>
-              <div className="relative" ref={santriDropdownRef}>
-                <Input
-                  id="santri-search"
-                  placeholder="Ketik nama santri..."
-                  value={santriSearch}
-                  onChange={(e) => {
-                    setSantriSearch(e.target.value);
-                    // Only show dropdown when user types (at least 1 character)
-                    if (e.target.value.length > 0) {
-                      fetchSantri(e.target.value);
-                      setShowSantriDropdown(true);
-                    } else {
-                      setShowSantriDropdown(false);
-                    }
-                  }}
-                  autoComplete="off"
-                />
-                {loadingSantri && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                )}
-                {/* Autocomplete Dropdown */}
-                {showSantriDropdown && santriList.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
-                    {santriList.map((santri) => (
-                      <div
-                        key={santri.id}
-                        className="flex flex-col px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => {
-                          handleFormChange("santriId", santri.id);
-                          setSantriSearch(`${santri.nama} - ${santri.nis}`);
-                          setShowSantriDropdown(false);
-                        }}
-                      >
-                        <span className="font-medium">{santri.nama}</span>
-                        <span className="text-xs text-muted-foreground">
-                          NIS: {santri.nis} | Kelas: {santri.kelas}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* No results message */}
-                {showSantriDropdown && !loadingSantri && santriSearch.length > 0 && santriList.length === 0 && (
-                  <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-md p-3 text-sm text-muted-foreground">
-                    Tidak ada santri ditemukan
-                  </div>
-                )}
-              </div>
-              {/* Hidden input for form validation */}
-              <input type="hidden" value={formData.santriId} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="bulan">Bulan</Label>
-                <select
-                  id="bulan"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={formData.bulan}
-                  onChange={(e) => handleFormChange("bulan", e.target.value)}
-                >
-                  {BULAN_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="tahun">Tahun</Label>
-                <Input
-                  id="tahun"
-                  type="number"
-                  value={formData.tahun}
-                  onChange={(e) => handleFormChange("tahun", e.target.value)}
-                  min="2020"
-                  max="2100"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="jumlah">Jumlah (Rp)</Label>
-                <Input
-                  id="jumlah"
-                  type="number"
-                  value={formData.jumlah}
-                  onChange={(e) => handleFormChange("jumlah", e.target.value)}
-                  placeholder="Masukkan jumlah"
-                />
-              </div>
-              <div>
-                <Label htmlFor="periode">Periode Pembayaran</Label>
-                <select
-                  id="periode"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={formData.periodePembayaran}
-                  onChange={(e) => handleFormChange("periodePembayaran", e.target.value)}
-                >
-                  {PERIODE_PEMBAYARAN_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={formData.status}
-                  onChange={(e) => handleFormChange("status", e.target.value)}
-                >
-                  {STATUS_TRANSAKSI_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="tanggalBayar">Tanggal Bayar</Label>
-                <Input
-                  id="tanggalBayar"
-                  type="date"
-                  value={formData.tanggalBayar}
-                  onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleAdd} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

@@ -111,6 +111,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   // Filter states - different per transaction type
   const [filterBulan, setFilterBulan] = useState<string>("");
   const [filterTahun, setFilterTahun] = useState("");
+  const [filterSemester, setFilterSemester] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterStatusUangSaku, setFilterStatusUangSaku] = useState("");
   const [filterJenisSantri, setFilterJenisSantri] = useState("");
@@ -216,6 +217,10 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
         if (filterBulan) params.append("bulan", filterBulan);
         if (filterTahun) params.append("tahun", filterTahun);
       }
+      if (jenis === "LKS") {
+        if (filterSemester) params.append("semester", filterSemester);
+        if (filterTahun) params.append("tahun", filterTahun);
+      }
       if (jenis === "UJIAN") {
         if (filterBulan) params.append("bulan", filterBulan);
         if (filterTahun) params.append("tahun", filterTahun);
@@ -242,7 +247,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
     } finally {
       setLoading(false);
     }
-  }, [jenis, page, limit, filterBulan, filterTahun, filterStatus, filterStatusUangSaku, filterJenisSantri, filterJenisUjian, searchQuery]);
+  }, [jenis, page, limit, filterBulan, filterTahun, filterSemester, filterStatus, filterStatusUangSaku, filterJenisSantri, filterJenisUjian, searchQuery]);
 
   useEffect(() => {
     fetchTransaksi();
@@ -747,6 +752,42 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
       );
     }
 
+    if (jenis === "LKS") {
+      return (
+        <>
+          <div>
+            <Label htmlFor="filter-semester">Semester</Label>
+            <select
+              id="filter-semester"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={filterSemester}
+              onChange={(e) => setFilterSemester(e.target.value)}
+            >
+              <option value="">Semua Semester</option>
+              <option value="SEMESTER_1">Semester 1 (Ganjil)</option>
+              <option value="SEMESTER_2">Semester 2 (Genap)</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="filter-tahun-lks">Tahun</Label>
+            <select
+              id="filter-tahun-lks"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={filterTahun}
+              onChange={(e) => setFilterTahun(e.target.value)}
+            >
+              <option value="">Semua Tahun</option>
+              {Array.from({ length: 10 }, (_, i) => currentYear - 5 + i).map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      );
+    }
+
     return null;
   };
 
@@ -1034,7 +1075,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   };
 
   // Determine grid columns for filters
-  const filterGridCols = jenis === "UANG_SAKU" || jenis === "LAUNDRY" ? "md:grid-cols-4" : "md:grid-cols-5";
+  const filterGridCols = jenis === "UANG_SAKU" || jenis === "LAUNDRY" ? "md:grid-cols-4" : jenis === "LKS" ? "md:grid-cols-5" : "md:grid-cols-5";
 
   return (
     <div className="flex flex-col gap-6">

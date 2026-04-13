@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const kelas = searchParams.get("kelas");
     const keterangan = searchParams.get("keterangan");
+    const semester = searchParams.get("semester");
     const statusUangSaku = searchParams.get("statusUangSaku") as StatusUangSaku | null;
     const allJenisSantri = searchParams.get("allJenisSantri") === "true";
     const page = parseInt(searchParams.get("page") || "1");
@@ -56,6 +57,17 @@ export async function GET(request: NextRequest) {
       filter.status = status;
     }
     if (keterangan) filter.keterangan = keterangan;
+    // Semester filter for LKS: check both bulan and keterangan fields
+    if (semester) {
+      filter.AND = [
+        {
+          OR: [
+            { bulan: semester },
+            { keterangan: semester },
+          ],
+        },
+      ];
+    }
     if (statusUangSaku && Object.values(StatusUangSaku).includes(statusUangSaku)) {
       filter.statusUangSaku = statusUangSaku;
     }

@@ -18,6 +18,18 @@ import {
   SantriOption,
 } from "@/lib/types/tagihan-dialogs";
 
+const defaultJenisTransaksiOptions = [
+  { value: "SPP", label: "SPP" },
+  { value: "SYAHRIAH", label: "Syahriah" },
+  { value: "UANG_SAKU", label: "Uang Saku" },
+  { value: "LAUNDRY", label: "Laundry" },
+  { value: "UJIAN", label: "Ujian" },
+  { value: "PKL", label: "PKL" },
+  { value: "LKS", label: "LKS" },
+  { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
+  { value: "TKA", label: "TKA" },
+];
+
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
 const bulanList = [
@@ -40,18 +52,6 @@ const bulanOptions = [
   ...bulanList.map((bulan) => ({ value: bulan, label: bulan })),
 ];
 
-const jenisTransaksiOptions = [
-  { value: "SPP", label: "SPP" },
-  { value: "SYAHRIAH", label: "Syahriah" },
-  { value: "UANG_SAKU", label: "Uang Saku" },
-  { value: "LAUNDRY", label: "Laundry" },
-  { value: "UJIAN", label: "Ujian" },
-  { value: "PKL", label: "PKL" },
-  { value: "LKS", label: "LKS" },
-  { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
-  { value: "TKA", label: "TKA" },
-];
-
 export function CreateTagihanDialog({
   open,
   onOpenChange,
@@ -60,6 +60,7 @@ export function CreateTagihanDialog({
   result,
   santriList,
   onSantriListLoad,
+  jenisTransaksiOptions = defaultJenisTransaksiOptions,
 }: CreateTagihanDialogProps) {
   const [santriSearch, setSantriSearch] = useState("");
   const [selectedSantriId, setSelectedSantriId] = useState("");

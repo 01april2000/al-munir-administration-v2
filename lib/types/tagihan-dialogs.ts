@@ -97,6 +97,11 @@ export interface GenerateTagihanData {
 }
 
 // Props for CreateTagihanDialog
+export interface JenisTransaksiOption {
+  value: string;
+  label: string;
+}
+
 export interface CreateTagihanDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -105,6 +110,7 @@ export interface CreateTagihanDialogProps {
   result: CreateResult | null;
   santriList: SantriOption[];
   onSantriListLoad: () => Promise<void>;
+  jenisTransaksiOptions?: JenisTransaksiOption[];
 }
 
 export interface CreateTagihanData {

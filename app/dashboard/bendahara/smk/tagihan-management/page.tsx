@@ -21,9 +21,24 @@ import {
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { columns, selectColumn, Tagihan, bulanOptions } from "./columns";
-import { FileText, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { FileText, Loader2, RefreshCw, Sparkles, Plus } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { CreateTagihanDialog } from "@/components/admin/tagihan/create-tagihan-dialog";
+import {
+  CreateTagihanData,
+  SantriOption,
+  CreateResult,
+  JenisTransaksiOption,
+} from "@/lib/types/tagihan-dialogs";
+
+const smkJenisTransaksiOptions: JenisTransaksiOption[] = [
+  { value: "SPP", label: "SPP" },
+  { value: "SYAHRIAH", label: "Syahriah" },
+  { value: "UJIAN", label: "Ujian" },
+  { value: "PKL", label: "PKL" },
+  { value: "LKS", label: "LKS" },
+];
 
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
@@ -53,6 +68,12 @@ export default function TagihanManagementPage() {
   const [generating, setGenerating] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
+  // Create dialog state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createResult, setCreateResult] = useState<CreateResult | null>(null);
+  const [santriList, setSantriList] = useState<SantriOption[]>([]);
+
   // Filter states
   const [filterBulan, setFilterBulan] = useState(bulanList[currentMonthIndex]);
   const [filterTahun, setFilterTahun] = useState(currentYear.toString());
@@ -76,6 +97,57 @@ export default function TagihanManagementPage() {
       tahun: number;
     };
   } | null>(null);
+
+  // Fetch santri list for create dialog (SMK only)
+  const fetchSantriList = useCallback(async () => {
+    try {
+      const response = await fetch("/api/santri?limit=1000&jenisSantri=SMK");
+      if (!response.ok) {
+        throw new Error("Failed to fetch santri");
+      }
+      const data = await response.json();
+      setSantriList(data.santri || data);
+    } catch (err) {
+      console.error("Error fetching santri:", err);
+    }
+  }, []);
+
+  // Handle create tagihan
+  const handleCreateTagihan = async (data: CreateTagihanData) => {
+    try {
+      setCreating(true);
+      setCreateResult(null);
+
+      const response = await fetch("/api/tagihan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create tagihan");
+      }
+
+      setCreateResult({
+        success: true,
+        message: "Tagihan berhasil dibuat",
+      });
+
+      // Refresh the list
+      await fetchTagihan();
+    } catch (err) {
+      setCreateResult({
+        success: false,
+        message: err instanceof Error ? err.message : "An error occurred",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const fetchTagihan = useCallback(async () => {
     try {
@@ -162,10 +234,16 @@ export default function TagihanManagementPage() {
             Kelola tagihan bulanan santri SMK (SPP & Syahriah)
           </p>
         </div>
-        <Button onClick={() => setIsGenerateDialogOpen(true)}>
-          <Sparkles className="mr-2 h-4 w-4" />
-          Generate Tagihan
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Buat Tagihan
+          </Button>
+          <Button onClick={() => setIsGenerateDialogOpen(true)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate Tagihan
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -418,6 +496,17 @@ export default function TagihanManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Create Tagihan Dialog */}
+      <CreateTagihanDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onCreate={handleCreateTagihan}
+        isCreating={creating}
+        result={createResult}
+        santriList={santriList}
+        onSantriListLoad={fetchSantriList}
+        jenisTransaksiOptions={smkJenisTransaksiOptions}
+      />
     </div>
   );
 }

@@ -62,6 +62,37 @@ const jenisTagihanOptions = [
   { value: "ALL", label: "SPP & Syahriah" },
   { value: "SPP", label: "SPP saja" },
   { value: "SYAHRIAH", label: "Syahriah saja" },
+  { value: "PKL", label: "PKL" },
+  { value: "LKS", label: "LKS" },
+  { value: "UJIAN", label: "Ujian" },
+];
+
+const jenisUjianOptions = [
+  { value: "UTS", label: "UTS (Ujian Tengah Semester)" },
+  { value: "UAS", label: "UAS (Ujian Akhir Semester)" },
+  { value: "UJIAN_NASIONAL", label: "Ujian Nasional" },
+  { value: "UJIAN_SEKOLAH", label: "Ujian Sekolah" },
+  { value: "UJIAN_PRAKTIK", label: "Ujian Praktik" },
+  { value: "ANBK", label: "ANBK (Asesmen Nasional Berbasis Komputer)" },
+  { value: "TKA", label: "TKA (Tes Kompetensi Akademik)" },
+  { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
+];
+
+const semesterOptions = [
+  { value: "SEMESTER_1", label: "Semester 1 (Ganjil)" },
+  { value: "SEMESTER_2", label: "Semester 2 (Genap)" },
+];
+
+const smkKelasOptions = [
+  { value: "X_RPL_A", label: "X RPL A" },
+  { value: "X_RPL_B", label: "X RPL B" },
+  { value: "X_AKL", label: "X AKL" },
+  { value: "XI_RPL_A", label: "XI RPL A" },
+  { value: "XI_RPL_B", label: "XI RPL B" },
+  { value: "XI_AKL", label: "XI AKL" },
+  { value: "XII_RPL_A", label: "XII RPL A" },
+  { value: "XII_RPL_B", label: "XII RPL B" },
+  { value: "XII_AKL", label: "XII AKL" },
 ];
 
 export default function TagihanManagementPage() {
@@ -97,6 +128,11 @@ export default function TagihanManagementPage() {
   const [jenisTagihan, setJenisTagihan] = useState("ALL");
   const [sppAmount, setSppAmount] = useState("");
   const [syahriahAmount, setSyahriahAmount] = useState("");
+  const [customAmount, setCustomAmount] = useState("");
+  const [jenisUjian, setJenisUjian] = useState("");
+  const [semester, setSemester] = useState("");
+  const [selectedKelas, setSelectedKelas] = useState<string[]>([]);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [generateResult, setGenerateResult] = useState<{
     success?: boolean;
     message?: string;
@@ -108,6 +144,23 @@ export default function TagihanManagementPage() {
       tahun: number;
     };
   } | null>(null);
+
+  // Reset generate form when dialog opens
+  useEffect(() => {
+    if (isGenerateDialogOpen) {
+      setGenerateBulan(bulanList[currentMonthIndex]);
+      setGenerateTahun(currentYear.toString());
+      setJenisTagihan("ALL");
+      setSppAmount("");
+      setSyahriahAmount("");
+      setCustomAmount("");
+      setJenisUjian("");
+      setSemester("");
+      setSelectedKelas([]);
+      setLocalError(null);
+      setGenerateResult(null);
+    }
+  }, [isGenerateDialogOpen]);
 
   // Fetch santri list for create dialog (SMK only)
   const fetchSantriList = useCallback(async () => {
@@ -189,6 +242,37 @@ export default function TagihanManagementPage() {
   }, [fetchTagihan]);
 
   const handleGenerateTagihan = async () => {
+    setLocalError(null);
+
+    // Validate custom amount for non-SPP/SYAHRIAH types
+    const isOtherTagihanType =
+      jenisTagihan !== "ALL" &&
+      jenisTagihan !== "SPP" &&
+      jenisTagihan !== "SYAHRIAH";
+
+    if (isOtherTagihanType && (!customAmount || parseInt(customAmount) <= 0)) {
+      setLocalError(`Jumlah untuk tagihan ${jenisTagihan} wajib diisi`);
+      return;
+    }
+
+    // Validate jenis ujian for UJIAN type
+    if (jenisTagihan === "UJIAN" && !jenisUjian) {
+      setLocalError("Jenis ujian wajib dipilih");
+      return;
+    }
+
+    // Validate semester for LKS type
+    if (jenisTagihan === "LKS" && !semester) {
+      setLocalError("Semester wajib dipilih");
+      return;
+    }
+
+    // Validate kelas for UJIAN and LKS types
+    if ((jenisTagihan === "UJIAN" || jenisTagihan === "LKS") && selectedKelas.length === 0) {
+      setLocalError("Pilih minimal satu kelas");
+      return;
+    }
+
     try {
       setGenerating(true);
       setGenerateResult(null);
@@ -203,8 +287,12 @@ export default function TagihanManagementPage() {
           tahun: parseInt(generateTahun),
           jenisSantri: "SMK",
           jenisTagihan: jenisTagihan,
+          jenisUjian: jenisTagihan === "UJIAN" ? jenisUjian : undefined,
+          semester: jenisTagihan === "LKS" ? semester : undefined,
           sppAmount: sppAmount ? parseInt(sppAmount) : undefined,
           syahriahAmount: syahriahAmount ? parseInt(syahriahAmount) : undefined,
+          customAmount: customAmount ? parseInt(customAmount) : undefined,
+          kelas: (jenisTagihan === "UJIAN" || jenisTagihan === "LKS") ? selectedKelas : undefined,
         }),
       });
 
@@ -419,6 +507,9 @@ export default function TagihanManagementPage() {
                 <option value="">Semua Jenis</option>
                 <option value="SPP">SPP</option>
                 <option value="SYAHRIAH">Syahriah</option>
+                <option value="PKL">PKL</option>
+                <option value="LKS">LKS</option>
+                <option value="UJIAN">Ujian</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -505,30 +596,158 @@ export default function TagihanManagementPage() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Show jenis ujian dropdown only for UJIAN type */}
+            {jenisTagihan === "UJIAN" && (
               <div className="space-y-2">
-                <Label htmlFor="spp-amount">Jumlah SPP (Opsional)</Label>
-                <Input
-                  id="spp-amount"
-                  type="number"
-                  placeholder="250000"
-                  value={sppAmount}
-                  onChange={(e) => setSppAmount(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Default: Rp 250.000</p>
+                <Label htmlFor="jenis-ujian">Jenis Ujian</Label>
+                <select
+                  id="jenis-ujian"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={jenisUjian}
+                  onChange={(e) => setJenisUjian(e.target.value)}
+                >
+                  <option value="">Pilih Jenis Ujian</option>
+                  {jenisUjianOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
+            )}
+
+            {/* Show semester dropdown only for LKS type */}
+            {jenisTagihan === "LKS" && (
               <div className="space-y-2">
-                <Label htmlFor="syahriah-amount">Jumlah Syahriah (Opsional)</Label>
-                <Input
-                  id="syahriah-amount"
-                  type="number"
-                  placeholder="300000"
-                  value={syahriahAmount}
-                  onChange={(e) => setSyahriahAmount(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Default: Rp 300.000</p>
+                <Label htmlFor="semester-lks">Semester</Label>
+                <select
+                  id="semester-lks"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={semester}
+                  onChange={(e) => setSemester(e.target.value)}
+                >
+                  <option value="">Pilih Semester</option>
+                  {semesterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+            )}
+
+            {/* Show kelas dropdown for UJIAN and LKS types */}
+            {(jenisTagihan === "UJIAN" || jenisTagihan === "LKS") && (
+              <div className="space-y-2">
+                <Label>Pilih Kelas</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {smkKelasOptions.map((option) => (
+                    <label
+                      key={option.value}
+                      className="flex items-center space-x-2 rounded-md border border-input p-2 cursor-pointer hover:bg-accent"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedKelas.includes(option.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedKelas([...selectedKelas, option.value]);
+                          } else {
+                            setSelectedKelas(selectedKelas.filter((k) => k !== option.value));
+                          }
+                        }}
+                        className="accent-primary"
+                      />
+                      <span className="text-sm">{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setSelectedKelas(smkKelasOptions.map((o) => o.value))}
+                  >
+                    Pilih Semua
+                  </button>
+                  <span className="text-xs text-muted-foreground">|</span>
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setSelectedKelas([])}
+                  >
+                    Hapus Semua
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Show SPP/Syahriah fields only for ALL, SPP, or SYAHRIAH */}
+            {(jenisTagihan === "ALL" || jenisTagihan === "SPP" || jenisTagihan === "SYAHRIAH") && (
+              <div className="grid grid-cols-2 gap-4">
+                {(jenisTagihan === "ALL" || jenisTagihan === "SPP") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="spp-amount">Jumlah SPP (Opsional)</Label>
+                    <Input
+                      id="spp-amount"
+                      type="number"
+                      placeholder="250000"
+                      value={sppAmount}
+                      onChange={(e) => setSppAmount(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Default: Rp 250.000</p>
+                  </div>
+                )}
+                {(jenisTagihan === "ALL" || jenisTagihan === "SYAHRIAH") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="syahriah-amount">Jumlah Syahriah (Opsional)</Label>
+                    <Input
+                      id="syahriah-amount"
+                      type="number"
+                      placeholder="300000"
+                      value={syahriahAmount}
+                      onChange={(e) => setSyahriahAmount(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Default: Rp 300.000</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Show custom amount field for other tagihan types (PKL, LKS, UJIAN) */}
+            {jenisTagihan !== "ALL" && jenisTagihan !== "SPP" && jenisTagihan !== "SYAHRIAH" && (
+              <div className="space-y-2">
+                <Label htmlFor="custom-amount">
+                  Jumlah {jenisTagihanOptions.find((o) => o.value === jenisTagihan)?.label} (Rp) *
+                </Label>
+                <Input
+                  id="custom-amount"
+                  type="number"
+                  placeholder="Masukkan jumlah"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Show PKL class restriction info */}
+            {jenisTagihan === "PKL" && (
+              <div className="p-3 rounded-md bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-sm">
+                <p className="font-medium">ℹ️ Keterangan PKL</p>
+                <p className="mt-1">
+                  Tagihan PKL hanya akan digenerate untuk santri kelas{" "}
+                  <strong>XII_RPL_A</strong>, <strong>XII_RPL_B</strong>, dan{" "}
+                  <strong>XII_AKL</strong>.
+                </p>
+              </div>
+            )}
+
+            {/* Local validation error */}
+            {localError && (
+              <div className="p-4 rounded-md bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+                <p className="font-medium">{localError}</p>
+              </div>
+            )}
 
             {generateResult && (
               <div className={`p-4 rounded-md ${generateResult.success ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>

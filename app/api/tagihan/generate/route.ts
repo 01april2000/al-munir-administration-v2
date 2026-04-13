@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JenisTagihan, StatusTagihan, JenisSantri, StatusSantri } from "@/lib/generated/prisma";
+import { JenisTagihan, StatusTagihan, JenisSantri, StatusSantri, KelasSantri } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -47,7 +47,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bulan, tahun, jenisSantri, jenisTagihan, jenisUjian, semester, sppAmount, syahriahAmount, customAmount } = body;
+    const { bulan, tahun, jenisSantri, jenisTagihan, jenisUjian, semester, sppAmount, syahriahAmount, customAmount, kelas } = body as {
+      bulan: string;
+      tahun: number;
+      jenisSantri?: string;
+      jenisTagihan?: string;
+      jenisUjian?: string;
+      semester?: string;
+      sppAmount?: number;
+      syahriahAmount?: number;
+      customAmount?: number;
+      kelas?: string[];
+    };
 
     // Validate input
     if (!bulan || !tahun) {
@@ -77,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate jenisTagihan - must be a valid JenisTagihan or "ALL"
-    const validJenisTagihan = jenisTagihan === "ALL" || ALL_JENIS_TAGIHAN.includes(jenisTagihan);
+    const validJenisTagihan = jenisTagihan === "ALL" || (jenisTagihan ? ALL_JENIS_TAGIHAN.includes(jenisTagihan as JenisTagihan) : false);
     if (jenisTagihan && !validJenisTagihan) {
       return NextResponse.json(
         { error: `Jenis tagihan tidak valid. Pilihan: ${ALL_JENIS_TAGIHAN.join(", ")} atau ALL` },
@@ -115,10 +126,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Build filter for santri
-    const santriFilter: {
-      status: StatusSantri;
-      jenisSantri?: JenisSantri;
-    } = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const santriFilter: any = {
       status: StatusSantri.AKTIF,
     };
 
@@ -127,6 +136,11 @@ export async function POST(request: NextRequest) {
       santriFilter.jenisSantri = allowedJenisSantri;
     } else if (jenisSantri && ["SMK", "SMP", "PONDOK"].includes(jenisSantri)) {
       santriFilter.jenisSantri = jenisSantri as JenisSantri;
+    }
+
+    // Filter by kelas if provided
+    if (kelas && kelas.length > 0) {
+      santriFilter.kelas = { in: kelas as KelasSantri[] };
     }
 
     // Get all active santri
@@ -221,7 +235,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate other tagihan types (UJIAN, PKL, LKS, BUKU_PENDAMPING, TKA, UANG_SAKU, LAUNDRY)
-      if (generateOtherType && customAmount > 0) {
+      if (generateOtherType && customAmount && customAmount > 0) {
         // For PKL, only generate for specific kelas (XII)
         if (generateOtherType === "PKL" && !PKL_ALLOWED_KELAS.includes(santri.kelas as typeof PKL_ALLOWED_KELAS[number])) {
           continue;

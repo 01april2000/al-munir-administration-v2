@@ -345,6 +345,21 @@ export function BendaharaTransaksiSPP({ jenisSantri }: BendaharaTransaksiSPPProp
       },
     },
     {
+      accessorKey: "metodePembayaran",
+      header: "Metode Bayar",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const metode = row.original.metodePembayaran;
+        if (!metode) return "-";
+        const labels: Record<string, string> = {
+          CASH: "Cash",
+          MIDTRANS: "Midtrans",
+          TRANSFER: "Transfer",
+          SALDO: "Saldo",
+        };
+        return labels[metode] || metode;
+      },
+    },
+    {
       accessorKey: "tanggalBayar",
       header: "Tgl. Bayar",
       cell: ({ row }: { row: { original: Transaksi } }) => {

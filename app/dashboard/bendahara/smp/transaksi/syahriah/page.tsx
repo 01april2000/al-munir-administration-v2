@@ -9,7 +9,7 @@ export default function SyahriahPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Pembayaran Syahriah</h1>
           <p className="text-muted-foreground">
-            Kelola pembayaran Syahriah santri SMP
+            Data pembayaran Syahriah santri SMP
           </p>
         </div>
       </div>

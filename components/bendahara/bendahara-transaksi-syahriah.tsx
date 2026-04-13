@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ import {
   PERIODE_PEMBAYARAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, Banknote, Printer } from "lucide-react";
+import { RefreshCw, Loader2, FileText, Banknote, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useReceiptPrinting } from "@/components/shared/receipt-printing";
 import {
@@ -42,16 +42,6 @@ import {
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
 const bulanList = BULAN_OPTIONS.map((b) => b.value) as string[];
-
-interface Santri {
-  id: string;
-  nis: string;
-  nama: string;
-  kelas: string;
-  asrama: string;
-  jenisSantri: string;
-  saldo: number;
-}
 
 interface FormData {
   santriId: string;
@@ -86,13 +76,12 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
   const [limit, setLimit] = useState(10);
 
   // Filter states
-  const [filterBulan, setFilterBulan] = useState<string>(bulanList[currentMonthIndex]);
-  const [filterTahun, setFilterTahun] = useState(currentYear.toString());
+  const [filterBulan, setFilterBulan] = useState<string>("");
+  const [filterTahun, setFilterTahun] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog states
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,34 +95,6 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
 
   // Form states
   const [formData, setFormData] = useState<FormData>(getDefaultFormData());
-
-  // Santri search for dropdown
-  const [santriList, setSantriList] = useState<Santri[]>([]);
-  const [santriSearch, setSantriSearch] = useState("");
-  const [loadingSantri, setLoadingSantri] = useState(false);
-  const [showSantriDropdown, setShowSantriDropdown] = useState(false);
-  const santriDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Fetch santri for dropdown (based on jenisSantri prop)
-  const fetchSantri = useCallback(async (search: string = "") => {
-    try {
-      setLoadingSantri(true);
-      const params = new URLSearchParams();
-      params.append("jenisSantri", jenisSantri);
-      if (search) params.append("search", search);
-      params.append("limit", "20");
-
-      const response = await fetch(`/api/santri?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSantriList(data.santri || []);
-      }
-    } catch (err) {
-      console.error("Error fetching santri:", err);
-    } finally {
-      setLoadingSantri(false);
-    }
-  }, [jenisSantri]);
 
   // Fetch transaksi (SYAHRIAH only, filtered by user role in API)
   const fetchTransaksi = useCallback(async () => {
@@ -169,21 +130,6 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
     fetchTransaksi();
   }, [fetchTransaksi]);
 
-  useEffect(() => {
-    fetchSantri();
-  }, [fetchSantri]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (santriDropdownRef.current && !santriDropdownRef.current.contains(event.target as Node)) {
-        setShowSantriDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // Handle form change
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -192,8 +138,6 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
   // Reset form
   const resetForm = () => {
     setFormData(getDefaultFormData());
-    setSantriSearch("");
-    setShowSantriDropdown(false);
   };
 
   // Build request body
@@ -214,36 +158,6 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
     base.periodePembayaran = data.periodePembayaran;
 
     return base;
-  };
-
-  // Handle add transaksi
-  const handleAdd = async () => {
-    if (!formData.santriId || !formData.jumlah) {
-      setError("Mohon lengkapi semua field yang diperlukan");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const response = await fetch("/api/transaksi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRequestBody(formData)),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create transaksi");
-      }
-
-      setIsAddDialogOpen(false);
-      resetForm();
-      fetchTransaksi();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   // Handle edit transaksi
@@ -433,6 +347,21 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
       },
     },
     {
+      accessorKey: "metodePembayaran",
+      header: "Metode Bayar",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const metode = row.original.metodePembayaran;
+        if (!metode) return "-";
+        const labels: Record<string, string> = {
+          CASH: "Cash",
+          MIDTRANS: "Midtrans",
+          TRANSFER: "Transfer",
+          SALDO: "Saldo",
+        };
+        return labels[metode] || metode;
+      },
+    },
+    {
       accessorKey: "tanggalBayar",
       header: "Tgl. Bayar",
       cell: ({ row }: { row: { original: Transaksi } }) => {
@@ -555,63 +484,6 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
   const getFormFields = (isEdit: boolean = false) => {
     return (
       <>
-        {!isEdit && (
-          <div>
-            <Label htmlFor="santri">Santri</Label>
-            <div className="relative" ref={santriDropdownRef}>
-              <Input
-                id="santri-search"
-                placeholder={`Ketik nama santri ${jenisSantri}...`}
-                value={santriSearch}
-                onChange={(e) => {
-                  setSantriSearch(e.target.value);
-                  // Only show dropdown when user types (at least 1 character)
-                  if (e.target.value.length > 0) {
-                    fetchSantri(e.target.value);
-                    setShowSantriDropdown(true);
-                  } else {
-                    setShowSantriDropdown(false);
-                  }
-                }}
-                autoComplete="off"
-              />
-              {loadingSantri && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              )}
-              {/* Autocomplete Dropdown */}
-              {showSantriDropdown && santriList.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
-                  {santriList.map((santri) => (
-                    <div
-                      key={santri.id}
-                      className="flex flex-col px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                      onClick={() => {
-                        handleFormChange("santriId", santri.id);
-                        setSantriSearch(`${santri.nama} - ${santri.nis}`);
-                        setShowSantriDropdown(false);
-                      }}
-                    >
-                      <span className="font-medium">{santri.nama}</span>
-                      <span className="text-xs text-muted-foreground">
-                        NIS: {santri.nis} | Kelas: {santri.kelas}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* No results message */}
-              {showSantriDropdown && !loadingSantri && santriSearch.length > 0 && santriList.length === 0 && (
-                <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-md p-3 text-sm text-muted-foreground">
-                  Tidak ada santri ditemukan
-                </div>
-              )}
-              {/* Hidden input for form validation */}
-              <input type="hidden" value={formData.santriId} />
-            </div>
-          </div>
-        )}
         {isEdit && selectedTransaksi && (
           <div className="text-sm text-muted-foreground mb-2">
             <strong>{selectedTransaksi.santri.nama}</strong> ({selectedTransaksi.santri.nis})
@@ -704,16 +576,10 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header with Add Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Syahriah</h2>
-          <p className="text-sm text-muted-foreground">Kelola pembayaran syahriah santri {jenisSantri}</p>
-        </div>
-        <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Transaksi
-        </Button>
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-semibold">Syahriah</h2>
+        <p className="text-sm text-muted-foreground">Data pembayaran syahriah santri {jenisSantri}</p>
       </div>
 
       {/* Summary Cards */}
@@ -854,33 +720,6 @@ export function BendaharaTransaksiSyahriah({ jenisSantri }: BendaharaTransaksiSy
           )}
         </CardContent>
       </Card>
-
-      {/* Add Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Transaksi Syahriah</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {getFormFields(false)}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleAdd} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

@@ -94,14 +94,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a new tagihan (admin only)
+// POST - Create a new tagihan (admin & bendahara)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    if (!session || session.user.role !== "ADMIN") {
+    const allowedRoles = ["ADMIN", "BENDAHARA_SMK", "BENDAHARA_SMP", "BENDAHARA_PONDOK"];
+    if (!session || !allowedRoles.includes(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -124,6 +125,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Santri tidak ditemukan" },
         { status: 404 }
+      );
+    }
+
+    // Validate bendahara can only create tagihan for their respective santri type
+    if (session.user.role === "BENDAHARA_SMK" && santri.jenisSantri !== "SMK") {
+      return NextResponse.json(
+        { error: "Anda hanya dapat membuat tagihan untuk santri SMK" },
+        { status: 403 }
+      );
+    } else if (session.user.role === "BENDAHARA_SMP" && santri.jenisSantri !== "SMP") {
+      return NextResponse.json(
+        { error: "Anda hanya dapat membuat tagihan untuk santri SMP" },
+        { status: 403 }
+      );
+    } else if (session.user.role === "BENDAHARA_PONDOK" && santri.jenisSantri !== "PONDOK") {
+      return NextResponse.json(
+        { error: "Anda hanya dapat membuat tagihan untuk santri Pondok" },
+        { status: 403 }
       );
     }
 

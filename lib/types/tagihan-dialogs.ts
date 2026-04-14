@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 // Types for Tagihan Management Dialogs
 
 export interface TagihanSantri {
@@ -76,12 +78,40 @@ export interface DeleteTagihanDialogProps {
 }
 
 // Props for GenerateTagihanDialog
+export interface KelasOption {
+  value: string;
+  label: string;
+}
+
+export interface JenisTagihanOption {
+  value: string;
+  label: string;
+}
+
 export interface GenerateTagihanDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onGenerate: (data: GenerateTagihanData) => Promise<void>;
   isGenerating: boolean;
   result: GenerateResult | null;
+  /** Fixed jenis santri (e.g. "SMK"). If set, hides the dropdown and auto-includes in payload */
+  jenisSantri?: "SMK" | "SMP" | "PONDOK";
+  /** Custom dialog title. Default: "Generate Tagihan Bulanan" */
+  title?: string;
+  /** Which jenis tagihan options to show in the dropdown */
+  jenisTagihanOptions?: JenisTagihanOption[];
+  /** Kelas options for checkbox grid (e.g. SMK classes) */
+  kelasOptions?: KelasOption[];
+  /** Show kelas selector for which tagihan types. Default: ["UJIAN", "LKS"] */
+  showKelasForTypes?: string[];
+  /** Default SPP amount hint text */
+  defaultSppHint?: string;
+  /** Default Syahriah amount hint text */
+  defaultSyahriahHint?: string;
+  /** Show jenis santri dropdown (for admin). Default: false */
+  showJenisSantriDropdown?: boolean;
+  /** Info box content rendered for specific tagihan types. Key = jenisTagihan value */
+  infoBoxes?: Record<string, ReactNode>;
 }
 
 export interface GenerateTagihanData {
@@ -94,6 +124,7 @@ export interface GenerateTagihanData {
   sppAmount?: number;
   syahriahAmount?: number;
   customAmount?: number;
+  kelas?: string[];
 }
 
 // Props for CreateTagihanDialog
@@ -111,6 +142,8 @@ export interface CreateTagihanDialogProps {
   santriList: SantriOption[];
   onSantriListLoad: () => Promise<void>;
   jenisTransaksiOptions?: JenisTransaksiOption[];
+  /** Options for jenis ujian dropdown, shown when jenis transaksi is "UJIAN" */
+  jenisUjianOptions?: { value: string; label: string }[];
 }
 
 export interface CreateTagihanData {
@@ -120,6 +153,7 @@ export interface CreateTagihanData {
   bulan: string;
   tahun: number;
   keterangan?: string;
+  jenisUjian?: string;
 }
 
 // Props for CashPaymentDialog

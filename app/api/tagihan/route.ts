@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { santriId, jenis, jumlah, bulan, tahun, keterangan } = body;
+    const { santriId, jenis, jumlah, bulan, tahun, keterangan, jenisUjian } = body;
 
     if (!santriId || !jenis || !jumlah) {
       return NextResponse.json(
@@ -161,7 +161,11 @@ export async function POST(request: NextRequest) {
     const count = await prisma.tagihan.count({
       where: { jenis: jenis as JenisTagihan },
     });
-    const kode = `TG-${jenisCode}-${String(count + 1).padStart(5, "0")}`;
+    let kode = `TG-${jenisCode}-${String(count + 1).padStart(5, "0")}`;
+    // For UJIAN type, include jenisUjian in the kode
+    if (jenis === "UJIAN" && jenisUjian) {
+      kode = `TG-${jenisCode}-${jenisUjian}-${String(count + 1).padStart(5, "0")}`;
+    }
     // Normalize bulan and tahun with defaults
     const finalBulan = bulan || "Januari";
     const finalTahun = tahun || new Date().getFullYear();
@@ -197,6 +201,12 @@ export async function POST(request: NextRequest) {
       jatuhTempo.setMonth(jatuhTempo.getMonth() + 1, 0);
     }
 
+    // Determine keterangan for UJIAN type
+    let finalKeterangan = keterangan || null;
+    if (jenis === "UJIAN" && jenisUjian && !finalKeterangan) {
+      finalKeterangan = jenisUjian;
+    }
+
     const tagihan = await prisma.tagihan.create({
       data: {
         kode,
@@ -207,7 +217,7 @@ export async function POST(request: NextRequest) {
         tahun: finalTahun,
         status: StatusTagihan.BELUM_LUNAS,
         jatuhTempo,
-        keterangan: keterangan || null,
+        keterangan: finalKeterangan,
       },
       include: {
         santri: {

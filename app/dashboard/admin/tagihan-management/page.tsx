@@ -681,6 +681,7 @@ export default function TagihanManagementPage() {
         onGenerate={handleGenerateTagihan}
         isGenerating={generating}
         result={generateResult}
+        showJenisSantriDropdown
       />
 
       {/* Create Tagihan Dialog */}

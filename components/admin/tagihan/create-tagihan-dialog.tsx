@@ -61,6 +61,7 @@ export function CreateTagihanDialog({
   santriList,
   onSantriListLoad,
   jenisTransaksiOptions = defaultJenisTransaksiOptions,
+  jenisUjianOptions,
 }: CreateTagihanDialogProps) {
   const [santriSearch, setSantriSearch] = useState("");
   const [selectedSantriId, setSelectedSantriId] = useState("");
@@ -70,6 +71,7 @@ export function CreateTagihanDialog({
   const [tahun, setTahun] = useState(currentYear.toString());
   const [keterangan, setKeterangan] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [jenisUjian, setJenisUjian] = useState("");
 
   // Load santri list when dialog opens
   useEffect(() => {
@@ -84,6 +86,7 @@ export function CreateTagihanDialog({
       setTahun(currentYear.toString());
       setKeterangan("");
       setLocalError(null);
+      setJenisUjian("");
     }
   }, [open, onSantriListLoad]);
 
@@ -107,6 +110,12 @@ export function CreateTagihanDialog({
       return;
     }
 
+    // Validate jenis ujian for UJIAN type
+    if (jenisTransaksi === "UJIAN" && jenisUjianOptions && jenisUjianOptions.length > 0 && !jenisUjian) {
+      setLocalError("Jenis ujian wajib dipilih");
+      return;
+    }
+
     const data: CreateTagihanData = {
       santriId: selectedSantriId,
       jenis: jenisTransaksi,
@@ -114,6 +123,7 @@ export function CreateTagihanDialog({
       bulan,
       tahun: parseInt(tahun),
       keterangan: keterangan || undefined,
+      jenisUjian: jenisTransaksi === "UJIAN" ? jenisUjian : undefined,
     };
 
     await onCreate(data);
@@ -176,6 +186,26 @@ export function CreateTagihanDialog({
               ))}
             </select>
           </div>
+
+          {/* Show jenis ujian dropdown only for UJIAN type */}
+          {jenisTransaksi === "UJIAN" && jenisUjianOptions && jenisUjianOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="jenis-ujian">Jenis Ujian</Label>
+              <select
+                id="jenis-ujian"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={jenisUjian}
+                onChange={(e) => setJenisUjian(e.target.value)}
+              >
+                <option value="">Pilih Jenis Ujian</option>
+                {jenisUjianOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Amount */}
           <div className="space-y-2">

@@ -15,6 +15,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import {
   GenerateTagihanDialogProps,
   GenerateTagihanData,
+  JenisTagihanOption,
 } from "@/lib/types/tagihan-dialogs";
 
 const currentYear = new Date().getFullYear();
@@ -39,14 +40,14 @@ const bulanOptions = [
   ...bulanList.map((bulan) => ({ value: bulan, label: bulan })),
 ];
 
-const jenisSantriOptions = [
+const defaultJenisSantriOptions = [
   { value: "", label: "Semua" },
   { value: "SMK", label: "SMK" },
   { value: "SMP", label: "SMP" },
   { value: "PONDOK", label: "Pondok" },
 ];
 
-const jenisTagihanOptions = [
+const defaultJenisTagihanOptions: JenisTagihanOption[] = [
   { value: "", label: "Semua Jenis" },
   { value: "SPP", label: "SPP" },
   { value: "SYAHRIAH", label: "Syahriah" },
@@ -81,16 +82,28 @@ export function GenerateTagihanDialog({
   onGenerate,
   isGenerating,
   result,
+  jenisSantri: fixedJenisSantri,
+  title = "Generate Tagihan Bulanan",
+  jenisTagihanOptions = defaultJenisTagihanOptions,
+  kelasOptions = [],
+  showKelasForTypes = ["UJIAN", "LKS"],
+  defaultSppHint,
+  defaultSyahriahHint,
+  showJenisSantriDropdown = false,
+  infoBoxes,
 }: GenerateTagihanDialogProps) {
   const [bulan, setBulan] = useState(bulanList[currentMonthIndex]);
   const [tahun, setTahun] = useState(currentYear.toString());
   const [jenisSantri, setJenisSantri] = useState("");
-  const [jenisTagihan, setJenisTagihan] = useState("ALL");
+  const [jenisTagihan, setJenisTagihan] = useState(
+    jenisTagihanOptions.find((o) => o.value === "ALL") ? "ALL" : ""
+  );
   const [sppAmount, setSppAmount] = useState("");
   const [syahriahAmount, setSyahriahAmount] = useState("");
   const [customAmount, setCustomAmount] = useState("");
   const [jenisUjian, setJenisUjian] = useState("");
   const [semester, setSemester] = useState("");
+  const [selectedKelas, setSelectedKelas] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Reset form when dialog opens
@@ -99,53 +112,78 @@ export function GenerateTagihanDialog({
       setBulan(bulanList[currentMonthIndex]);
       setTahun(currentYear.toString());
       setJenisSantri("");
-      setJenisTagihan("ALL");
+      setJenisTagihan(
+        jenisTagihanOptions.find((o) => o.value === "ALL") ? "ALL" : ""
+      );
       setSppAmount("");
       setSyahriahAmount("");
       setCustomAmount("");
       setJenisUjian("");
       setSemester("");
+      setSelectedKelas([]);
       setLocalError(null);
     }
-  }, [open]);
+  }, [open, jenisTagihanOptions]);
+
+  // Determine effective jenis santri
+  const effectiveJenisSantri = fixedJenisSantri || jenisSantri || undefined;
+
+  // Whether to show kelas selector
+  const showKelas =
+    kelasOptions.length > 0 && showKelasForTypes.includes(jenisTagihan);
+
+  // Whether current tagihan type uses SPP/Syahriah amounts
+  const usesSppSyahriah =
+    !jenisTagihan ||
+    jenisTagihan === "ALL" ||
+    jenisTagihan === "SPP" ||
+    jenisTagihan === "SYAHRIAH";
+
+  // Whether current tagihan type uses custom amount
+  const usesCustomAmount =
+    jenisTagihan &&
+    jenisTagihan !== "ALL" &&
+    jenisTagihan !== "SPP" &&
+    jenisTagihan !== "SYAHRIAH";
 
   const handleGenerate = async () => {
     setLocalError(null);
 
-    // Check if custom amount is required for non-SPP/SYAHRIAH types
-    const isOtherTagihanType =
-      jenisTagihan &&
-      jenisTagihan !== "ALL" &&
-      jenisTagihan !== "SPP" &&
-      jenisTagihan !== "SYAHRIAH";
-
-    if (isOtherTagihanType && !customAmount) {
+    // Validate custom amount for non-SPP/SYAHRIAH types
+    if (usesCustomAmount && (!customAmount || parseInt(customAmount) <= 0)) {
       setLocalError(`Jumlah untuk tagihan ${jenisTagihan} wajib diisi`);
       return;
     }
 
-    // Check if jenis ujian is required for UJIAN type
+    // Validate jenis ujian for UJIAN type
     if (jenisTagihan === "UJIAN" && !jenisUjian) {
       setLocalError("Jenis ujian wajib dipilih");
       return;
     }
 
-    // Check if semester is required for LKS type
+    // Validate semester for LKS type
     if (jenisTagihan === "LKS" && !semester) {
       setLocalError("Semester wajib dipilih");
+      return;
+    }
+
+    // Validate kelas for types that require it
+    if (showKelas && selectedKelas.length === 0) {
+      setLocalError("Pilih minimal satu kelas");
       return;
     }
 
     const data: GenerateTagihanData = {
       bulan,
       tahun: parseInt(tahun),
-      jenisSantri: jenisSantri || undefined,
+      jenisSantri: effectiveJenisSantri,
       jenisTagihan,
       jenisUjian: jenisTagihan === "UJIAN" ? jenisUjian : undefined,
       semester: jenisTagihan === "LKS" ? semester : undefined,
       sppAmount: sppAmount ? parseInt(sppAmount) : undefined,
       syahriahAmount: syahriahAmount ? parseInt(syahriahAmount) : undefined,
       customAmount: customAmount ? parseInt(customAmount) : undefined,
+      kelas: showKelas ? selectedKelas : undefined,
     };
 
     await onGenerate(data);
@@ -155,9 +193,10 @@ export function GenerateTagihanDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Generate Tagihan Bulanan</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {/* Bulan & Tahun */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="generate-bulan">Bulan</Label>
@@ -167,11 +206,13 @@ export function GenerateTagihanDialog({
                 value={bulan}
                 onChange={(e) => setBulan(e.target.value)}
               >
-                {bulanOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+                {bulanOptions
+                  .filter((o) => o.value !== "")
+                  .map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
               </select>
             </div>
             <div className="space-y-2">
@@ -187,22 +228,46 @@ export function GenerateTagihanDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="jenis-santri">Jenis Santri</Label>
-              <select
-                id="jenis-santri"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={jenisSantri}
-                onChange={(e) => setJenisSantri(e.target.value)}
-              >
-                {jenisSantriOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+          {/* Jenis Santri dropdown (only for admin) */}
+          {showJenisSantriDropdown && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="jenis-santri">Jenis Santri</Label>
+                <select
+                  id="jenis-santri"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={jenisSantri}
+                  onChange={(e) => setJenisSantri(e.target.value)}
+                >
+                  {defaultJenisSantriOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Jenis Tagihan */}
+              <div className="space-y-2">
+                <Label htmlFor="jenis-tagihan">Jenis Tagihan</Label>
+                <select
+                  id="jenis-tagihan"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={jenisTagihan}
+                  onChange={(e) => setJenisTagihan(e.target.value)}
+                >
+                  {jenisTagihanOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+          )}
+
+          {/* Jenis Tagihan (when jenis santri is NOT shown as dropdown) */}
+          {!showJenisSantriDropdown && (
             <div className="space-y-2">
               <Label htmlFor="jenis-tagihan">Jenis Tagihan</Label>
               <select
@@ -218,7 +283,7 @@ export function GenerateTagihanDialog({
                 ))}
               </select>
             </div>
-          </div>
+          )}
 
           {/* Show jenis ujian dropdown only for UJIAN type */}
           {jenisTagihan === "UJIAN" && (
@@ -260,17 +325,64 @@ export function GenerateTagihanDialog({
             </div>
           )}
 
+          {/* Show kelas selector for configured types */}
+          {showKelas && (
+            <div className="space-y-2">
+              <Label>Pilih Kelas</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {kelasOptions.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex items-center space-x-2 rounded-md border border-input p-2 cursor-pointer hover:bg-accent"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedKelas.includes(option.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedKelas([...selectedKelas, option.value]);
+                        } else {
+                          setSelectedKelas(
+                            selectedKelas.filter((k) => k !== option.value)
+                          );
+                        }
+                      }}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">{option.label}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={() =>
+                    setSelectedKelas(kelasOptions.map((o) => o.value))
+                  }
+                >
+                  Pilih Semua
+                </button>
+                <span className="text-xs text-muted-foreground">|</span>
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => setSelectedKelas([])}
+                >
+                  Hapus Semua
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Show SPP/Syahriah fields only for ALL, SPP, or SYAHRIAH */}
-          {(!jenisTagihan ||
-            jenisTagihan === "ALL" ||
-            jenisTagihan === "SPP" ||
-            jenisTagihan === "SYAHRIAH") && (
+          {usesSppSyahriah && (
             <div className="grid grid-cols-2 gap-4">
               {(jenisTagihan === "ALL" ||
                 jenisTagihan === "SPP" ||
                 !jenisTagihan) && (
                 <div className="space-y-2">
-                  <Label htmlFor="spp-amount">Jumlah SPP (Rp) - Opsional</Label>
+                  <Label htmlFor="spp-amount">Jumlah SPP (Opsional)</Label>
                   <Input
                     id="spp-amount"
                     type="number"
@@ -278,6 +390,11 @@ export function GenerateTagihanDialog({
                     value={sppAmount}
                     onChange={(e) => setSppAmount(e.target.value)}
                   />
+                  {defaultSppHint && (
+                    <p className="text-xs text-muted-foreground">
+                      {defaultSppHint}
+                    </p>
+                  )}
                 </div>
               )}
               {(jenisTagihan === "ALL" ||
@@ -285,7 +402,7 @@ export function GenerateTagihanDialog({
                 !jenisTagihan) && (
                 <div className="space-y-2">
                   <Label htmlFor="syahriah-amount">
-                    Jumlah Syahriah (Rp) - Opsional
+                    Jumlah Syahriah (Opsional)
                   </Label>
                   <Input
                     id="syahriah-amount"
@@ -294,57 +411,39 @@ export function GenerateTagihanDialog({
                     value={syahriahAmount}
                     onChange={(e) => setSyahriahAmount(e.target.value)}
                   />
+                  {defaultSyahriahHint && (
+                    <p className="text-xs text-muted-foreground">
+                      {defaultSyahriahHint}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
           )}
 
           {/* Show custom amount field for other tagihan types */}
-          {jenisTagihan &&
-            jenisTagihan !== "ALL" &&
-            jenisTagihan !== "SPP" &&
-            jenisTagihan !== "SYAHRIAH" && (
-              <div className="space-y-2">
-                <Label htmlFor="custom-amount">
-                  Jumlah{" "}
-                  {jenisTagihanOptions.find((o) => o.value === jenisTagihan)
-                    ?.label}{" "}
-                  (Rp) *
-                </Label>
-                <Input
-                  id="custom-amount"
-                  type="number"
-                  placeholder="Masukkan jumlah"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                />
-              </div>
-            )}
-
-          {/* Show PKL class restriction info */}
-          {jenisTagihan === "PKL" && (
-            <div className="p-3 rounded-md bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-sm">
-              <p className="font-medium">ℹ️ Keterangan PKL</p>
-              <p className="mt-1">
-                Tagihan PKL hanya akan digenerate untuk santri kelas{" "}
-                <strong>XII_RPL_A</strong>, <strong>XII_RPL_B</strong>, dan{" "}
-                <strong>XII_AKL</strong>.
-              </p>
+          {usesCustomAmount && (
+            <div className="space-y-2">
+              <Label htmlFor="custom-amount">
+                Jumlah{" "}
+                {jenisTagihanOptions.find((o) => o.value === jenisTagihan)
+                  ?.label}{" "}
+                (Rp) *
+              </Label>
+              <Input
+                id="custom-amount"
+                type="number"
+                placeholder="Masukkan jumlah"
+                value={customAmount}
+                onChange={(e) => setCustomAmount(e.target.value)}
+              />
             </div>
           )}
 
-          {/* Show default amounts info only for SPP/SYAHRIAH */}
-          {(!jenisTagihan ||
-            jenisTagihan === "ALL" ||
-            jenisTagihan === "SPP" ||
-            jenisTagihan === "SYAHRIAH") && (
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium">Default amounts per jenis santri:</p>
-              <ul className="list-disc list-inside mt-1">
-                <li>SMK: SPP Rp 350.000, Syahriah Rp 250.000</li>
-                <li>SMP: SPP Rp 300.000, Syahriah Rp 200.000</li>
-                <li>Pondok: SPP Rp 250.000, Syahriah Rp 150.000</li>
-              </ul>
+          {/* Info boxes for specific tagihan types */}
+          {infoBoxes && infoBoxes[jenisTagihan] && (
+            <div className="p-3 rounded-md bg-blue-50 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-sm">
+              {infoBoxes[jenisTagihan]}
             </div>
           )}
 

@@ -5,18 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardContent,
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
@@ -24,6 +15,12 @@ import { columns, selectColumn, Tagihan, bulanOptions } from "./columns";
 import { FileText, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { GenerateTagihanDialog } from "@/components/admin/tagihan";
+import {
+  GenerateTagihanData,
+  GenerateResult,
+  JenisTagihanOption,
+} from "@/lib/types/tagihan-dialogs";
 
 const currentYear = new Date().getFullYear();
 const currentMonthIndex = new Date().getMonth();
@@ -39,7 +36,7 @@ const statusOptions = [
   { value: "OVERDUE", label: "Terlambat" },
 ];
 
-const jenisTagihanOptions = [
+const smpJenisTagihanOptions: JenisTagihanOption[] = [
   { value: "ALL", label: "SPP & Syahriah" },
   { value: "SPP", label: "SPP saja" },
   { value: "SYAHRIAH", label: "Syahriah saja" },
@@ -53,29 +50,14 @@ export default function TagihanManagementPage() {
   const [generating, setGenerating] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
+  // Generate dialog result state
+  const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
+
   // Filter states
   const [filterBulan, setFilterBulan] = useState(bulanList[currentMonthIndex]);
   const [filterTahun, setFilterTahun] = useState(currentYear.toString());
   const [filterStatus, setFilterStatus] = useState("");
   const [filterJenis, setFilterJenis] = useState("");
-
-  // Generate form states
-  const [generateBulan, setGenerateBulan] = useState(bulanList[currentMonthIndex]);
-  const [generateTahun, setGenerateTahun] = useState(currentYear.toString());
-  const [jenisTagihan, setJenisTagihan] = useState("ALL");
-  const [sppAmount, setSppAmount] = useState("");
-  const [syahriahAmount, setSyahriahAmount] = useState("");
-  const [generateResult, setGenerateResult] = useState<{
-    success?: boolean;
-    message?: string;
-    data?: {
-      totalSantri: number;
-      created: number;
-      skipped: number;
-      bulan: string;
-      tahun: number;
-    };
-  } | null>(null);
 
   const fetchTagihan = useCallback(async () => {
     try {
@@ -105,7 +87,8 @@ export default function TagihanManagementPage() {
     fetchTagihan();
   }, [fetchTagihan]);
 
-  const handleGenerateTagihan = async () => {
+  // Handle generate tagihan via shared dialog
+  const handleGenerateTagihan = async (data: GenerateTagihanData) => {
     try {
       setGenerating(true);
       setGenerateResult(null);
@@ -116,23 +99,19 @@ export default function TagihanManagementPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          bulan: generateBulan,
-          tahun: parseInt(generateTahun),
+          ...data,
           jenisSantri: "SMP",
-          jenisTagihan: jenisTagihan,
-          sppAmount: sppAmount ? parseInt(sppAmount) : undefined,
-          syahriahAmount: syahriahAmount ? parseInt(syahriahAmount) : undefined,
         }),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate tagihan");
+        throw new Error(result.error || "Failed to generate tagihan");
       }
 
-      setGenerateResult(data);
-      
+      setGenerateResult(result);
+
       // Refresh the list
       await fetchTagihan();
     } catch (err) {
@@ -267,7 +246,7 @@ export default function TagihanManagementPage() {
                 value={filterJenis}
                 onChange={(e) => setFilterJenis(e.target.value)}
               >
-                {jenisTagihanOptions.map((option) => (
+                {smpJenisTagihanOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -306,127 +285,19 @@ export default function TagihanManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Generate Dialog */}
-      <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Generate Tagihan Bulanan SMP</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="generate-bulan">Bulan</Label>
-                <select
-                  id="generate-bulan"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={generateBulan}
-                  onChange={(e) => setGenerateBulan(e.target.value)}
-                >
-                  {bulanOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="generate-tahun">Tahun</Label>
-                <Input
-                  id="generate-tahun"
-                  type="number"
-                  value={generateTahun}
-                  onChange={(e) => setGenerateTahun(e.target.value)}
-                  min="2020"
-                  max="2100"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="jenis-tagihan">Jenis Tagihan</Label>
-              <select
-                id="jenis-tagihan"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={jenisTagihan}
-                onChange={(e) => setJenisTagihan(e.target.value)}
-              >
-                {jenisTagihanOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="spp-amount">Jumlah SPP (Rp) - Opsional</Label>
-                <Input
-                  id="spp-amount"
-                  type="number"
-                  placeholder="Default Rp 300.000"
-                  value={sppAmount}
-                  onChange={(e) => setSppAmount(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="syahriah-amount">Jumlah Syahriah (Rp) - Opsional</Label>
-                <Input
-                  id="syahriah-amount"
-                  type="number"
-                  placeholder="Default Rp 200.000"
-                  value={syahriahAmount}
-                  onChange={(e) => setSyahriahAmount(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium">Default amounts:</p>
-              <ul className="list-disc list-inside mt-1">
-                <li>SMP: SPP Rp 300.000, Syahriah Rp 200.000</li>
-              </ul>
-            </div>
-
-            {generateResult && (
-              <div
-                className={`p-4 rounded-md ${
-                  generateResult.success
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                }`}
-              >
-                <p className="font-medium">{generateResult.message}</p>
-                {generateResult.data && (
-                  <div className="mt-2 text-sm">
-                    <p>Total Santri: {generateResult.data.totalSantri}</p>
-                    <p>Dibuat: {generateResult.data.created}</p>
-                    <p>Dilewati (sudah ada): {generateResult.data.skipped}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleGenerateTagihan} disabled={generating}>
-              {generating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Generate Dialog (Shared Component) */}
+      <GenerateTagihanDialog
+        open={isGenerateDialogOpen}
+        onOpenChange={setIsGenerateDialogOpen}
+        onGenerate={handleGenerateTagihan}
+        isGenerating={generating}
+        result={generateResult}
+        jenisSantri="SMP"
+        title="Generate Tagihan Bulanan SMP"
+        jenisTagihanOptions={smpJenisTagihanOptions}
+        defaultSppHint="Default: Rp 300.000"
+        defaultSyahriahHint="Default: Rp 200.000"
+      />
     </div>
   );
 }

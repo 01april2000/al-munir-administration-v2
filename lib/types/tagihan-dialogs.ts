@@ -144,6 +144,8 @@ export interface CreateTagihanDialogProps {
   jenisTransaksiOptions?: JenisTransaksiOption[];
   /** Options for jenis ujian dropdown, shown when jenis transaksi is "UJIAN" */
   jenisUjianOptions?: { value: string; label: string }[];
+  /** Options for semester dropdown, shown when jenis transaksi is "LKS" */
+  semesterOptions?: { value: string; label: string }[];
 }
 
 export interface CreateTagihanData {
@@ -154,6 +156,7 @@ export interface CreateTagihanData {
   tahun: number;
   keterangan?: string;
   jenisUjian?: string;
+  semester?: string;
 }
 
 // Props for CashPaymentDialog

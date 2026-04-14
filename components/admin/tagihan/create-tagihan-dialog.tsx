@@ -62,6 +62,7 @@ export function CreateTagihanDialog({
   onSantriListLoad,
   jenisTransaksiOptions = defaultJenisTransaksiOptions,
   jenisUjianOptions,
+  semesterOptions,
 }: CreateTagihanDialogProps) {
   const [santriSearch, setSantriSearch] = useState("");
   const [selectedSantriId, setSelectedSantriId] = useState("");
@@ -72,6 +73,7 @@ export function CreateTagihanDialog({
   const [keterangan, setKeterangan] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [jenisUjian, setJenisUjian] = useState("");
+  const [semester, setSemester] = useState("");
 
   // Load santri list when dialog opens
   useEffect(() => {
@@ -87,6 +89,7 @@ export function CreateTagihanDialog({
       setKeterangan("");
       setLocalError(null);
       setJenisUjian("");
+      setSemester("");
     }
   }, [open, onSantriListLoad]);
 
@@ -116,6 +119,12 @@ export function CreateTagihanDialog({
       return;
     }
 
+    // Validate semester for LKS type
+    if (jenisTransaksi === "LKS" && semesterOptions && semesterOptions.length > 0 && !semester) {
+      setLocalError("Semester wajib dipilih");
+      return;
+    }
+
     const data: CreateTagihanData = {
       santriId: selectedSantriId,
       jenis: jenisTransaksi,
@@ -124,6 +133,7 @@ export function CreateTagihanDialog({
       tahun: parseInt(tahun),
       keterangan: keterangan || undefined,
       jenisUjian: jenisTransaksi === "UJIAN" ? jenisUjian : undefined,
+      semester: jenisTransaksi === "LKS" ? semester : undefined,
     };
 
     await onCreate(data);
@@ -199,6 +209,26 @@ export function CreateTagihanDialog({
               >
                 <option value="">Pilih Jenis Ujian</option>
                 {jenisUjianOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Show semester dropdown only for LKS type */}
+          {jenisTransaksi === "LKS" && semesterOptions && semesterOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="semester">Semester</Label>
+              <select
+                id="semester"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+              >
+                <option value="">Pilih Semester</option>
+                {semesterOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

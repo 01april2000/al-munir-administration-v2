@@ -59,6 +59,11 @@ const smkJenisUjianOptions = [
   { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
 ];
 
+const smkSemesterOptions = [
+  { value: "SEMESTER_1", label: "Semester 1 (Ganjil)" },
+  { value: "SEMESTER_2", label: "Semester 2 (Genap)" },
+];
+
 const smkKelasOptions: KelasOption[] = [
   { value: "X_RPL_A", label: "X RPL A" },
   { value: "X_RPL_B", label: "X RPL B" },
@@ -498,6 +503,7 @@ export default function TagihanManagementPage() {
         onSantriListLoad={fetchSantriList}
         jenisTransaksiOptions={smkJenisTransaksiOptions}
         jenisUjianOptions={smkJenisUjianOptions}
+        semesterOptions={smkSemesterOptions}
       />
 
       {/* Cash Payment Dialog */}

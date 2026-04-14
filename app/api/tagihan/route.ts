@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { santriId, jenis, jumlah, bulan, tahun, keterangan, jenisUjian } = body;
+    const { santriId, jenis, jumlah, bulan, tahun, keterangan, jenisUjian, semester } = body;
 
     if (!santriId || !jenis || !jumlah) {
       return NextResponse.json(
@@ -166,6 +166,10 @@ export async function POST(request: NextRequest) {
     if (jenis === "UJIAN" && jenisUjian) {
       kode = `TG-${jenisCode}-${jenisUjian}-${String(count + 1).padStart(5, "0")}`;
     }
+    // For LKS type, include semester in the kode
+    if (jenis === "LKS" && semester) {
+      kode = `TG-${jenisCode}-${semester}-${String(count + 1).padStart(5, "0")}`;
+    }
     // Normalize bulan and tahun with defaults
     const finalBulan = bulan || "Januari";
     const finalTahun = tahun || new Date().getFullYear();
@@ -201,10 +205,13 @@ export async function POST(request: NextRequest) {
       jatuhTempo.setMonth(jatuhTempo.getMonth() + 1, 0);
     }
 
-    // Determine keterangan for UJIAN type
+    // Determine keterangan for UJIAN/LKS type
     let finalKeterangan = keterangan || null;
     if (jenis === "UJIAN" && jenisUjian && !finalKeterangan) {
       finalKeterangan = jenisUjian;
+    }
+    if (jenis === "LKS" && semester && !finalKeterangan) {
+      finalKeterangan = semester;
     }
 
     const tagihan = await prisma.tagihan.create({

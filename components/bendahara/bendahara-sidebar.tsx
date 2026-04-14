@@ -21,6 +21,7 @@ import {
   FileText,
   BookMarked,
   Sparkles,
+  FileBarChart,
 } from "lucide-react"
 
 import {
@@ -188,6 +189,21 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
+
+              {/* Rekap Transaksi - only for SMK */}
+              {role === "smk" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname?.startsWith(`${basePath}/rekap-transaksi`) ?? false}
+                    render={
+                      <Link href={`${basePath}/rekap-transaksi`}>
+                        <FileBarChart className="h-4 w-4" />
+                        <span>Rekap Transaksi</span>
+                      </Link>
+                    }
+                  />
+                </SidebarMenuItem>
+              )}
             
             </SidebarMenu>
           </SidebarGroupContent>

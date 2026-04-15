@@ -190,8 +190,8 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
                 )}
               </SidebarMenuItem>
 
-              {/* Rekap Transaksi - only for SMK */}
-              {role === "smk" && (
+              {/* Rekap Transaksi - for SMK and SMP */}
+              {(role === "smk" || role === "smp") && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={pathname?.startsWith(`${basePath}/rekap-transaksi`) ?? false}

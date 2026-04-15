@@ -27,6 +27,7 @@ import {
   GenerateResult,
   JenisTagihanOption,
   JenisTransaksiOption,
+  KelasOption,
   SantriOption,
 } from "@/lib/types/tagihan-dialogs";
 
@@ -48,6 +49,8 @@ const smpJenisTagihanOptions: JenisTagihanOption[] = [
   { value: "ALL", label: "SPP & Syahriah" },
   { value: "SPP", label: "SPP saja" },
   { value: "SYAHRIAH", label: "Syahriah saja" },
+  { value: "UJIAN", label: "Ujian" },
+  { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
 ];
 
 const smpJenisTransaksiOptions: JenisTransaksiOption[] = [
@@ -55,6 +58,18 @@ const smpJenisTransaksiOptions: JenisTransaksiOption[] = [
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UJIAN", label: "Ujian" },
   { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
+];
+
+const smpKelasOptions: KelasOption[] = [
+  { value: "VII_A", label: "VII A" },
+  { value: "VII_B", label: "VII B" },
+  { value: "VII_C", label: "VII C" },
+  { value: "VIII_A", label: "VIII A" },
+  { value: "VIII_B", label: "VIII B" },
+  { value: "VIII_C", label: "VIII C" },
+  { value: "IX_A", label: "IX A" },
+  { value: "IX_B", label: "IX B" },
+  { value: "IX_C", label: "IX C" },
 ];
 
 const smpJenisUjianOptions = [
@@ -459,6 +474,8 @@ export default function TagihanManagementPage() {
         jenisSantri="SMP"
         title="Generate Tagihan Bulanan SMP"
         jenisTagihanOptions={smpJenisTagihanOptions}
+        kelasOptions={smpKelasOptions}
+        showKelasForTypes={["UJIAN"]}
         defaultSppHint="Default: Rp 300.000"
         defaultSyahriahHint="Default: Rp 200.000"
       />

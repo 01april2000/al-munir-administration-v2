@@ -117,10 +117,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For LKS type, semester is required
-    if (jenisTagihan === "LKS" && !semester) {
+    // For LKS and BUKU_PENDAMPING types, semester is required
+    if ((jenisTagihan === "LKS" || jenisTagihan === "BUKU_PENDAMPING") && !semester) {
       return NextResponse.json(
-        { error: "Semester wajib dipilih untuk tagihan LKS" },
+        { error: `Semester wajib dipilih untuk tagihan ${jenisTagihan}` },
         { status: 400 }
       );
     }
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
         let kodeSuffix = `${bulan}-${tahun}`;
         if (generateOtherType === "UJIAN" && jenisUjian) {
           kodeSuffix = `${jenisUjian}-${bulan}-${tahun}`;
-        } else if (generateOtherType === "LKS" && semester) {
+        } else if ((generateOtherType === "LKS" || generateOtherType === "BUKU_PENDAMPING") && semester) {
           kodeSuffix = `${semester}-${bulan}-${tahun}`;
         }
 
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
         let keteranganValue: string | null = null;
         if (generateOtherType === "UJIAN") {
           keteranganValue = jenisUjian || null;
-        } else if (generateOtherType === "LKS") {
+        } else if (generateOtherType === "LKS" || generateOtherType === "BUKU_PENDAMPING") {
           keteranganValue = semester || null;
         }
         

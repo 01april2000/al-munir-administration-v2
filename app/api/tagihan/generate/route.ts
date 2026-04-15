@@ -272,21 +272,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use upsert to handle duplicates gracefully
-    let created = 0;
-    let skipped = 0;
+    // Use createMany with skipDuplicates for bulk insert (1 query instead of N queries)
+    const result = await prisma.tagihan.createMany({
+      data: tagihanData,
+      skipDuplicates: true, // Skip jika kode sudah ada (unique constraint)
+    });
 
-    for (const tagihan of tagihanData) {
-      try {
-        await prisma.tagihan.create({
-          data: tagihan,
-        });
-        created++;
-      } catch (error) {
-        // Unique constraint violation means it already exists
-        skipped++;
-      }
-    }
+    const created = result.count;
+    const skipped = tagihanData.length - result.count;
 
     return NextResponse.json({
       success: true,
@@ -375,13 +368,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let created = 0, skipped = 0;
-    for (const tagihan of tagihanData) {
-      try {
-        await prisma.tagihan.create({ data: tagihan });
-        created++;
-      } catch { skipped++; }
-    }
+    // Use createMany with skipDuplicates for bulk insert (1 query instead of N queries)
+    const result = await prisma.tagihan.createMany({
+      data: tagihanData,
+      skipDuplicates: true, // Skip jika kode sudah ada (unique constraint)
+    });
+
+    const created = result.count;
+    const skipped = tagihanData.length - result.count;
 
     return NextResponse.json({
       success: true,

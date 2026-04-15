@@ -96,6 +96,36 @@ export async function POST(request: NextRequest) {
       currentStatus: midtransTransaction.transactionStatus,
     });
 
+    // Idempotency check — skip if already in a terminal state
+    const terminalStates = ["settlement", "capture", "cancel", "deny", "expire"];
+    const currentStatus = midtransTransaction.transactionStatus;
+    const isDuplicate = currentStatus === transaction_status;
+    const isAlreadyTerminal = terminalStates.includes(currentStatus);
+
+    if (isAlreadyTerminal || isDuplicate) {
+      console.log("Webhook: Idempotent skip — already processed:", {
+        currentStatus,
+        incomingStatus: transaction_status,
+        isAlreadyTerminal,
+        isDuplicate,
+      });
+
+      // Still update the Midtrans record with latest data (e.g. settlement_time)
+      await prisma.midtransTransaction.update({
+        where: { id: midtransTransaction.id },
+        data: {
+          transactionId: transaction_id,
+          paymentType: payment_type,
+          transactionStatus: transaction_status,
+          fraudStatus: fraud_status,
+          transactionTime: transaction_time ? new Date(transaction_time) : null,
+          settlementTime: settlement_time ? new Date(settlement_time) : null,
+        },
+      });
+
+      return NextResponse.json({ success: true, status: "already_processed" });
+    }
+
     // Update Midtrans transaction record
     await prisma.midtransTransaction.update({
       where: { id: midtransTransaction.id },

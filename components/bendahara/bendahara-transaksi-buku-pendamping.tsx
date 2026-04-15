@@ -25,7 +25,7 @@ import {
   PERIODE_PEMBAYARAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, BookOpen, Sparkles, Banknote } from "lucide-react";
+import { RefreshCw, Loader2, FileText, BookOpen, Sparkles, Banknote } from "lucide-react";
 import { ReceiptPrinting } from "@/components/shared/receipt-printing";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -593,16 +593,6 @@ export function BendaharaTransaksiBukuPendamping() {
         <div>
           <h2 className="text-xl font-semibold">Pembayaran Buku Pendamping</h2>
           <p className="text-sm text-muted-foreground">Kelola pembayaran buku pendamping santri SMP</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsGenerateDialogOpen(true)}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Generate
-          </Button>
-          <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Pembayaran
-          </Button>
         </div>
       </div>
 

@@ -43,6 +43,8 @@ const currentMonthIndex = new Date().getMonth();
 const bulanList = BULAN_OPTIONS.map((b) => b.value) as string[];
 
 const SEMESTER_OPTIONS = [
+  { value: "SEMESTER_1", label: "Semester 1 (Ganjil)" },
+  { value: "SEMESTER_2", label: "Semester 2 (Genap)" },
   { value: "Semester 1", label: "Semester 1" },
   { value: "Semester 2", label: "Semester 2" },
 ] as const;
@@ -70,7 +72,7 @@ interface FormData {
 
 const getDefaultFormData = (): FormData => ({
   santriId: "",
-  semester: "Semester 1",
+  semester: "SEMESTER_1",
   tahun: currentYear.toString(),
   jumlah: "",
   periodePembayaran: "BULANAN",
@@ -327,7 +329,7 @@ export function BendaharaTransaksiBukuPendamping() {
     setSelectedTransaksi(transaksi);
     setFormData({
       santriId: transaksi.santriId,
-      semester: transaksi.bulan || "Semester 1",
+      semester: transaksi.bulan || "SEMESTER_1",
       tahun: transaksi.tahun?.toString() || currentYear.toString(),
       jumlah: transaksi.jumlah.toString(),
       periodePembayaran: transaksi.periodePembayaran || "BULANAN",
@@ -443,30 +445,23 @@ export function BendaharaTransaksiBukuPendamping() {
       },
     },
     {
-      accessorKey: "bulan",
+      accessorKey: "keterangan",
       header: "Semester",
       cell: ({ row }: { row: { original: Transaksi } }) => {
-        const bulan = row.original.bulan;
-        return bulan || "-";
+        const keterangan = row.original.keterangan;
+        if (!keterangan) return "-";
+        const labels: Record<string, string> = {
+          SEMESTER_1: "Semester 1 (Ganjil)",
+          SEMESTER_2: "Semester 2 (Genap)",
+          "Semester 1": "Semester 1 (Ganjil)",
+          "Semester 2": "Semester 2 (Genap)",
+        };
+        return labels[keterangan] || keterangan;
       },
     },
     {
       accessorKey: "tahun",
       header: "Tahun",
-    },
-    {
-      accessorKey: "periodePembayaran",
-      header: "Periode",
-      cell: ({ row }: { row: { original: Transaksi } }) => {
-        const periode = row.original.periodePembayaran;
-        if (!periode) return "-";
-        const labels: Record<string, string> = {
-          BULANAN: "Bulanan",
-          SEMESTER: "Semester",
-          TAHUNAN: "Tahunan",
-        };
-        return labels[periode] || periode;
-      },
     },
     {
       accessorKey: "jumlah",
@@ -501,8 +496,23 @@ export function BendaharaTransaksiBukuPendamping() {
       },
     },
     {
+      accessorKey: "metodePembayaran",
+      header: "Metode Pembayaran",
+      cell: ({ row }: { row: { original: Transaksi } }) => {
+        const metode = row.original.metodePembayaran;
+        if (!metode) return "-";
+        const labels: Record<string, string> = {
+          CASH: "Cash",
+          MIDTRANS: "Midtrans",
+          TRANSFER: "Transfer",
+          SALDO: "Saldo",
+        };
+        return labels[metode] || metode;
+      },
+    },
+    {
       accessorKey: "tanggalBayar",
-      header: "Tgl. Bayar",
+      header: "Tgl Bayar",
       cell: ({ row }: { row: { original: Transaksi } }) => {
         const tanggalBayar = row.original.tanggalBayar;
         if (!tanggalBayar) return "-";
@@ -512,14 +522,6 @@ export function BendaharaTransaksiBukuPendamping() {
           month: "short",
           year: "numeric",
         }).format(d);
-      },
-    },
-    {
-      accessorKey: "keterangan",
-      header: "Keterangan",
-      cell: ({ row }: { row: { original: Transaksi } }) => {
-        const keterangan = row.original.keterangan;
-        return keterangan || "-";
       },
     },
     {

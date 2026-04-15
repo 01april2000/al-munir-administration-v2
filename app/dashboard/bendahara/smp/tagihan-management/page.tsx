@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   CreateTagihanDialog,
   GenerateTagihanDialog,
+  CashPaymentDialog,
 } from "@/components/admin/tagihan";
 import {
   CreateTagihanData,
@@ -79,6 +80,13 @@ export default function TagihanManagementPage() {
   const [creating, setCreating] = useState(false);
   const [createResult, setCreateResult] = useState<CreateResult | null>(null);
   const [santriList, setSantriList] = useState<SantriOption[]>([]);
+
+  // Cash payment dialog state
+  const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
+  const [tagihanToPay, setTagihanToPay] = useState<Tagihan | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [cashPaymentError, setCashPaymentError] = useState<string | null>(null);
+  const [cashPaymentSuccess, setCashPaymentSuccess] = useState(false);
 
   // Generate dialog result state
   const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
@@ -167,6 +175,62 @@ export default function TagihanManagementPage() {
   useEffect(() => {
     fetchTagihan();
   }, [fetchTagihan]);
+
+  // Handle cash payment
+  const handleCashPayment = useCallback((tagihan: Tagihan) => {
+    setTagihanToPay(tagihan);
+    setCashPaymentError(null);
+    setCashPaymentSuccess(false);
+    setIsCashPaymentDialogOpen(true);
+  }, []);
+
+  const confirmCashPayment = async () => {
+    if (!tagihanToPay) return;
+
+    try {
+      setProcessingPayment(true);
+      setCashPaymentError(null);
+
+      const response = await fetch("/api/transaksi/cash-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tagihanIds: [tagihanToPay.id],
+          santriId: tagihanToPay.santri.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to process cash payment");
+      }
+
+      setCashPaymentSuccess(true);
+
+      // Refresh the list after a short delay
+      setTimeout(async () => {
+        await fetchTagihan();
+        setIsCashPaymentDialogOpen(false);
+        setTagihanToPay(null);
+        setCashPaymentSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setCashPaymentError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  // Register handleCashPayment on window object for columns.tsx to access
+  useEffect(() => {
+    (window as any).handleCashPayment = handleCashPayment;
+    return () => {
+      delete (window as any).handleCashPayment;
+    };
+  }, [handleCashPayment]);
 
   // Handle generate tagihan via shared dialog
   const handleGenerateTagihan = async (data: GenerateTagihanData) => {
@@ -397,6 +461,17 @@ export default function TagihanManagementPage() {
         jenisTagihanOptions={smpJenisTagihanOptions}
         defaultSppHint="Default: Rp 300.000"
         defaultSyahriahHint="Default: Rp 200.000"
+      />
+
+      {/* Cash Payment Dialog */}
+      <CashPaymentDialog
+        open={isCashPaymentDialogOpen}
+        onOpenChange={setIsCashPaymentDialogOpen}
+        tagihan={tagihanToPay as any}
+        onConfirm={confirmCashPayment}
+        isProcessing={processingPayment}
+        error={cashPaymentError}
+        success={cashPaymentSuccess}
       />
     </div>
   );

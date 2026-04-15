@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JenisSantri, StatusSantri, JenisBeasiswa, KelasSantri } from "@/lib/generated/prisma";
+import { JenisSantri, StatusSantri, JenisBeasiswa, KelasSantri, JenisPondok } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +14,7 @@ interface SantriImportData {
   beasiswa: boolean;
   jenisBeasiswa: string | null;
   jenisSantri: string;
+  jenisPondok: string;
   email: string;
   password: string;
 }
@@ -68,6 +69,17 @@ export async function POST(request: NextRequest) {
           results.errors.push({
             row: rowNum,
             message: `Jenis Santri tidak valid. Gunakan: ${validJenisSantri.join(", ")}`,
+          });
+          continue;
+        }
+
+        // Validate jenisPondok
+        const validJenisPondok = ["PONDOK_ATAS", "PONDOK_BAWAH", "SYALAF", "NON_PONDOK"];
+        if (row.jenisPondok && !validJenisPondok.includes(row.jenisPondok.toUpperCase())) {
+          results.failed++;
+          results.errors.push({
+            row: rowNum,
+            message: `Jenis Pondok tidak valid. Gunakan: ${validJenisPondok.join(", ")}`,
           });
           continue;
         }
@@ -144,6 +156,7 @@ export async function POST(request: NextRequest) {
 
         // Create santri linked to user
         const jenisSantriValue = (row.jenisSantri?.toUpperCase() as JenisSantri) || "PONDOK";
+        const jenisPondokValue = (row.jenisPondok?.toUpperCase() as JenisPondok) || "NON_PONDOK";
         await prisma.santri.create({
           data: {
             nis: row.nis,
@@ -157,6 +170,7 @@ export async function POST(request: NextRequest) {
               ? (row.jenisBeasiswa.toUpperCase() as JenisBeasiswa)
               : null,
             jenisSantri: jenisSantriValue,
+            jenisPondok: jenisPondokValue,
             userId: userId,
           },
         });

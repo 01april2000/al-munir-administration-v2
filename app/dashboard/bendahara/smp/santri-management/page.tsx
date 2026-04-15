@@ -25,6 +25,7 @@ import {
   Santri,
   StatusSantri,
   JenisSantri,
+  JenisPondok,
   JenisBeasiswa,
   KelasSmp,
 } from "./columns";
@@ -52,6 +53,7 @@ interface FormData {
   beasiswa: boolean;
   jenisBeasiswa: JenisBeasiswa | null;
   jenisSantri: JenisSantri;
+  jenisPondok: JenisPondok;
   email: string;
   password: string;
 }
@@ -66,9 +68,17 @@ const initialFormData: FormData = {
   beasiswa: false,
   jenisBeasiswa: null,
   jenisSantri: "SMP",
+  jenisPondok: "NON_PONDOK",
   email: "",
   password: "",
 };
+
+const jenisPondokOptions: { value: JenisPondok; label: string }[] = [
+  { value: "NON_PONDOK", label: "Non Pondok" },
+  { value: "PONDOK_ATAS", label: "Pondok Atas" },
+  { value: "PONDOK_BAWAH", label: "Pondok Bawah" },
+  { value: "SYALAF", label: "Syalaf" },
+];
 
 const kelasSmpOptions: { value: KelasSmp; label: string }[] = [
   { value: "VII_A", label: "VII A" },
@@ -158,6 +168,7 @@ export default function SantriManagementPage() {
       beasiswa: santri.beasiswa,
       jenisBeasiswa: santri.jenisBeasiswa,
       jenisSantri: santri.jenisSantri,
+      jenisPondok: santri.jenisPondok || "NON_PONDOK",
       email: santri.user?.email || "",
       password: "",
     });

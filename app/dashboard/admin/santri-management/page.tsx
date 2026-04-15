@@ -25,6 +25,7 @@ import {
   Santri,
   StatusSantri,
   JenisSantri,
+  JenisPondok,
   JenisBeasiswa,
   KelasSantri,
 } from "./columns";
@@ -52,6 +53,7 @@ interface FormData {
   beasiswa: boolean;
   jenisBeasiswa: JenisBeasiswa | null;
   jenisSantri: JenisSantri;
+  jenisPondok: JenisPondok;
   email: string;
   password: string;
 }
@@ -66,6 +68,7 @@ const initialFormData: FormData = {
   beasiswa: false,
   jenisBeasiswa: null,
   jenisSantri: "PONDOK",
+  jenisPondok: "NON_PONDOK",
   email: "",
   password: "",
 };
@@ -81,6 +84,13 @@ const jenisSantriOptions: { value: JenisSantri; label: string }[] = [
   { value: "SMK", label: "SMK" },
   { value: "SMP", label: "SMP" },
   { value: "PONDOK", label: "Pondok" },
+];
+
+const jenisPondokOptions: { value: JenisPondok; label: string }[] = [
+  { value: "NON_PONDOK", label: "Non Pondok" },
+  { value: "PONDOK_ATAS", label: "Pondok Atas" },
+  { value: "PONDOK_BAWAH", label: "Pondok Bawah" },
+  { value: "SYALAF", label: "Syalaf" },
 ];
 
 const jenisBeasiswaOptions: { value: JenisBeasiswa; label: string }[] = [
@@ -172,6 +182,7 @@ export default function SantriManagementPage() {
       beasiswa: santri.beasiswa,
       jenisBeasiswa: santri.jenisBeasiswa,
       jenisSantri: santri.jenisSantri,
+      jenisPondok: santri.jenisPondok || "NON_PONDOK",
       email: santri.user?.email || "",
       password: "",
     });
@@ -662,6 +673,26 @@ export default function SantriManagementPage() {
                   className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                 >
                   {jenisSantriOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jenisPondok">Jenis Pondok</Label>
+                <select
+                  id="jenisPondok"
+                  value={formData.jenisPondok}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      jenisPondok: e.target.value as JenisPondok,
+                    })
+                  }
+                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                >
+                  {jenisPondokOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>

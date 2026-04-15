@@ -83,6 +83,13 @@ enum JenisSantri {
   PONDOK
 }
 
+enum JenisPondok {
+  PONDOK_ATAS
+  PONDOK_BAWAH
+  SYALAF
+  NON_PONDOK
+}
+
 enum PeriodePembayaran {
   BULANAN
   TAHUNAN
@@ -197,6 +204,7 @@ model Santri {
   beasiswa      Boolean          @default(false)
   jenisBeasiswa JenisBeasiswa?
   jenisSantri   JenisSantri      @default(PONDOK)
+  jenisPondok   JenisPondok      @default(NON_PONDOK)
   saldoUangSaku Int              @default(0)
   userId        String?          @unique
   user          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -210,6 +218,7 @@ model Santri {
   @@index([status])
   @@index([beasiswa])
   @@index([jenisSantri])
+  @@index([jenisPondok])
   @@index([userId])
   @@map("santri")
 }

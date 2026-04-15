@@ -47,6 +47,14 @@ const defaultJenisSantriOptions = [
   { value: "PONDOK", label: "Pondok" },
 ];
 
+const jenisPondokOptions = [
+  { value: "", label: "Semua Tingkat" },
+  { value: "PONDOK_ATAS", label: "Pondok Atas" },
+  { value: "PONDOK_BAWAH", label: "Pondok Bawah" },
+  { value: "SYALAF", label: "Syalaf" },
+  { value: "NON_PONDOK", label: "Non Pondok" },
+];
+
 const defaultJenisTagihanOptions: JenisTagihanOption[] = [
   { value: "", label: "Semua Jenis" },
   { value: "SPP", label: "SPP" },
@@ -95,6 +103,7 @@ export function GenerateTagihanDialog({
   const [bulan, setBulan] = useState(bulanList[currentMonthIndex]);
   const [tahun, setTahun] = useState(currentYear.toString());
   const [jenisSantri, setJenisSantri] = useState("");
+  const [jenisPondok, setJenisPondok] = useState("");
   const [jenisTagihan, setJenisTagihan] = useState(
     jenisTagihanOptions.find((o) => o.value === "ALL") ? "ALL" : ""
   );
@@ -112,6 +121,7 @@ export function GenerateTagihanDialog({
       setBulan(bulanList[currentMonthIndex]);
       setTahun(currentYear.toString());
       setJenisSantri("");
+      setJenisPondok("");
       setJenisTagihan(
         jenisTagihanOptions.find((o) => o.value === "ALL") ? "ALL" : ""
       );
@@ -177,6 +187,7 @@ export function GenerateTagihanDialog({
       bulan,
       tahun: parseInt(tahun),
       jenisSantri: effectiveJenisSantri,
+      jenisPondok: jenisPondok || undefined,
       jenisTagihan,
       jenisUjian: jenisTagihan === "UJIAN" ? jenisUjian : undefined,
       semester: jenisTagihan === "LKS" || jenisTagihan === "BUKU_PENDAMPING" ? semester : undefined,
@@ -263,6 +274,28 @@ export function GenerateTagihanDialog({
                   ))}
                 </select>
               </div>
+            </div>
+          )}
+
+          {/* Jenis Pondok filter */}
+          {showJenisSantriDropdown && (
+            <div className="space-y-2">
+              <Label htmlFor="jenis-pondok">Jenis Pondok</Label>
+              <select
+                id="jenis-pondok"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={jenisPondok}
+                onChange={(e) => setJenisPondok(e.target.value)}
+              >
+                {jenisPondokOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Filter berdasarkan tingkat pondok. Pondok Atas → SPP saja, Pondok Bawah/Syalaf → Syahriah saja.
+              </p>
             </div>
           )}
 

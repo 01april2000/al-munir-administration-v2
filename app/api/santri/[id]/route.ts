@@ -32,6 +32,7 @@ export async function GET(
         beasiswa: true,
         jenisBeasiswa: true,
         jenisSantri: true,
+        jenisPondok: true,
         userId: true,
         user: {
           select: {
@@ -85,6 +86,7 @@ export async function PUT(
       beasiswa,
       jenisBeasiswa,
       jenisSantri,
+      jenisPondok,
       email,
       password,
     } = body;
@@ -170,6 +172,7 @@ export async function PUT(
           ...(beasiswa !== undefined && { beasiswa }),
           ...(jenisBeasiswa !== undefined && { jenisBeasiswa }),
           ...(jenisSantri !== undefined && { jenisSantri }),
+          ...(jenisPondok !== undefined && { jenisPondok }),
         },
         select: {
           id: true,
@@ -182,6 +185,7 @@ export async function PUT(
           beasiswa: true,
           jenisBeasiswa: true,
           jenisSantri: true,
+          jenisPondok: true,
           userId: true,
           user: {
             select: {

@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         beasiswa: true,
         jenisBeasiswa: true,
         jenisSantri: true,
+        jenisPondok: true,
         userId: true,
         user: {
           select: {
@@ -149,6 +150,7 @@ export async function POST(request: NextRequest) {
       beasiswa,
       jenisBeasiswa,
       jenisSantri,
+      jenisPondok,
       email,
       password,
     } = body;
@@ -225,6 +227,7 @@ export async function POST(request: NextRequest) {
         beasiswa: beasiswa || false,
         jenisBeasiswa: jenisBeasiswa || null,
         jenisSantri: jenisSantri || "PONDOK",
+        jenisPondok: jenisPondok || "NON_PONDOK",
         userId: userId,
       },
       select: {
@@ -238,6 +241,7 @@ export async function POST(request: NextRequest) {
         beasiswa: true,
         jenisBeasiswa: true,
         jenisSantri: true,
+        jenisPondok: true,
         userId: true,
         user: {
           select: {

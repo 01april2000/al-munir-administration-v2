@@ -17,6 +17,7 @@ import {
 
 export type StatusSantri = "AKTIF" | "NON_AKTIF" | "LULUS" | "KELUAR";
 export type JenisSantri = "SMK" | "SMP" | "PONDOK";
+export type JenisPondok = "PONDOK_ATAS" | "PONDOK_BAWAH" | "SYALAF" | "NON_PONDOK";
 export type JenisBeasiswa = "FULL" | "SYAHRIAH" | "SPP" | "UANG_SAKU";
 
 export type KelasSmk = "X_RPL_A" | "X_RPL_B" | "X_AKL" | "XI_RPL_A" | "XI_RPL_B" | "XI_AKL" | "XII_RPL_A" | "XII_RPL_B" | "XII_AKL";
@@ -32,6 +33,7 @@ export interface Santri {
   beasiswa: boolean;
   jenisBeasiswa: JenisBeasiswa | null;
   jenisSantri: JenisSantri;
+  jenisPondok: JenisPondok;
   userId: string | null;
   user: {
     id: string;
@@ -71,6 +73,20 @@ const jenisSantriVariants: Record<JenisSantri, "default" | "secondary" | "destru
   SMK: "default",
   SMP: "secondary",
   PONDOK: "outline",
+};
+
+const jenisPondokLabels: Record<JenisPondok, string> = {
+  PONDOK_ATAS: "Pondok Atas",
+  PONDOK_BAWAH: "Pondok Bawah",
+  SYALAF: "Syalaf",
+  NON_PONDOK: "Non Pondok",
+};
+
+const jenisPondokVariants: Record<JenisPondok, "default" | "secondary" | "destructive" | "outline"> = {
+  PONDOK_ATAS: "default",
+  PONDOK_BAWAH: "secondary",
+  SYALAF: "outline",
+  NON_PONDOK: "outline",
 };
 
 const jenisBeasiswaLabels: Record<JenisBeasiswa, string> = {

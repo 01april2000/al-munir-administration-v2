@@ -124,6 +124,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
             jenisBeasiswa: String(row["Jenis Beasiswa"] || row["jenisBeasiswa"] || row["jenis_beasiswa"] || row["JENIS_BEASISWA"] || "") || null,
             // Use defaultJenisSantri if provided, otherwise use value from Excel
             jenisSantri: defaultJenisSantri || String(row["Jenis Santri"] || row["jenisSantri"] || row["jenis_santri"] || row["JENIS_SANTRI"] || "PONDOK"),
+            jenisPondok: String(row["Jenis Pondok"] || row["jenisPondok"] || row["jenis_pondok"] || row["JENIS_PONDOK"] || "NON_PONDOK"),
             email: String(row["Email"] || row["email"] || row["EMAIL"] || ""),
             password: String(row["Password"] || row["password"] || row["PASSWORD"] || ""),
           }));
@@ -193,6 +194,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
         Beasiswa: "Ya",
         "Jenis Beasiswa": "FULL",
         "Jenis Santri": jenisSantriValue,
+        "Jenis Pondok": "NON_PONDOK",
         Email: "ahmad@example.com",
         Password: "password123",
       },
@@ -206,6 +208,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
         Beasiswa: "Tidak",
         "Jenis Beasiswa": "",
         "Jenis Santri": jenisSantriValue,
+        "Jenis Pondok": "PONDOK_ATAS",
         Email: "aisyah@example.com",
         Password: "password123",
       },
@@ -219,6 +222,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
         Beasiswa: "Ya",
         "Jenis Beasiswa": "SYAHRIAH",
         "Jenis Santri": jenisSantriValue,
+        "Jenis Pondok": "PONDOK_BAWAH",
         Email: "rizki@example.com",
         Password: "password123",
       },
@@ -361,6 +365,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
               {defaultJenisSantri && (
                 <li><strong>Jenis Santri</strong> - Otomatis diatur ke <strong>{defaultJenisSantri}</strong></li>
               )}
+              <li><strong>Jenis Pondok</strong> - PONDOK_ATAS, PONDOK_BAWAH, SYALAF, NON_PONDOK (default: NON_PONDOK)</li>
               <li><strong>Email</strong> - Email untuk login (unik)</li>
               <li><strong>Password</strong> - Password untuk login</li>
             </ul>

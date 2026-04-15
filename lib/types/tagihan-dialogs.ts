@@ -9,6 +9,7 @@ export interface TagihanSantri {
   kelas: string;
   asrama: string;
   jenisSantri: "SMK" | "SMP" | "PONDOK";
+  jenisPondok: "PONDOK_ATAS" | "PONDOK_BAWAH" | "SYALAF" | "NON_PONDOK";
 }
 
 export interface Tagihan {
@@ -118,6 +119,7 @@ export interface GenerateTagihanData {
   bulan: string;
   tahun: number;
   jenisSantri?: string;
+  jenisPondok?: string;
   jenisTagihan: string;
   jenisUjian?: string;
   semester?: string;

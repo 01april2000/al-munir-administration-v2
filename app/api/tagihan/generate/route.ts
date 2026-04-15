@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JenisTagihan, StatusTagihan, JenisSantri, StatusSantri, KelasSantri } from "@/lib/generated/prisma";
+import { JenisTagihan, StatusTagihan, JenisSantri, StatusSantri, KelasSantri, JenisPondok } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +9,14 @@ const DEFAULT_AMOUNTS: Record<JenisSantri, { SPP: number; SYAHRIAH: number }> = 
   SMK: { SPP: 250000, SYAHRIAH: 300000 },
   SMP: { SPP: 300000, SYAHRIAH: 200000 },
   PONDOK: { SPP: 250000, SYAHRIAH: 150000 },
+};
+
+// Syahriah amounts based on jenisPondok (used when jenisPondok is PONDOK_BAWAH or SYALAF)
+const SYAHRIAH_BY_JENIS_PONDOK: Record<JenisPondok, number> = {
+  PONDOK_ATAS: 0,       // Tidak ada syahriah
+  PONDOK_BAWAH: 150000, // Nominal standar pondok bawah
+  SYALAF: 100000,       // Nominal khusus syalaf
+  NON_PONDOK: 0,        // Tidak dipakai, pakai DEFAULT_AMOUNTS
 };
 
 // All available JenisTagihan types
@@ -47,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bulan, tahun, jenisSantri, jenisTagihan, jenisUjian, semester, sppAmount, syahriahAmount, customAmount, kelas } = body as {
+    const { bulan, tahun, jenisSantri, jenisTagihan, jenisUjian, semester, sppAmount, syahriahAmount, customAmount, kelas, jenisPondok } = body as {
       bulan: string;
       tahun: number;
       jenisSantri?: string;
@@ -58,6 +66,7 @@ export async function POST(request: NextRequest) {
       syahriahAmount?: number;
       customAmount?: number;
       kelas?: string[];
+      jenisPondok?: string;
     };
 
     // Validate input
@@ -143,6 +152,11 @@ export async function POST(request: NextRequest) {
       santriFilter.kelas = { in: kelas as KelasSantri[] };
     }
 
+    // Filter by jenisPondok if provided
+    if (jenisPondok && Object.values(JenisPondok).includes(jenisPondok as JenisPondok)) {
+      santriFilter.jenisPondok = jenisPondok as JenisPondok;
+    }
+
     // Get all active santri
     const activeSantri = await prisma.santri.findMany({
       where: santriFilter,
@@ -152,6 +166,7 @@ export async function POST(request: NextRequest) {
         nama: true,
         kelas: true,
         jenisSantri: true,
+        jenisPondok: true,
         beasiswa: true,
         jenisBeasiswa: true,
       },
@@ -191,8 +206,38 @@ export async function POST(request: NextRequest) {
     for (const santri of activeSantri) {
       // Get amounts based on jenisSantri or custom amounts
       const amounts = DEFAULT_AMOUNTS[santri.jenisSantri];
-      const sppAmountFinal = sppAmount ?? amounts.SPP;
-      const syahriahAmountFinal = syahriahAmount ?? amounts.SYAHRIAH;
+      const tingkat = santri.jenisPondok;
+
+      // ===== TENTUKAN SPP & SYAHRIAH BERDASARKAN JENIS PONDOK =====
+      let sppAmountFinal: number;
+      let syahriahAmountFinal: number;
+
+      switch (tingkat) {
+        case "PONDOK_ATAS":
+          // Pondok Atas → SPP saja, syahriah diskip
+          sppAmountFinal = sppAmount ?? amounts.SPP;
+          syahriahAmountFinal = 0;
+          break;
+
+        case "PONDOK_BAWAH":
+          // Pondok Bawah → Syahriah saja, SPP diskip
+          sppAmountFinal = 0;
+          syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.PONDOK_BAWAH;
+          break;
+
+        case "SYALAF":
+          // Syalaf → Syahriah saja dengan nominal khusus, SPP diskip
+          sppAmountFinal = 0;
+          syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.SYALAF;
+          break;
+
+        case "NON_PONDOK":
+        default:
+          // Non-pondok → SPP + Syahriah normal
+          sppAmountFinal = sppAmount ?? amounts.SPP;
+          syahriahAmountFinal = syahriahAmount ?? amounts.SYAHRIAH;
+          break;
+      }
 
       // Generate SPP tagihan
       if (generateSPP) {
@@ -329,6 +374,7 @@ export async function GET(request: NextRequest) {
       where: { status: StatusSantri.AKTIF },
       select: {
         id: true, nis: true, nama: true, jenisSantri: true,
+        jenisPondok: true,
         beasiswa: true, jenisBeasiswa: true,
       },
     });
@@ -344,26 +390,51 @@ export async function GET(request: NextRequest) {
 
     for (const santri of activeSantri) {
       const amounts = DEFAULT_AMOUNTS[santri.jenisSantri];
+      const tingkat = santri.jenisPondok;
+
+      // ===== TENTUKAN SPP & SYAHRIAH BERDASARKAN JENIS PONDOK =====
+      let sppAmount: number;
+      let syahriahAmount: number;
+
+      switch (tingkat) {
+        case "PONDOK_ATAS":
+          sppAmount = amounts.SPP;
+          syahriahAmount = 0;
+          break;
+        case "PONDOK_BAWAH":
+          sppAmount = 0;
+          syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.PONDOK_BAWAH;
+          break;
+        case "SYALAF":
+          sppAmount = 0;
+          syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.SYALAF;
+          break;
+        case "NON_PONDOK":
+        default:
+          sppAmount = amounts.SPP;
+          syahriahAmount = amounts.SYAHRIAH;
+          break;
+      }
 
       // SPP
-      const skipSPP = santri.beasiswa && 
+      const skipSPP = santri.beasiswa &&
         (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SPP");
-      if (!skipSPP && amounts.SPP > 0) {
+      if (!skipSPP && sppAmount > 0) {
         tagihanData.push({
           kode: `SPP-${santri.nis}-${bulan}-${tahun}`,
           santriId: santri.id, jenis: "SPP", bulan, tahun,
-          jumlah: amounts.SPP, status: "BELUM_LUNAS", jatuhTempo,
+          jumlah: sppAmount, status: "BELUM_LUNAS", jatuhTempo,
         });
       }
 
       // SYAHRIAH
-      const skipSyahriah = santri.beasiswa && 
+      const skipSyahriah = santri.beasiswa &&
         (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SYAHRIAH");
-      if (!skipSyahriah && amounts.SYAHRIAH > 0) {
+      if (!skipSyahriah && syahriahAmount > 0) {
         tagihanData.push({
           kode: `SYAHRIAH-${santri.nis}-${bulan}-${tahun}`,
           santriId: santri.id, jenis: "SYAHRIAH", bulan, tahun,
-          jumlah: amounts.SYAHRIAH, status: "BELUM_LUNAS", jatuhTempo,
+          jumlah: syahriahAmount, status: "BELUM_LUNAS", jatuhTempo,
         });
       }
     }

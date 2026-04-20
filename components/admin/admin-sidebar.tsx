@@ -119,7 +119,7 @@ export function AdminSidebar() {
                   render={
                     <Link href="/dashboard/admin/transaksi?tab=UANG_SAKU">
                       <Wallet className="h-4 w-4" />
-                      <span>Uang Saku</span>
+                      <span>Saldo Management</span>
                     </Link>
                   }
                 />

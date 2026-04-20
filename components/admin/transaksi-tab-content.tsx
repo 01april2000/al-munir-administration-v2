@@ -30,7 +30,7 @@ import {
   JENIS_UJIAN_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi, JenisTransaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Shirt, Check, Briefcase, Sparkles } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Shirt, Check, Briefcase, Sparkles, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useReceiptPrinting } from "@/components/shared/receipt-printing";
 import {
@@ -75,7 +75,14 @@ interface FormData {
   statusUangSaku: string;
   jenisLaundry: string;
   keterangan: string;
+  targetSaldo: string; // "SALDO_UANG_SAKU" | "SALDO_TAGIHAN"
 }
+
+// Options for target saldo selection
+const TARGET_SALDO_OPTIONS = [
+  { value: "SALDO_UANG_SAKU", label: "Saldo Uang Saku" },
+  { value: "SALDO_TAGIHAN", label: "Saldo Tagihan" },
+] as const;
 
 // Default form data for each transaction type
 const getDefaultFormData = (jenis: JenisTransaksi): FormData => {
@@ -90,6 +97,7 @@ const getDefaultFormData = (jenis: JenisTransaksi): FormData => {
     statusUangSaku: "DITAMBAH",
     jenisLaundry: "REGULAR",
     keterangan: "",
+    targetSaldo: "SALDO_UANG_SAKU",
   };
 
   if (jenis === "UANG_SAKU") {
@@ -107,6 +115,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalSaldoUangSaku, setTotalSaldoUangSaku] = useState(0);
+  const [totalSaldoTagihan, setTotalSaldoTagihan] = useState(0);
 
   // Filter states - different per transaction type
   const [filterBulan, setFilterBulan] = useState<string>("");
@@ -241,6 +250,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
       setTransaksiList(data.items);
       setTotal(data.total);
       setTotalSaldoUangSaku(data.totalSaldoUangSaku || 0);
+      setTotalSaldoTagihan(data.totalSaldoTagihan || 0);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -299,6 +309,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
 
     if (jenis === "UANG_SAKU") {
       base.statusUangSaku = data.statusUangSaku;
+      base.targetSaldo = data.targetSaldo;
       base.keterangan = data.keterangan || null;
     }
 
@@ -503,12 +514,23 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Saldo Santri</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Saldo Uang Saku</CardTitle>
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${totalSaldoUangSaku >= 0 ? "text-green-600" : "text-red-600"}`}>
                 {formatCurrency(totalSaldoUangSaku)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Saldo Tagihan</CardTitle>
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${totalSaldoTagihan >= 0 ? "text-blue-600" : "text-red-600"}`}>
+                {formatCurrency(totalSaldoTagihan)}
               </div>
             </CardContent>
           </Card>
@@ -866,7 +888,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="status-uang-saku">Jenis Transaksi</Label>
               <select
@@ -876,6 +898,21 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
                 onChange={(e) => handleFormChange("statusUangSaku", e.target.value)}
               >
                 {STATUS_UANG_SAKU_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="target-saldo">Target Saldo</Label>
+              <select
+                id="target-saldo"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={formData.targetSaldo}
+                onChange={(e) => handleFormChange("targetSaldo", e.target.value)}
+              >
+                {TARGET_SALDO_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -1108,7 +1145,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className={`grid gap-4 ${jenis === "UANG_SAKU" ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
         {getSummaryCards()}
       </div>
 

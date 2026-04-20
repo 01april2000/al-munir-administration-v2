@@ -128,6 +128,7 @@ export async function GET(request: NextRequest) {
 
     // For UANG_SAKU transactions, get total saldo from Santri model
     let totalSaldoUangSaku = 0;
+    let totalSaldoTagihan = 0;
     if (jenis === "UANG_SAKU") {
       const santriFilter: { jenisSantri?: JenisSantri } = {};
       if (jenisSantri && Object.values(JenisSantri).includes(jenisSantri)) {
@@ -138,9 +139,11 @@ export async function GET(request: NextRequest) {
         where: santriFilter,
         _sum: {
           saldoUangSaku: true,
+          saldoTagihan: true,
         },
       });
       totalSaldoUangSaku = saldoResult._sum.saldoUangSaku || 0;
+      totalSaldoTagihan = saldoResult._sum.saldoTagihan || 0;
     }
 
     return NextResponse.json({
@@ -149,6 +152,7 @@ export async function GET(request: NextRequest) {
       page,
       limit,
       totalSaldoUangSaku,
+      totalSaldoTagihan,
     });
   } catch (error) {
     console.error("Error fetching transaksi:", error);
@@ -183,6 +187,7 @@ export async function POST(request: NextRequest) {
       statusUangSaku,
       jenisLaundry,
       keterangan,
+      targetSaldo,
     } = body;
 
     // Validate required fields
@@ -327,7 +332,7 @@ export async function POST(request: NextRequest) {
     // For UANG_SAKU transactions with LUNAS status, update the santri's balance
     if (jenis === "UANG_SAKU" && status === "LUNAS" && statusUangSaku) {
       const balanceChange = statusUangSaku === "DITAMBAH" ? jumlah : -jumlah;
-      const isTagihan = keterangan === "Top-up Saldo Tagihan";
+      const isTagihan = targetSaldo === "SALDO_TAGIHAN";
       
       if (isTagihan) {
         await prisma.santri.update({

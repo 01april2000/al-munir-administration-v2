@@ -664,6 +664,26 @@ export default function SantriManagementPage() {
                   ))}
                 </select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="jenisPondok">Jenis Pondok</Label>
+                <select
+                  id="jenisPondok"
+                  value={formData.jenisPondok}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      jenisPondok: e.target.value as JenisPondok,
+                    })
+                  }
+                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                >
+                  {jenisPondokOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="col-span-2 flex items-center gap-2">
                 <input
                   type="checkbox"

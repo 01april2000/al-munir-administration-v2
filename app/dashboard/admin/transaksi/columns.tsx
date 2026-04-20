@@ -214,6 +214,18 @@ const sppSyahriahColumns: ColumnDef<Transaksi>[] = [
   },
 ];
 
+// Jenis Transaksi label mapping
+const jenisTransaksiLabels: Record<string, string> = {
+  SPP: "SPP",
+  SYAHRIAH: "Syahriah",
+  PKL: "PKL",
+  UANG_SAKU: "Uang Saku",
+  LAUNDRY: "Laundry",
+  LKS: "LKS",
+  UJIAN: "Ujian",
+  BUKU_PENDAMPING: "Buku Pendamping",
+};
+
 // Uang Saku specific columns
 const uangSakuColumns: ColumnDef<Transaksi>[] = [
   {
@@ -221,7 +233,15 @@ const uangSakuColumns: ColumnDef<Transaksi>[] = [
     header: "Jenis",
     cell: ({ row }) => {
       const status = row.getValue("statusUangSaku") as string;
-      return status ? <StatusUangSakuBadge status={status} /> : "-";
+      const jenis = row.original.jenis;
+      if (status) {
+        return <StatusUangSakuBadge status={status} />;
+      }
+      // For saldo-paid transactions (metodePembayaran: SALDO), show the transaction jenis
+      if (jenis && jenis !== "UANG_SAKU") {
+        return <Badge variant="outline">{jenisTransaksiLabels[jenis] || jenis}</Badge>;
+      }
+      return "-";
     },
   },
   {

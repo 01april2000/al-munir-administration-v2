@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const kelas = searchParams.get("kelas");
     const keterangan = searchParams.get("keterangan");
     const semester = searchParams.get("semester");
-    const statusUangSaku = searchParams.get("statusUangSaku") as StatusUangSaku | null;
+    const statusUangSaku = searchParams.get("statusUangSaku") as string | null;
     const allJenisSantri = searchParams.get("allJenisSantri") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -50,9 +50,28 @@ export async function GET(request: NextRequest) {
     if (santriId) filter.santriId = santriId;
     if (bulan) filter.bulan = bulan;
     if (tahun) filter.tahun = parseInt(tahun);
-    if (jenis && Object.values(JenisTransaksi).includes(jenis)) {
+
+    // For UANG_SAKU, include both regular UANG_SAKU transactions and
+    // transactions paid with saldo tagihan (metodePembayaran: SALDO)
+    if (jenis === "UANG_SAKU") {
+      if (statusUangSaku === "PEMBAYARAN_SALDO") {
+        // Special filter: show only saldo-paid transactions
+        filter.metodePembayaran = "SALDO";
+      } else {
+        // Include both UANG_SAKU and SALDO-paid transactions
+        filter.AND = [
+          {
+            OR: [
+              { jenis: "UANG_SAKU" },
+              { metodePembayaran: "SALDO" },
+            ],
+          },
+        ];
+      }
+    } else if (jenis && Object.values(JenisTransaksi).includes(jenis)) {
       filter.jenis = jenis;
     }
+
     if (status && Object.values(StatusTransaksi).includes(status)) {
       filter.status = status;
     }
@@ -68,8 +87,8 @@ export async function GET(request: NextRequest) {
         },
       ];
     }
-    if (statusUangSaku && Object.values(StatusUangSaku).includes(statusUangSaku)) {
-      filter.statusUangSaku = statusUangSaku;
+    if (statusUangSaku && statusUangSaku !== "PEMBAYARAN_SALDO" && Object.values(StatusUangSaku).includes(statusUangSaku as StatusUangSaku)) {
+      filter.statusUangSaku = statusUangSaku as StatusUangSaku;
     }
     // Build santri filter combining jenisSantri and kelas if provided
     const santriFilter: Prisma.SantriWhereInput = {};

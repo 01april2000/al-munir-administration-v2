@@ -701,6 +701,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
                 {option.label}
               </option>
             ))}
+            <option value="PEMBAYARAN_SALDO">Pembayaran Saldo Tagihan</option>
           </select>
         </div>
       );

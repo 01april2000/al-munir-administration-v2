@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         id: true,
         nis: true,
         nama: true,
-        saldoUangSaku: true,
+        saldoTagihan: true,
       },
     });
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Santri not found" }, { status: 404 });
     }
 
-    console.log("Santri found:", santri.id, "Saldo:", santri.saldoUangSaku);
+    console.log("Santri found:", santri.id, "Saldo Tagihan:", santri.saldoTagihan);
 
     // Handle payment for existing transaksi (e.g., laundry, ujian, etc.)
     if (transaksiId) {
@@ -87,13 +87,13 @@ export async function POST(request: NextRequest) {
     console.log("Total amount to pay:", totalAmount);
 
     // Check if saldo is sufficient
-    if (santri.saldoUangSaku < totalAmount) {
+    if (santri.saldoTagihan < totalAmount) {
       return NextResponse.json(
         {
-          error: "Saldo tidak mencukupi",
+          error: "Saldo tagihan tidak mencukupi",
           required: totalAmount,
-          available: santri.saldoUangSaku,
-          shortfall: totalAmount - santri.saldoUangSaku,
+          available: santri.saldoTagihan,
+          shortfall: totalAmount - santri.saldoTagihan,
         },
         { status: 400 }
       );
@@ -110,13 +110,13 @@ export async function POST(request: NextRequest) {
       const updatedSantri = await tx.santri.update({
         where: { id: santri.id },
         data: {
-          saldoUangSaku: {
+          saldoTagihan: {
             decrement: totalAmount,
           },
         },
       });
 
-      console.log("Saldo deducted. New saldo:", updatedSantri.saldoUangSaku);
+      console.log("Saldo deducted. New saldo tagihan:", updatedSantri.saldoTagihan);
 
       // 2. Create transaksi
       const transaksi = await tx.transaksi.create({
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         tanggalBayar: result.transaksi.tanggalBayar,
       },
       deductedAmount: totalAmount,
-      remainingSaldo: result.updatedSantri.saldoUangSaku,
+      remainingSaldo: result.updatedSantri.saldoTagihan,
       tagihanPaid: result.tagihanCount,
     });
   } catch (error) {
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
 // Handle payment for existing transaksi (laundry, ujian, etc.)
 async function handleTransaksiPayment(
   request: NextRequest,
-  santri: { id: string; nis: string; nama: string; saldoUangSaku: number },
+  santri: { id: string; nis: string; nama: string; saldoTagihan: number },
   transaksiId: string,
   session: any
 ) {
@@ -214,13 +214,13 @@ async function handleTransaksiPayment(
   console.log("Transaksi amount to pay:", totalAmount);
 
   // Check if saldo is sufficient
-  if (santri.saldoUangSaku < totalAmount) {
+  if (santri.saldoTagihan < totalAmount) {
     return NextResponse.json(
       {
-        error: "Saldo tidak mencukupi",
+        error: "Saldo tagihan tidak mencukupi",
         required: totalAmount,
-        available: santri.saldoUangSaku,
-        shortfall: totalAmount - santri.saldoUangSaku,
+        available: santri.saldoTagihan,
+        shortfall: totalAmount - santri.saldoTagihan,
       },
       { status: 400 }
     );
@@ -228,17 +228,17 @@ async function handleTransaksiPayment(
 
   // Use transaction for atomicity
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Deduct saldo
+    // 1. Deduct saldo tagihan
     const updatedSantri = await tx.santri.update({
       where: { id: santri.id },
       data: {
-        saldoUangSaku: {
+        saldoTagihan: {
           decrement: totalAmount,
         },
       },
     });
 
-    console.log("Saldo deducted. New saldo:", updatedSantri.saldoUangSaku);
+    console.log("Saldo deducted. New saldo tagihan:", updatedSantri.saldoTagihan);
 
     // 2. Update transaksi to LUNAS
     const updatedTransaksi = await tx.transaksi.update({
@@ -277,6 +277,6 @@ async function handleTransaksiPayment(
       tanggalBayar: result.transaksi.tanggalBayar,
     },
     deductedAmount: totalAmount,
-    remainingSaldo: result.updatedSantri.saldoUangSaku,
+    remainingSaldo: result.updatedSantri.saldoTagihan,
   });
 }

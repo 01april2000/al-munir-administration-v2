@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id;
     const santri = await prisma.santri.findUnique({
       where: { userId },
-      select: { id: true, jenisSantri: true, nama: true, saldoUangSaku: true },
+      select: { id: true, jenisSantri: true, nama: true, saldoTagihan: true, saldoUangSaku: true },
     });
 
     if (!santri) {
@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
       transaksi,
       santri: {
         nama: santri.nama,
+        saldoTagihan: santri.saldoTagihan,
         saldoUangSaku: santri.saldoUangSaku,
       },
     });

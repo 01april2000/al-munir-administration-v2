@@ -12,7 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, CreditCard, AlertCircle, Wallet, Plus } from "lucide-react"
+import { Loader2, CreditCard, AlertCircle, Wallet, Plus, Receipt } from "lucide-react"
+
+type SaldoType = "UANG_SAKU" | "TAGIHAN"
 
 interface TopupDialogProps {
   onTopupComplete?: () => void
@@ -45,6 +47,7 @@ export function TopupDialog({
   const [snapLoaded, setSnapLoaded] = useState(false)
   const [amount, setAmount] = useState<string>("")
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
+  const [saldoType, setSaldoType] = useState<SaldoType>("UANG_SAKU")
 
   // Load Midtrans Snap script
   useEffect(() => {
@@ -65,6 +68,16 @@ export function TopupDialog({
       setSnapLoaded(true)
     }
   }, [])
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setError(null)
+      setAmount("")
+      setSelectedPreset(null)
+      setSaldoType("UANG_SAKU")
+    }
+  }, [open])
 
   const handlePresetClick = (value: number) => {
     setAmount(value.toString())
@@ -101,6 +114,7 @@ export function TopupDialog({
         },
         body: JSON.stringify({
           amount: numericAmount,
+          saldoType,
         }),
       })
 
@@ -126,6 +140,9 @@ export function TopupDialog({
           } catch (error) {
             console.error("Error checking payment status:", error)
           }
+          // Wait 2 seconds for database to update before refreshing UI
+          // This prevents race condition where saldo hasn't been updated yet
+          await new Promise(resolve => setTimeout(resolve, 2000))
           setOpen(false)
           setAmount("")
           setSelectedPreset(null)
@@ -144,6 +161,8 @@ export function TopupDialog({
           } catch (error) {
             console.error("Error checking payment status:", error)
           }
+          // Wait briefly for database to update
+          await new Promise(resolve => setTimeout(resolve, 1000))
           // Payment is pending, user can close the dialog
           setOpen(false)
           setAmount("")
@@ -187,10 +206,75 @@ export function TopupDialog({
               Top Up Saldo
             </DialogTitle>
             <DialogDescription className="text-sm">
-              Tambah saldo uang saku Anda dengan mudah dan aman
+              Tambah saldo Anda dengan mudah dan aman
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Saldo Type Selector */}
+            <div className="space-y-2">
+              <Label>Pilih Jenis Saldo</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSaldoType("UANG_SAKU")}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                    saldoType === "UANG_SAKU"
+                      ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                      : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg ${
+                    saldoType === "UANG_SAKU"
+                      ? "bg-amber-100 dark:bg-amber-900"
+                      : "bg-gray-100 dark:bg-gray-800"
+                  }`}>
+                    <Wallet className={`h-4 w-4 ${
+                      saldoType === "UANG_SAKU"
+                        ? "text-amber-600"
+                        : "text-gray-500"
+                    }`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      saldoType === "UANG_SAKU"
+                        ? "text-amber-700 dark:text-amber-400"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}>Uang Saku</p>
+                    <p className="text-[10px] text-muted-foreground">Saldo harian</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSaldoType("TAGIHAN")}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                    saldoType === "TAGIHAN"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                      : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg ${
+                    saldoType === "TAGIHAN"
+                      ? "bg-blue-100 dark:bg-blue-900"
+                      : "bg-gray-100 dark:bg-gray-800"
+                  }`}>
+                    <Receipt className={`h-4 w-4 ${
+                      saldoType === "TAGIHAN"
+                        ? "text-blue-600"
+                        : "text-gray-500"
+                    }`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      saldoType === "TAGIHAN"
+                        ? "text-blue-700 dark:text-blue-400"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}>Saldo Tagihan</p>
+                    <p className="text-[10px] text-muted-foreground">Bayar tagihan</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             {/* Preset Amounts */}
             <div className="grid grid-cols-3 gap-2">
               {PRESET_AMOUNTS.map((preset) => (
@@ -200,8 +284,12 @@ export function TopupDialog({
                   variant={selectedPreset === preset.value ? "default" : "outline"}
                   className={`h-10 text-sm transition-all ${
                     selectedPreset === preset.value
-                      ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700"
-                      : "hover:border-amber-500"
+                      ? saldoType === "TAGIHAN"
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                        : "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700"
+                      : saldoType === "TAGIHAN"
+                        ? "hover:border-blue-500"
+                        : "hover:border-amber-500"
                   }`}
                   onClick={() => handlePresetClick(preset.value)}
                 >
@@ -234,10 +322,28 @@ export function TopupDialog({
 
             {/* Summary */}
             {amount && (
-              <div className="rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800 p-4 space-y-2">
+              <div className={`rounded-xl border p-4 space-y-2 ${
+                saldoType === "TAGIHAN"
+                  ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800"
+                  : "bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-amber-200 dark:border-amber-800"
+              }`}>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Jenis Saldo</span>
+                  <span className={`font-semibold ${
+                    saldoType === "TAGIHAN"
+                      ? "text-blue-700 dark:text-blue-400"
+                      : "text-amber-700 dark:text-amber-400"
+                  }`}>
+                    {saldoType === "TAGIHAN" ? "Saldo Tagihan" : "Uang Saku"}
+                  </span>
+                </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Jumlah Top Up</span>
-                  <span className="font-semibold text-amber-700 dark:text-amber-400">
+                  <span className={`font-semibold ${
+                    saldoType === "TAGIHAN"
+                      ? "text-blue-700 dark:text-blue-400"
+                      : "text-amber-700 dark:text-amber-400"
+                  }`}>
                     Rp {formatCurrency(amount)}
                   </span>
                 </div>
@@ -247,10 +353,18 @@ export function TopupDialog({
                     Gratis
                   </span>
                 </div>
-                <div className="h-px bg-amber-200 dark:bg-amber-800" />
+                <div className={`h-px ${
+                  saldoType === "TAGIHAN"
+                    ? "bg-blue-200 dark:bg-blue-800"
+                    : "bg-amber-200 dark:bg-amber-800"
+                }`} />
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total Bayar</span>
-                  <span className="font-bold text-lg text-amber-700 dark:text-amber-400">
+                  <span className={`font-bold text-lg ${
+                    saldoType === "TAGIHAN"
+                      ? "text-blue-700 dark:text-blue-400"
+                      : "text-amber-700 dark:text-amber-400"
+                  }`}>
                     Rp {formatCurrency(amount)}
                   </span>
                 </div>
@@ -279,7 +393,11 @@ export function TopupDialog({
             <Button
               onClick={handleTopup}
               disabled={loading || !amount || parseInt(amount) < 10000}
-              className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700"
+              className={`w-full ${
+                saldoType === "TAGIHAN"
+                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                  : "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700"
+              }`}
             >
               {loading ? (
                 <>
@@ -289,7 +407,7 @@ export function TopupDialog({
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Top Up Sekarang
+                  Top Up {saldoType === "TAGIHAN" ? "Saldo Tagihan" : "Uang Saku"}
                 </>
               )}
             </Button>

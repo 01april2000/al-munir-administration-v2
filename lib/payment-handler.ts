@@ -1,6 +1,11 @@
 import { StatusTransaksi, StatusTagihan, JenisTransaksi, StatusUangSaku, MetodePembayaran } from "@/lib/generated/prisma";
 import { prisma } from "@/lib/prisma";
 
+// Shared constants for top-up keterangan strings
+// These MUST match between topup/route.ts and payment-handler.ts
+export const KETERANGAN_TOPUP_TAGIHAN = "Top-up Saldo Tagihan" as const;
+export const KETERANGAN_TOPUP_UANG_SAKU = "Top-up Uang Saku" as const;
+
 /**
  * Handle successful payment - updates transaksi status, ALL related tagihan status, and santri saldo if applicable
  * This function is shared between webhook and check-status endpoints
@@ -57,15 +62,30 @@ export async function handleSuccessfulPayment(transaksiId: string, paymentTime: 
 
       // 4. Update santri saldo if this is a UANG_SAKU top-up transaction
       if (transaksi.jenis === JenisTransaksi.UANG_SAKU && transaksi.statusUangSaku === StatusUangSaku.DITAMBAH) {
-        console.log("handleSuccessfulPayment: Updating santri saldo for top-up, amount:", transaksi.jumlah);
-        await tx.santri.update({
-          where: { id: transaksi.santriId },
-          data: {
-            saldoUangSaku: {
-              increment: transaksi.jumlah,
+        // Use shared constant for reliable detection of tagihan vs uang saku top-up
+        const isTagihanTopup = transaksi.keterangan === KETERANGAN_TOPUP_TAGIHAN;
+        const saldoField = isTagihanTopup ? "saldoTagihan" : "saldoUangSaku";
+        console.log(`handleSuccessfulPayment: Updating santri ${saldoField} for top-up, amount:`, transaksi.jumlah, "keterangan:", transaksi.keterangan);
+        
+        if (isTagihanTopup) {
+          await tx.santri.update({
+            where: { id: transaksi.santriId },
+            data: {
+              saldoTagihan: {
+                increment: transaksi.jumlah,
+              },
             },
-          },
-        });
+          });
+        } else {
+          await tx.santri.update({
+            where: { id: transaksi.santriId },
+            data: {
+              saldoUangSaku: {
+                increment: transaksi.jumlah,
+              },
+            },
+          });
+        }
         console.log("handleSuccessfulPayment: Santri saldo updated successfully");
       }
 

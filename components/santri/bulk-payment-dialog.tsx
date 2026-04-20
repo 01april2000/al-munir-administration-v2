@@ -53,14 +53,14 @@ export function BulkPaymentDialog({
   const [saldoLoading, setSaldoLoading] = useState(true)
   const [success, setSuccess] = useState(false)
 
-  // Fetch santri saldo
+  // Fetch santri saldo (use saldoTagihan for bill payments)
   useEffect(() => {
     async function fetchSaldo() {
       try {
         const res = await fetch("/api/santri/saldo")
         if (res.ok) {
           const data = await res.json()
-          setSantriSaldo(data.saldo)
+          setSantriSaldo(data.saldoTagihan ?? data.saldo)
         }
       } catch (error) {
         console.error("Error fetching saldo:", error)

@@ -207,6 +207,8 @@ export async function PUT(
 
   // Handle UANG_SAKU balance updates
   const transaksiStatusUangSaku = statusUangSaku ?? existingTransaksi.statusUangSaku;
+  const transaksiKeterangan = keterangan ?? existingTransaksi.keterangan;
+  const isTagihanTopup = transaksiKeterangan === "Top-up Saldo Tagihan";
   
   if (transaksiJenis === "UANG_SAKU" && transaksiStatusUangSaku) {
     // Calculate balance changes based on status changes
@@ -218,22 +220,18 @@ export async function PUT(
       const balanceChange = transaksiStatusUangSaku === "DITAMBAH" ? transaksiJumlah : -transaksiJumlah;
       await prisma.santri.update({
         where: { id: transaksiSantriId },
-        data: {
-          saldoUangSaku: {
-            increment: balanceChange,
-          },
-        },
+        data: isTagihanTopup
+          ? { saldoTagihan: { increment: balanceChange } }
+          : { saldoUangSaku: { increment: balanceChange } },
       });
     } else if (wasLunas && !nowLunas) {
       // Status changed from LUNAS to non-LUNAS - reverse the balance
       const balanceChange = transaksiStatusUangSaku === "DITAMBAH" ? -transaksiJumlah : transaksiJumlah;
       await prisma.santri.update({
         where: { id: transaksiSantriId },
-        data: {
-          saldoUangSaku: {
-            increment: balanceChange,
-          },
-        },
+        data: isTagihanTopup
+          ? { saldoTagihan: { increment: balanceChange } }
+          : { saldoUangSaku: { increment: balanceChange } },
       });
     } else if (wasLunas && nowLunas && jumlah !== undefined && jumlah !== existingTransaksi.jumlah) {
       // Amount changed while staying LUNAS - adjust the difference
@@ -244,11 +242,9 @@ export async function PUT(
       if (netChange !== 0) {
         await prisma.santri.update({
           where: { id: transaksiSantriId },
-          data: {
-            saldoUangSaku: {
-              increment: netChange,
-            },
-          },
+          data: isTagihanTopup
+            ? { saldoTagihan: { increment: netChange } }
+            : { saldoUangSaku: { increment: netChange } },
         });
       }
     }

@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { TopupDialog } from "@/components/santri/topup-dialog"
 import { Button } from "@/components/ui/button"
 import { CreditCard } from "lucide-react"
@@ -9,6 +10,8 @@ interface TopupButtonProps {
 }
 
 export function TopupButton({ className }: TopupButtonProps) {
+  const router = useRouter()
+
   return (
     <TopupDialog
       trigger={
@@ -18,8 +21,10 @@ export function TopupButton({ className }: TopupButtonProps) {
         </Button>
       }
       onTopupComplete={() => {
-        // Refresh the page to update balance
-        window.location.reload()
+        // Use router.refresh() to refetch server component data
+        // This avoids full page reload which can lose session cookies
+        // (especially in PWA/mobile contexts after Midtrans redirect)
+        router.refresh()
       }}
     />
   )

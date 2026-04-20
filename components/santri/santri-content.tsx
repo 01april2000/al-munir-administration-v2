@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -201,10 +202,14 @@ export function SantriContent({ role, initialData }: SantriContentProps) {
   const [notificationOpen, setNotificationOpen] = React.useState(false)
   const [selectedTransactionType, setSelectedTransactionType] = React.useState<string | null>(null)
 
+  const router = useRouter()
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    // Refresh by reloading the page (Server Component data)
-    window.location.reload()
+    // Use router.refresh() to refetch server component data
+    // This avoids full page reload which can lose session cookies
+    router.refresh()
+    // Give a brief moment for the refresh to complete
+    setTimeout(() => setIsRefreshing(false), 1000)
   }
 
   const handleQuickActionClick = (type: string) => {
@@ -273,38 +278,52 @@ export function SantriContent({ role, initialData }: SantriContentProps) {
         {/* BERANDA TAB */}
         {activeTab === "beranda" && (
           <>
-            {/* Balance Card */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-background border-0 shadow-2xl shadow-primary/20">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5Ljk0MSAwIDE4LTguMDU5IDE4LTE4cy04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNHMxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-20" />
-              <CardHeader className="relative pb-3">
-                <div className="flex items-start justify-between">
+            {/* Balance Cards - Saldo Tagihan & Saldo Uang Saku */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Saldo Tagihan Card */}
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-500 text-white shadow-2xl shadow-blue-500/20 flex flex-col">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5Ljk0MSAwIDE4LTguMDU5IDE4LTE4cy04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNHMxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-20" />
+                <div className="relative pb-1 px-4 pt-4">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                      <Wallet className="h-5 w-5 md:h-6 md:w-6" />
+                    <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <Receipt className="h-4 w-4" />
                     </div>
-                    <span className="text-sm md:text-base font-medium text-background">Saldo Uang Saku</span>
+                    <span className="text-xs font-medium text-white/90">Saldo Tagihan</span>
                   </div>
-                  <Sparkles className="h-5 w-5 text-white/60 animate-pulse" />
                 </div>
-              </CardHeader>
-              <CardContent className="relative pt-0">
-                <div className="text-3xl md:text-5xl font-bold tracking-tight mb-2">
-                  {formatCurrency(summaryStats.uangSakuBalance)}
-                </div>
-                <div className="flex items-center gap-2 text-background text-xs md:text-sm">
-                  <div className="flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
-                    <span>Aktif</span>
+                <div className="relative pt-0 px-4 pb-4">
+                  <div className="text-lg md:text-2xl font-bold tracking-tight">
+                    {formatCurrency(summaryStats.saldoTagihan)}
                   </div>
-                  <span>•</span>
-                  <span>{getRoleLabel(role)}</span>
+                  <p className="text-[10px] text-white/70 mt-1">Untuk bayar tagihan</p>
                 </div>
-                <div className="flex gap-2 mt-4 md:mt-6">
-                  <TopupButton className="flex-1 bg-white text-primary hover:bg-white/90 shadow-lg" />
-                  <LaundryButton />
+              </div>
+
+              {/* Saldo Uang Saku Card */}
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-background shadow-2xl shadow-primary/20 flex flex-col">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5Ljk0MSAwIDE4LTguMDU5IDE4LTE4cy04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNHMxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-20" />
+                <div className="relative pb-1 px-4 pt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-medium text-background/90">Saldo Uang Saku</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="relative pt-0 px-4 pb-4">
+                  <div className="text-lg md:text-2xl font-bold tracking-tight">
+                    {formatCurrency(summaryStats.uangSakuBalance)}
+                  </div>
+                  <p className="text-[10px] text-background/70 mt-1">Uang saku harian</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex gap-2">
+              <TopupButton className="flex-1" />
+              <LaundryButton />
+            </div>
 
             {/* Quick Actions */}
             <div className="grid grid-cols-4 gap-3">

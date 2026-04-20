@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
             kelas: true,
             asrama: true,
             jenisSantri: true,
+            saldoTagihan: true,
             saldoUangSaku: true,
           },
         },
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
             kelas: true,
             asrama: true,
             jenisSantri: true,
+            saldoTagihan: true,
             saldoUangSaku: true,
           },
         },
@@ -196,17 +198,18 @@ async function handleCombinedCashPayment(
 
   // Get santri data
   const santri = await prisma.santri.findUnique({
-    where: { id: santriId },
-    select: {
-      id: true,
-      nis: true,
-      nama: true,
-      kelas: true,
-      asrama: true,
-      jenisSantri: true,
-      saldoUangSaku: true,
-    },
-  });
+  where: { id: santriId },
+  select: {
+    id: true,
+    nis: true,
+    nama: true,
+    kelas: true,
+    asrama: true,
+    jenisSantri: true,
+    saldoTagihan: true,
+    saldoUangSaku: true,
+  },
+});
 
   if (!santri) {
     return NextResponse.json(
@@ -278,6 +281,7 @@ async function handleCombinedCashPayment(
           kelas: true,
           asrama: true,
           jenisSantri: true,
+          saldoTagihan: true,
           saldoUangSaku: true,
         },
       },

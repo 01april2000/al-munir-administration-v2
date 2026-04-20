@@ -100,7 +100,7 @@ export async function getTransaksiSummary(santriId: string): Promise<TransaksiSu
  * Get combined summary stats for a santri
  * Combines tagihan and transaksi summaries
  */
-export async function getCombinedSummary(santriId: string, saldoUangSaku: number) {
+export async function getCombinedSummary(santriId: string, saldoUangSaku: number, saldoTagihan: number) {
   const [tagihanSummary, transaksiSummary] = await Promise.all([
     getTagihanSummary(santriId),
     getTransaksiSummary(santriId),
@@ -112,5 +112,6 @@ export async function getCombinedSummary(santriId: string, saldoUangSaku: number
     totalPaid: tagihanSummary.totalPaid + transaksiSummary.totalPaid,
     paidCount: tagihanSummary.paidCount + transaksiSummary.paidCount,
     uangSakuBalance: saldoUangSaku,
+    saldoTagihan,
   }
 }

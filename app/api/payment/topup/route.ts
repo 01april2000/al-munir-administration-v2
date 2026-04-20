@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createSnapTransaction } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
+import { KETERANGAN_TOPUP_TAGIHAN, KETERANGAN_TOPUP_UANG_SAKU } from "@/lib/payment-handler";
 
 // POST - Create top-up transaction with Midtrans
 export async function POST(request: NextRequest) {
@@ -20,9 +21,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { amount } = body;
+    const { amount, saldoType } = body;
 
-    console.log("Request body:", { amount });
+    console.log("Request body:", { amount, saldoType });
 
     // Validate input
     if (!amount || typeof amount !== "number" || amount < 10000) {
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
         nama: true,
         kelas: true,
         asrama: true,
+        jenisSantri: true,
       },
     });
 
@@ -58,6 +60,10 @@ export async function POST(request: NextRequest) {
     // Generate order ID (shorter format for Midtrans)
     const orderId = `TU-${Date.now()}-${santri.nis.slice(-4)}`;
 
+    // Determine keterangan based on saldoType (using shared constants)
+    const isTagihan = saldoType === "TAGIHAN";
+    const keterangan = isTagihan ? KETERANGAN_TOPUP_TAGIHAN : KETERANGAN_TOPUP_UANG_SAKU;
+
     // Create transaksi for top-up with PENDING status
     const transaksi = await prisma.transaksi.create({
       data: {
@@ -67,12 +73,17 @@ export async function POST(request: NextRequest) {
         jumlah: amount,
         status: StatusTransaksi.PENDING,
         statusUangSaku: StatusUangSaku.DITAMBAH,
-        keterangan: "Top-up Uang Saku",
+        keterangan,
         managedBy: (session.user.role as Role) || Role.ADMIN,
       },
     });
 
     console.log("Created transaksi:", transaksi.id);
+
+    // Build finish redirect URL so Midtrans redirects back to the santri page
+    // This prevents the user from being stuck on Midtrans domain after payment
+    const jenisPath = santri.jenisSantri?.toLowerCase() || "smk";
+    const finishRedirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/santri/${jenisPath}`;
 
     // Create Midtrans Snap transaction
     const midtransTransaction = await createSnapTransaction({
@@ -87,13 +98,14 @@ export async function POST(request: NextRequest) {
       itemDetails: [
         {
           id: transaksi.id,
-          name: "Top-up Uang Saku",
+          name: isTagihan ? "Top-up Saldo Tagihan" : "Top-up Uang Saku",
           price: amount,
           quantity: 1,
         },
       ],
       tagihanId: "",
       santriName: santri.nama,
+      finishRedirectUrl,
     });
 
     // Store Midtrans transaction details

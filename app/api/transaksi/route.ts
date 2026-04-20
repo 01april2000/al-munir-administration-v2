@@ -112,6 +112,7 @@ export async function GET(request: NextRequest) {
               kelas: true,
               asrama: true,
               jenisSantri: true,
+              saldoTagihan: true,
               saldoUangSaku: true,
             },
           },
@@ -326,14 +327,27 @@ export async function POST(request: NextRequest) {
     // For UANG_SAKU transactions with LUNAS status, update the santri's balance
     if (jenis === "UANG_SAKU" && status === "LUNAS" && statusUangSaku) {
       const balanceChange = statusUangSaku === "DITAMBAH" ? jumlah : -jumlah;
-      await prisma.santri.update({
-        where: { id: santriId },
-        data: {
-          saldoUangSaku: {
-            increment: balanceChange,
+      const isTagihan = keterangan === "Top-up Saldo Tagihan";
+      
+      if (isTagihan) {
+        await prisma.santri.update({
+          where: { id: santriId },
+          data: {
+            saldoTagihan: {
+              increment: balanceChange,
+            },
           },
-        },
-      });
+        });
+      } else {
+        await prisma.santri.update({
+          where: { id: santriId },
+          data: {
+            saldoUangSaku: {
+              increment: balanceChange,
+            },
+          },
+        });
+      }
     }
 
     return NextResponse.json({ transaksi }, { status: 201 });

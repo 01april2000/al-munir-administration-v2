@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         id: true,
         nis: true,
         nama: true,
+        saldoTagihan: true,
         saldoUangSaku: true,
       },
     });
@@ -34,6 +35,8 @@ export async function GET(request: NextRequest) {
       nis: santri.nis,
       nama: santri.nama,
       saldo: santri.saldoUangSaku,
+      saldoTagihan: santri.saldoTagihan,
+      saldoUangSaku: santri.saldoUangSaku,
     });
   } catch (error) {
     console.error("Error fetching saldo:", error);

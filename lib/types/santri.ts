@@ -28,6 +28,7 @@ export interface SummaryStats {
   unpaidCount: number
   paidCount: number
   uangSakuBalance: number
+  saldoTagihan: number
 }
 
 // Santri info
@@ -36,6 +37,7 @@ export interface SantriInfo {
   nama: string
   nis: string
   kelas: string
+  saldoTagihan: number
   saldoUangSaku: number
   foto?: string | null
   email?: string | null

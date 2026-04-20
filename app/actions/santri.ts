@@ -202,6 +202,7 @@ async function getAuthenticatedSantri(expectedJenisSantri: JenisSantri) {
     select: {
       id: true,
       nama: true,
+      saldoTagihan: true,
       saldoUangSaku: true,
       jenisSantri: true,
       nis: true,
@@ -385,7 +386,7 @@ export async function getSmkData(): Promise<ProcessedSantriData> {
   const [tagihan, transaksi, summaryStats] = await Promise.all([
     getTagihanInitial(santri.id),
     getTransaksiInitial(santri.id),
-    getCombinedSummary(santri.id, santri.saldoUangSaku),
+    getCombinedSummary(santri.id, santri.saldoUangSaku, santri.saldoTagihan),
   ])
 
   const santriInfo: SantriInfo = {
@@ -393,6 +394,7 @@ export async function getSmkData(): Promise<ProcessedSantriData> {
     nama: santri.nama,
     nis: santri.nis || "",
     kelas: santri.kelas || "",
+    saldoTagihan: santri.saldoTagihan,
     saldoUangSaku: santri.saldoUangSaku,
     foto: santri.user?.image,
     email: santri.user?.email,
@@ -410,7 +412,7 @@ export async function getSmpData(): Promise<ProcessedSantriData> {
   const [tagihan, transaksi, summaryStats] = await Promise.all([
     getTagihanInitial(santri.id),
     getTransaksiInitial(santri.id),
-    getCombinedSummary(santri.id, santri.saldoUangSaku),
+    getCombinedSummary(santri.id, santri.saldoUangSaku, santri.saldoTagihan),
   ])
 
   const santriInfo: SantriInfo = {
@@ -418,6 +420,7 @@ export async function getSmpData(): Promise<ProcessedSantriData> {
     nama: santri.nama,
     nis: santri.nis || "",
     kelas: santri.kelas || "",
+    saldoTagihan: santri.saldoTagihan,
     saldoUangSaku: santri.saldoUangSaku,
     foto: santri.user?.image,
     email: santri.user?.email,
@@ -435,7 +438,7 @@ export async function getPondokData(): Promise<ProcessedSantriData> {
   const [tagihan, transaksi, summaryStats] = await Promise.all([
     getTagihanInitial(santri.id),
     getTransaksiInitial(santri.id),
-    getCombinedSummary(santri.id, santri.saldoUangSaku),
+    getCombinedSummary(santri.id, santri.saldoUangSaku, santri.saldoTagihan),
   ])
 
   const santriInfo: SantriInfo = {
@@ -443,6 +446,7 @@ export async function getPondokData(): Promise<ProcessedSantriData> {
     nama: santri.nama,
     nis: santri.nis || "",
     kelas: santri.kelas || "",
+    saldoTagihan: santri.saldoTagihan,
     saldoUangSaku: santri.saldoUangSaku,
     foto: santri.user?.image,
     email: santri.user?.email,

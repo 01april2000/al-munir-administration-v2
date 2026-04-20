@@ -3,6 +3,7 @@ import { verifyWebhookSignature } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { handleSuccessfulPayment, handleFailedPayment, handlePendingPayment } from "@/lib/payment-handler";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST - Handle Midtrans webhook notifications
 export async function POST(request: NextRequest) {
@@ -11,13 +12,13 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(request, RATE_LIMITS.WEBHOOK);
     if (ipLimit) return ipLimit;
 
-    console.log("=== Webhook received ===");
+    logger.log("=== Webhook received ===");
     
     // Get notification data
     const notificationJson = await request.text();
     const notification = JSON.parse(notificationJson);
     
-    console.log("Webhook notification:", {
+    logger.log("Webhook notification:", {
       order_id: notification.order_id,
       transaction_status: notification.transaction_status,
       fraud_status: notification.fraud_status,
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Webhook: Signature verified successfully");
+    logger.log("Webhook: Signature verified successfully");
 
     const { order_id, transaction_status, fraud_status, transaction_id, payment_type, transaction_time, settlement_time } = notification;
 
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
       // New format: multiple transactions stored as JSON array
       try {
         transaksiIds = JSON.parse(midtransTransaction.transaksiIds);
-        console.log("Webhook: Using transaksiIds (multiple transactions):", transaksiIds);
+        logger.log("Webhook: Using transaksiIds (multiple transactions):", transaksiIds);
       } catch (e) {
         console.error("Webhook: Failed to parse transaksiIds:", midtransTransaction.transaksiIds);
         transaksiIds = [];
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     } else if (midtransTransaction.transaksiId) {
       // Legacy format: single transaction
       transaksiIds = [midtransTransaction.transaksiId];
-      console.log("Webhook: Using transaksiId (single transaction):", midtransTransaction.transaksiId);
+      logger.log("Webhook: Using transaksiId (single transaction):", midtransTransaction.transaksiId);
     }
 
     if (transaksiIds.length === 0) {
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Webhook: Found transaction(s) to process:", {
+    logger.log("Webhook: Found transaction(s) to process:", {
       transaksiIds,
       count: transaksiIds.length,
       currentStatus: midtransTransaction.transactionStatus,
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     const isAlreadyTerminal = terminalStates.includes(currentStatus);
 
     if (isAlreadyTerminal || isDuplicate) {
-      console.log("Webhook: Idempotent skip — already processed:", {
+      logger.log("Webhook: Idempotent skip — already processed:", {
         currentStatus,
         incomingStatus: transaction_status,
         isAlreadyTerminal,
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Webhook: Processing transaction status:", transaction_status);
+    logger.log("Webhook: Processing transaction status:", transaction_status);
 
     // Handle different transaction statuses using shared handlers
     // Process ALL transactions (both single and combined payments)
@@ -162,9 +163,9 @@ export async function POST(request: NextRequest) {
       }
     } else if (transaction_status === "settlement") {
       // Payment is settled - update all transactions
-      console.log("Webhook: Payment settled, updating all transactions to LUNAS");
+      logger.log("Webhook: Payment settled, updating all transactions to LUNAS");
       for (const transaksiId of transaksiIds) {
-        console.log(`Webhook: Updating transaction ${transaksiId} to LUNAS`);
+        logger.log(`Webhook: Updating transaction ${transaksiId} to LUNAS`);
         await handleSuccessfulPayment(transaksiId, settlement_time || transaction_time);
       }
     } else if (transaction_status === "cancel" || transaction_status === "deny" || transaction_status === "expire") {
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("Webhook: Processed successfully");
+    logger.log("Webhook: Processed successfully");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error processing webhook:", error);

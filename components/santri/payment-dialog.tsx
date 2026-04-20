@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Loader2, CreditCard, AlertCircle, Wallet, CheckCircle2 } from "lucide-react"
+import { logger } from "@/lib/logger"
 
 interface PaymentDialogProps {
   tagihanId?: string
@@ -203,7 +204,7 @@ export function PaymentDialog({
       window.snap.pay(data.token, {
         // Callback when payment is successful (for regular popup flow)
         onSuccess: async (result: any) => {
-          console.log("Payment success:", result)
+          logger.log("Payment success:", result)
           try {
             await fetch("/api/payment/check-status", {
               method: "POST",
@@ -218,7 +219,7 @@ export function PaymentDialog({
         },
         // Callback when payment is pending
         onPending: async (result: any) => {
-          console.log("Payment pending:", result)
+          logger.log("Payment pending:", result)
           try {
             await fetch("/api/payment/check-status", {
               method: "POST",

@@ -6,6 +6,7 @@ import { createSnapTransaction } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { KETERANGAN_TOPUP_TAGIHAN, KETERANGAN_TOPUP_UANG_SAKU } from "@/lib/payment-handler";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST - Create top-up transaction with Midtrans
 export async function POST(request: NextRequest) {
@@ -14,12 +15,12 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CREATE);
     if (ipLimit) return ipLimit;
 
-    console.log("=== Top-up Payment API Called ===");
+    logger.log("=== Top-up Payment API Called ===");
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    console.log("Session:", session?.user?.id, session?.user?.role);
+    logger.log("Session:", session?.user?.id, session?.user?.role);
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, saldoType } = body;
 
-    console.log("Request body:", { amount, saldoType });
+    logger.log("Request body:", { amount, saldoType });
 
     // Validate input
     if (!amount || typeof amount !== "number" || amount < 10000) {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Get the santri record using userId from session
     const userId = session.user.id;
-    console.log("Fetching santri for userId:", userId);
+    logger.log("Fetching santri for userId:", userId);
     const santri = await prisma.santri.findUnique({
       where: { userId },
       select: {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Santri found:", santri ? santri.id : null);
+    logger.log("Santri found:", santri ? santri.id : null);
 
     if (!santri) {
       return NextResponse.json(
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Created transaksi:", transaksi.id);
+    logger.log("Created transaksi:", transaksi.id);
 
     // Build finish redirect URL so Midtrans redirects back to the santri page
     // This prevents the user from being stuck on Midtrans domain after payment
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Top-up transaction created successfully:", {
+    logger.log("Top-up transaction created successfully:", {
       orderId,
       transaksiId: transaksi.id,
       amount,

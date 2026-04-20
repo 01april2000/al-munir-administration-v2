@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Loader2, CreditCard, AlertCircle, CheckCircle2, Wallet } from "lucide-react"
+import { logger } from "@/lib/logger"
 
 interface TagihanItem {
   tagihanId: string
@@ -233,7 +234,7 @@ export function BulkPaymentDialog({
       // Open Midtrans Snap popup
       window.snap.pay(data.token, {
         onSuccess: async (result: any) => {
-          console.log("Payment success:", result)
+          logger.log("Payment success:", result)
           try {
             await fetch("/api/payment/check-status", {
               method: "POST",
@@ -248,7 +249,7 @@ export function BulkPaymentDialog({
           window.location.href = buildRedirectUrl("success")
         },
         onPending: async (result: any) => {
-          console.log("Payment pending:", result)
+          logger.log("Payment pending:", result)
           try {
             await fetch("/api/payment/check-status", {
               method: "POST",

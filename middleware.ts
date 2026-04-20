@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import type { Role, JenisSantri } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 // Role-based route access configuration
 const roleAccess: Record<string, string[]> = {
@@ -88,11 +89,11 @@ export async function middleware(request: NextRequest) {
     headers,
   });
 
-  console.log("Middleware session:", session?.user?.email, session?.user?.role);
+  logger.log("Middleware session:", session?.user?.email, session?.user?.role);
 
   // If no session, redirect to auth page
   if (!session) {
-    console.log("No session, redirecting to /auth");
+    logger.log("No session, redirecting to /auth");
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
@@ -100,7 +101,7 @@ export async function middleware(request: NextRequest) {
   const userRole = session.user?.role as Role;
   const jenisSantri = session.user?.jenisSantri as JenisSantri | null | undefined;
 
-  console.log("User role:", userRole, "jenisSantri:", jenisSantri);
+  logger.log("User role:", userRole, "jenisSantri:", jenisSantri);
 
   // If user is on root path "/" or "/santri", redirect to their default page
   // For SANTRI role, /santri should redirect to specific jenisSantri page
@@ -108,7 +109,7 @@ export async function middleware(request: NextRequest) {
     const defaultPath = getDefaultPath(userRole, jenisSantri);
     // Only redirect if not already at the target path
     if (pathname !== defaultPath) {
-      console.log("Redirecting from", pathname, "to:", defaultPath);
+      logger.log("Redirecting from", pathname, "to:", defaultPath);
       return NextResponse.redirect(new URL(defaultPath, request.url));
     }
   }

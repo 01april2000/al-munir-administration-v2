@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST - Pay tagihan using santri saldo
 export async function POST(request: NextRequest) {
@@ -18,12 +19,12 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_SALDO);
     if (ipLimit) return ipLimit;
 
-    console.log("=== Saldo Payment API Called ===");
+    logger.log("=== Saldo Payment API Called ===");
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    console.log("Session:", session?.user?.id, session?.user?.role);
+    logger.log("Session:", session?.user?.id, session?.user?.role);
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tagihanId, tagihanIds, transaksiId } = body;
 
-    console.log("Request body:", { tagihanId, tagihanIds, transaksiId });
+    logger.log("Request body:", { tagihanId, tagihanIds, transaksiId });
 
     // Support single tagihanId, multiple tagihanIds, or transaksiId
     const isBulkPayment = tagihanIds && Array.isArray(tagihanIds) && tagihanIds.length > 0;
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Santri not found" }, { status: 404 });
     }
 
-    console.log("Santri found:", santri.id, "Saldo Tagihan:", santri.saldoTagihan);
+    logger.log("Santri found:", santri.id, "Saldo Tagihan:", santri.saldoTagihan);
 
     // Handle payment for existing transaksi (e.g., laundry, ujian, etc.)
     if (transaksiId) {
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     // Calculate total amount
     const totalAmount = tagihanList.reduce((sum, t) => sum + t.jumlah, 0);
 
-    console.log("Total amount to pay:", totalAmount);
+    logger.log("Total amount to pay:", totalAmount);
 
     // Check if saldo is sufficient
     if (santri.saldoTagihan < totalAmount) {
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log("Saldo deducted. New saldo tagihan:", updatedSantri.saldoTagihan);
+      logger.log("Saldo deducted. New saldo tagihan:", updatedSantri.saldoTagihan);
 
       // 2. Create transaksi
       const transaksi = await tx.transaksi.create({
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log("Transaksi created:", transaksi.id);
+      logger.log("Transaksi created:", transaksi.id);
 
       // 3. Update all tagihan to LUNAS and link to transaksi
       const updateResult = await tx.tagihan.updateMany({
@@ -154,12 +155,12 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log("Tagihan updated:", updateResult.count);
+      logger.log("Tagihan updated:", updateResult.count);
 
       return { transaksi, updatedSantri, tagihanCount: updateResult.count };
     });
 
-    console.log("Payment transaction completed successfully");
+    logger.log("Payment transaction completed successfully");
 
     return NextResponse.json({
       success: true,
@@ -220,7 +221,7 @@ async function handleTransaksiPayment(
 
   const totalAmount = transaksi.jumlah;
 
-  console.log("Transaksi amount to pay:", totalAmount);
+  logger.log("Transaksi amount to pay:", totalAmount);
 
   // Check if saldo is sufficient
   if (santri.saldoTagihan < totalAmount) {
@@ -247,7 +248,7 @@ async function handleTransaksiPayment(
       },
     });
 
-    console.log("Saldo deducted. New saldo tagihan:", updatedSantri.saldoTagihan);
+    logger.log("Saldo deducted. New saldo tagihan:", updatedSantri.saldoTagihan);
 
     // 2. Update transaksi to LUNAS
     const updatedTransaksi = await tx.transaksi.update({
@@ -259,7 +260,7 @@ async function handleTransaksiPayment(
       },
     });
 
-    console.log("Transaksi updated to LUNAS:", updatedTransaksi.id);
+    logger.log("Transaksi updated to LUNAS:", updatedTransaksi.id);
 
     // 3. Update related tagihan if any
     if (transaksi.tagihan.length > 0) {
@@ -267,13 +268,13 @@ async function handleTransaksiPayment(
         where: { transaksiId: transaksiId },
         data: { status: StatusTagihan.LUNAS },
       });
-      console.log("Related tagihan updated to LUNAS");
+      logger.log("Related tagihan updated to LUNAS");
     }
 
     return { transaksi: updatedTransaksi, updatedSantri };
   });
 
-  console.log("Transaksi payment completed successfully");
+  logger.log("Transaksi payment completed successfully");
 
   return NextResponse.json({
     success: true,

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST - Directly confirm laundry payment as LUNAS (called from Snap onSuccess)
 export async function POST(request: NextRequest) {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM);
     if (ipLimit) return ipLimit;
 
-    console.log("=== Laundry Payment Confirm API Called ===");
+    logger.log("=== Laundry Payment Confirm API Called ===");
     
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Confirming payment for order_id:", orderId);
+    logger.log("Confirming payment for order_id:", orderId);
 
     // Find Midtrans transaction
     const midtransTransaction = await prisma.midtransTransaction.findUnique({
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log("Payment confirmed successfully for transaksi:", transaksiIds);
+    logger.log("Payment confirmed successfully for transaksi:", transaksiIds);
 
     return NextResponse.json({
       success: true,

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST - Confirm cash payment for a transaction
 // Supports:
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
         where: { transaksiId: transaksiId },
         data: { status: StatusTagihan.LUNAS },
       });
-      console.log(`Updated ${updateResult.count} tagihan to LUNAS for transaksi ${transaksiId}`);
+      logger.log(`Updated ${updateResult.count} tagihan to LUNAS for transaksi ${transaksiId}`);
     }
 
     // Generate receipt number
@@ -157,7 +158,7 @@ async function handleCombinedCashPayment(
   santriId: string,
   userRole: Role
 ) {
-  console.log("=== Handling Combined Cash Payment for tagihanIds:", tagihanIds);
+  logger.log("=== Handling Combined Cash Payment for tagihanIds:", tagihanIds);
 
   // Fetch all tagihan
   const tagihanList = await prisma.tagihan.findMany({
@@ -229,7 +230,7 @@ async function handleCombinedCashPayment(
 
   // Calculate total amount
   const totalAmount = tagihanList.reduce((sum, t) => sum + t.jumlah, 0);
-  console.log("Combined cash payment total amount:", totalAmount);
+  logger.log("Combined cash payment total amount:", totalAmount);
 
   // Determine primary jenis:
   // - If SPP exists, use SPP
@@ -260,7 +261,7 @@ async function handleCombinedCashPayment(
       where: { id: oldTx.id },
       data: { status: StatusTransaksi.DITOLAK },
     });
-    console.log(`Marked old transaction ${oldTx.id} as DITOLAK (replaced by combined cash payment)`);
+    logger.log(`Marked old transaction ${oldTx.id} as DITOLAK (replaced by combined cash payment)`);
   }
 
   // Create combined transaction
@@ -307,7 +308,7 @@ async function handleCombinedCashPayment(
     },
   });
 
-  console.log(`Created combined cash transaction ${newTransaksi.id}, updated ${updateResult.count} tagihan to LUNAS`);
+  logger.log(`Created combined cash transaction ${newTransaksi.id}, updated ${updateResult.count} tagihan to LUNAS`);
 
   // Generate receipt number
   const receiptNumber = `RCP-${Date.now()}-${newTransaksi.kode}`;

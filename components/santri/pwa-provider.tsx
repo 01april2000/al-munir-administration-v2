@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { logger } from "@/lib/logger"
 
 export function PWAProvider() {
   const [isInstallable, setIsInstallable] = useState(false)
@@ -22,7 +23,7 @@ export function PWAProvider() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('Service Worker registered:', registration)
+          logger.log('Service Worker registered:', registration)
           setRegistration(registration)
 
           // Check for updates
@@ -44,7 +45,7 @@ export function PWAProvider() {
           }, 5 * 60 * 1000)
         })
         .catch((error) => {
-          console.log('Service Worker registration failed:', error)
+          logger.log('Service Worker registration failed:', error)
         })
 
       // Handle controller change (when new SW takes over)

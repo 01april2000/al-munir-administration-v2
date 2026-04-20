@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createSnapTransaction, generateOrderId, generateCombinedOrderId } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST - Create payment transaction with Midtrans
 // Supports:
@@ -17,12 +18,12 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CREATE);
     if (ipLimit) return ipLimit;
 
-    console.log("=== Payment Create API Called ===");
+    logger.log("=== Payment Create API Called ===");
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    console.log("Session:", session?.user?.id, session?.user?.role);
+    logger.log("Session:", session?.user?.id, session?.user?.role);
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tagihanId, tagihanIds, transaksiId } = body;
 
-    console.log("Request body:", { tagihanId, tagihanIds, transaksiId });
+    logger.log("Request body:", { tagihanId, tagihanIds, transaksiId });
 
     // Validate input - support single tagihanId, multiple tagihanIds, or transaksiId
     const isCombinedPayment = tagihanIds && Array.isArray(tagihanIds) && tagihanIds.length > 0;
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Get the santri record using userId from session
     const userId = session.user.id;
-    console.log("Fetching santri for userId:", userId);
+    logger.log("Fetching santri for userId:", userId);
     const santri = await prisma.santri.findUnique({
       where: { userId },
       select: {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Santri found:", santri ? santri.id : null);
+    logger.log("Santri found:", santri ? santri.id : null);
 
     if (!santri) {
       return NextResponse.json(
@@ -274,7 +275,7 @@ async function handleCombinedPayment(
   tagihanIds: string[],
   session: any
 ) {
-  console.log("=== Handling Combined Payment for tagihanIds:", tagihanIds);
+  logger.log("=== Handling Combined Payment for tagihanIds:", tagihanIds);
 
   // Fetch all tagihan
   const tagihanList = await prisma.tagihan.findMany({
@@ -319,7 +320,7 @@ async function handleCombinedPayment(
 
   // Calculate total amount
   const totalAmount = tagihanList.reduce((sum, t) => sum + t.jumlah, 0);
-  console.log("Combined payment total amount:", totalAmount);
+  logger.log("Combined payment total amount:", totalAmount);
 
   // Build item details for Midtrans
   const itemDetails = tagihanList.map((t) => ({
@@ -356,7 +357,7 @@ async function handleCombinedPayment(
       where: { id: oldTx.id },
       data: { status: StatusTransaksi.DITOLAK },
     });
-    console.log(`Marked old transaction ${oldTx.id} (${oldTx.kode}) as DITOLAK (replaced by new separate transactions)`);
+    logger.log(`Marked old transaction ${oldTx.id} (${oldTx.kode}) as DITOLAK (replaced by new separate transactions)`);
   }
 
   // Create SEPARATE transactions for each tagihan
@@ -386,14 +387,14 @@ async function handleCombinedPayment(
         },
       });
       transactions.push(newTx);
-      console.log(`Created new transaction ${newTx.id} (${newTx.kode}) for tagihan ${tagihan.id} (${tagihan.jenis}): ${tagihan.jumlah}`);
+      logger.log(`Created new transaction ${newTx.id} (${newTx.kode}) for tagihan ${tagihan.id} (${tagihan.jenis}): ${tagihan.jumlah}`);
     }
     
     return transactions;
   });
 
   const transaksiIds = createdTransactions.map(t => t.id);
-  console.log("Created/separated transactions:", transaksiIds);
+  logger.log("Created/separated transactions:", transaksiIds);
 
   // Build finish redirect URL
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get("origin") || "https://al-munir-administration-v2.vercel.app/";
@@ -425,7 +426,7 @@ async function handleCombinedPayment(
     },
   });
 
-  console.log("Combined payment created successfully:", {
+  logger.log("Combined payment created successfully:", {
     orderId,
     transaksiIds,
     totalAmount,

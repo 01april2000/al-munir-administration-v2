@@ -1,5 +1,6 @@
 import { StatusTransaksi, StatusTagihan, JenisTransaksi, StatusUangSaku, MetodePembayaran } from "@/lib/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 // Shared constants for top-up keterangan strings
 // These MUST match between topup/route.ts and payment-handler.ts
@@ -13,8 +14,8 @@ export const KETERANGAN_TOPUP_UANG_SAKU = "Top-up Uang Saku" as const;
  * Uses Prisma transaction for atomicity
  */
 export async function handleSuccessfulPayment(transaksiId: string, paymentTime: string | undefined) {
-  console.log("handleSuccessfulPayment: Starting for transaksi:", transaksiId);
-  console.log("handleSuccessfulPayment: Payment time:", paymentTime);
+  logger.log("handleSuccessfulPayment: Starting for transaksi:", transaksiId);
+  logger.log("handleSuccessfulPayment: Payment time:", paymentTime);
   
   try {
     // Use transaction for atomicity - all updates succeed or none do
@@ -28,7 +29,7 @@ export async function handleSuccessfulPayment(transaksiId: string, paymentTime: 
           metodePembayaran: MetodePembayaran.MIDTRANS,
         },
       });
-      console.log("handleSuccessfulPayment: Transaksi updated to LUNAS:", updatedTransaksi.id);
+      logger.log("handleSuccessfulPayment: Transaksi updated to LUNAS:", updatedTransaksi.id);
 
       // 2. Get transaksi with related tagihan and santri
       const transaksi = await tx.transaksi.findUnique({
@@ -45,19 +46,19 @@ export async function handleSuccessfulPayment(transaksiId: string, paymentTime: 
 
       // 3. Update ALL related tagihan to LUNAS (supports combined SPP + SYAHRIAH payments)
       if (transaksi.tagihan.length > 0) {
-        console.log(`handleSuccessfulPayment: Updating ${transaksi.tagihan.length} tagihan to LUNAS`);
+        logger.log(`handleSuccessfulPayment: Updating ${transaksi.tagihan.length} tagihan to LUNAS`);
         
         const updateResult = await tx.tagihan.updateMany({
           where: { transaksiId: transaksiId },
           data: { status: StatusTagihan.LUNAS },
         });
         
-        console.log("handleSuccessfulPayment: Tagihan update result:", updateResult);
-        console.log("handleSuccessfulPayment: All tagihan updated successfully:",
+        logger.log("handleSuccessfulPayment: Tagihan update result:", updateResult);
+        logger.log("handleSuccessfulPayment: All tagihan updated successfully:",
           transaksi.tagihan.map(t => `${t.jenis}-${t.bulan}-${t.tahun}`).join(", ")
         );
       } else {
-        console.log("handleSuccessfulPayment: No tagihan found for this transaksi");
+        logger.log("handleSuccessfulPayment: No tagihan found for this transaksi");
       }
 
       // 4. Update santri saldo if this is a UANG_SAKU top-up transaction
@@ -65,7 +66,7 @@ export async function handleSuccessfulPayment(transaksiId: string, paymentTime: 
         // Use shared constant for reliable detection of tagihan vs uang saku top-up
         const isTagihanTopup = transaksi.keterangan === KETERANGAN_TOPUP_TAGIHAN;
         const saldoField = isTagihanTopup ? "saldoTagihan" : "saldoUangSaku";
-        console.log(`handleSuccessfulPayment: Updating santri ${saldoField} for top-up, amount:`, transaksi.jumlah, "keterangan:", transaksi.keterangan);
+        logger.log(`handleSuccessfulPayment: Updating santri ${saldoField} for top-up, amount:`, transaksi.jumlah, "keterangan:", transaksi.keterangan);
         
         if (isTagihanTopup) {
           await tx.santri.update({
@@ -86,13 +87,13 @@ export async function handleSuccessfulPayment(transaksiId: string, paymentTime: 
             },
           });
         }
-        console.log("handleSuccessfulPayment: Santri saldo updated successfully");
+        logger.log("handleSuccessfulPayment: Santri saldo updated successfully");
       }
 
       return { transaksi, updatedTransaksi };
     });
     
-    console.log("handleSuccessfulPayment: Transaction completed successfully");
+    logger.log("handleSuccessfulPayment: Transaction completed successfully");
     return result;
   } catch (error) {
     console.error("handleSuccessfulPayment: Error updating payment status:", error);
@@ -106,7 +107,7 @@ export async function handleSuccessfulPayment(transaksiId: string, paymentTime: 
  * Supports combined transactions with multiple tagihan (SPP + SYAHRIAH)
  */
 export async function handleFailedPayment(transaksiId: string, tagihanId?: string) {
-  console.log("handleFailedPayment: Updating transaksi:", transaksiId, "to DITOLAK");
+  logger.log("handleFailedPayment: Updating transaksi:", transaksiId, "to DITOLAK");
   
   await prisma.transaksi.update({
     where: { id: transaksiId },
@@ -121,10 +122,10 @@ export async function handleFailedPayment(transaksiId: string, tagihanId?: strin
   });
   
   if (updateResult.count > 0) {
-    console.log(`handleFailedPayment: Updated ${updateResult.count} tagihan to BELUM_LUNAS`);
+    logger.log(`handleFailedPayment: Updated ${updateResult.count} tagihan to BELUM_LUNAS`);
   } else if (tagihanId) {
     // Fallback: update single tagihan if provided and no tagihan found via transaksiId
-    console.log("handleFailedPayment: Updating single tagihan:", tagihanId, "to BELUM_LUNAS");
+    logger.log("handleFailedPayment: Updating single tagihan:", tagihanId, "to BELUM_LUNAS");
     await prisma.tagihan.update({
       where: { id: tagihanId },
       data: { status: StatusTagihan.BELUM_LUNAS },
@@ -137,7 +138,7 @@ export async function handleFailedPayment(transaksiId: string, tagihanId?: strin
  * This function is shared between webhook and check-status endpoints
  */
 export async function handlePendingPayment(transaksiId: string) {
-  console.log("handlePendingPayment: Updating transaksi:", transaksiId, "to PENDING");
+  logger.log("handlePendingPayment: Updating transaksi:", transaksiId, "to PENDING");
   
   await prisma.transaksi.update({
     where: { id: transaksiId },

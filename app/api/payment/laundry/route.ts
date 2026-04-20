@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createSnapTransaction } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // Fixed laundry price for 1 month
 const LAUNDRY_PRICE = 100000;
@@ -16,12 +17,12 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CREATE);
     if (ipLimit) return ipLimit;
 
-    console.log("=== Laundry Payment API Called ===");
+    logger.log("=== Laundry Payment API Called ===");
     const session = await auth.api.getSession({
       headers: await headers(),
     });
 
-    console.log("Session:", session?.user?.id, session?.user?.role);
+    logger.log("Session:", session?.user?.id, session?.user?.role);
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { bulan, tahun } = body;
 
-    console.log("Request body:", { bulan, tahun });
+    logger.log("Request body:", { bulan, tahun });
 
     // Validate input
     if (!bulan || !tahun) {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Get the santri record using userId from session
     const userId = session.user.id;
-    console.log("Fetching santri for userId:", userId);
+    logger.log("Fetching santri for userId:", userId);
     const santri = await prisma.santri.findUnique({
       where: { userId },
       select: {
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Santri found:", santri ? santri.id : null);
+    logger.log("Santri found:", santri ? santri.id : null);
 
     if (!santri) {
       return NextResponse.json(
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Created transaksi:", transaksi.id);
+    logger.log("Created transaksi:", transaksi.id);
 
     // Create Midtrans Snap transaction
     const midtransTransaction = await createSnapTransaction({
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
       santriName: santri.nama,
     });
 
-    console.log("Midtrans transaction created:", midtransTransaction.token);
+    logger.log("Midtrans transaction created:", midtransTransaction.token);
 
     // Store Midtrans transaction details for webhook
     await prisma.midtransTransaction.create({

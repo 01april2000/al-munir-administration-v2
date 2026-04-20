@@ -5,6 +5,7 @@ import { getTransactionStatus } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { handleSuccessfulPayment, handleFailedPayment, handlePendingPayment } from "@/lib/payment-handler";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 // POST - Manually check and update payment status from Midtrans
 export async function POST(request: NextRequest) {
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM);
     if (ipLimit) return ipLimit;
 
-    console.log("=== Payment Status Check API Called ===");
+    logger.log("=== Payment Status Check API Called ===");
     
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Checking status for order_id:", orderId);
+    logger.log("Checking status for order_id:", orderId);
 
     // Find Midtrans transaction
     const midtransTransaction = await prisma.midtransTransaction.findUnique({
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     // Get transaction status from Midtrans
     const midtransStatus = await getTransactionStatus(orderId);
-    console.log("Midtrans status:", midtransStatus);
+    logger.log("Midtrans status:", midtransStatus);
 
     const { transaction_status, fraud_status, settlement_time, transaction_time } = midtransStatus;
 
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
       // New format: multiple transactions stored as JSON array
       try {
         transaksiIds = JSON.parse(midtransTransaction.transaksiIds);
-        console.log("Check-status: Using transaksiIds (multiple transactions):", transaksiIds);
+        logger.log("Check-status: Using transaksiIds (multiple transactions):", transaksiIds);
       } catch (e) {
         console.error("Check-status: Failed to parse transaksiIds:", midtransTransaction.transaksiIds);
         transaksiIds = [];
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     } else if (midtransTransaction.transaksiId) {
       // Legacy format: single transaction
       transaksiIds = [midtransTransaction.transaksiId];
-      console.log("Check-status: Using transaksiId (single transaction):", midtransTransaction.transaksiId);
+      logger.log("Check-status: Using transaksiId (single transaction):", midtransTransaction.transaksiId);
     }
 
     if (transaksiIds.length === 0) {

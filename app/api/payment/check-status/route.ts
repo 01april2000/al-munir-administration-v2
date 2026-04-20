@@ -4,10 +4,15 @@ import { headers } from "next/headers";
 import { getTransactionStatus } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { handleSuccessfulPayment, handleFailedPayment, handlePendingPayment } from "@/lib/payment-handler";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST - Manually check and update payment status from Midtrans
 export async function POST(request: NextRequest) {
   try {
+    // IP-based rate limit
+    const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM);
+    if (ipLimit) return ipLimit;
+
     console.log("=== Payment Status Check API Called ===");
     
     const session = await auth.api.getSession({
@@ -17,6 +22,10 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // User-based rate limit
+    const userLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM, session.user.id);
+    if (userLimit) return userLimit;
 
     const body = await request.json();
     const { orderId } = body;

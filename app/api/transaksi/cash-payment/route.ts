@@ -3,6 +3,7 @@ import { StatusTransaksi, Role, StatusTagihan, MetodePembayaran, JenisTagihan } 
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST - Confirm cash payment for a transaction
 // Supports:
@@ -10,6 +11,10 @@ import { prisma } from "@/lib/prisma";
 // - Combined payment from multiple tagihan: { tagihanIds: string[], santriId: string }
 export async function POST(request: NextRequest) {
   try {
+    // IP-based rate limit
+    const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM);
+    if (ipLimit) return ipLimit;
+
     const session = await auth.api.getSession({
       headers: await headers(),
     });
@@ -17,6 +22,10 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // User-based rate limit
+    const userLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM, session.user.id);
+    if (userLimit) return userLimit;
 
     const userRole = session.user.role as Role;
     

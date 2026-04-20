@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createSnapTransaction } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Fixed laundry price for 1 month
 const LAUNDRY_PRICE = 100000;
@@ -11,6 +12,10 @@ const LAUNDRY_PRICE = 100000;
 // POST - Create laundry payment transaction with Midtrans
 export async function POST(request: NextRequest) {
   try {
+    // IP-based rate limit
+    const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CREATE);
+    if (ipLimit) return ipLimit;
+
     console.log("=== Laundry Payment API Called ===");
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -21,6 +26,10 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // User-based rate limit
+    const userLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CREATE, session.user.id);
+    if (userLimit) return userLimit;
 
     const body = await request.json();
     const { bulan, tahun } = body;

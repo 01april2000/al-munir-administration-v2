@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  StatusTransaksi, 
-  StatusTagihan, 
-  MetodePembayaran, 
+import {
+  StatusTransaksi,
+  StatusTagihan,
+  MetodePembayaran,
   JenisTransaksi,
-  Role 
+  Role
 } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST - Pay tagihan using santri saldo
 export async function POST(request: NextRequest) {
   try {
+    // IP-based rate limit
+    const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_SALDO);
+    if (ipLimit) return ipLimit;
+
     console.log("=== Saldo Payment API Called ===");
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -23,6 +28,10 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // User-based rate limit
+    const userLimit = rateLimit(request, RATE_LIMITS.PAYMENT_SALDO, session.user.id);
+    if (userLimit) return userLimit;
 
     const body = await request.json();
     const { tagihanId, tagihanIds, transaksiId } = body;

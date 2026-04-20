@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { handleSuccessfulPayment, handleFailedPayment, handlePendingPayment } from "@/lib/payment-handler";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST - Handle Midtrans webhook notifications
 export async function POST(request: NextRequest) {
   try {
+    // IP-based rate limit for webhook (no auth, uses IP only)
+    const ipLimit = rateLimit(request, RATE_LIMITS.WEBHOOK);
+    if (ipLimit) return ipLimit;
+
     console.log("=== Webhook received ===");
     
     // Get notification data

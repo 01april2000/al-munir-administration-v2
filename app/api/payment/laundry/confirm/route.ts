@@ -3,10 +3,15 @@ import { StatusTransaksi } from "@/lib/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST - Directly confirm laundry payment as LUNAS (called from Snap onSuccess)
 export async function POST(request: NextRequest) {
   try {
+    // IP-based rate limit
+    const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM);
+    if (ipLimit) return ipLimit;
+
     console.log("=== Laundry Payment Confirm API Called ===");
     
     const session = await auth.api.getSession({
@@ -16,6 +21,10 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // User-based rate limit
+    const userLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CONFIRM, session.user.id);
+    if (userLimit) return userLimit;
 
     const body = await request.json();
     const { orderId } = body;

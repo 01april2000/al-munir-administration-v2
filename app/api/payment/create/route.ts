@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createSnapTransaction, generateOrderId, generateCombinedOrderId } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST - Create payment transaction with Midtrans
 // Supports:
@@ -12,6 +13,10 @@ import { prisma } from "@/lib/prisma";
 // - Existing transaksi: { transaksiId: string }
 export async function POST(request: NextRequest) {
   try {
+    // IP-based rate limit (protects against unauthenticated floods)
+    const ipLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CREATE);
+    if (ipLimit) return ipLimit;
+
     console.log("=== Payment Create API Called ===");
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -22,6 +27,10 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // User-based rate limit (per authenticated user)
+    const userLimit = rateLimit(request, RATE_LIMITS.PAYMENT_CREATE, session.user.id);
+    if (userLimit) return userLimit;
 
     const body = await request.json();
     const { tagihanId, tagihanIds, transaksiId } = body;

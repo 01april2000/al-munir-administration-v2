@@ -9,7 +9,7 @@ export interface TagihanSantri {
   kelas: string;
   asrama: string;
   jenisSantri: "SMK" | "SMP" | "PONDOK";
-  jenisPondok: "PONDOK_ATAS" | "PONDOK_BAWAH" | "SYALAF" | "NON_PONDOK";
+  jenisPondok: "ALMUNIR_1" | "ALMUNIR_2" | "SALAF" | "NON_PONDOK";
 }
 
 export interface Tagihan {

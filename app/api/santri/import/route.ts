@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate jenisPondok
-        const validJenisPondok = ["PONDOK_ATAS", "PONDOK_BAWAH", "SYALAF", "NON_PONDOK"];
+        const validJenisPondok = ["ALMUNIR_1", "ALMUNIR_2", "SALAF", "NON_PONDOK"];
         if (row.jenisPondok && !validJenisPondok.includes(row.jenisPondok.toUpperCase())) {
           results.failed++;
           results.errors.push({

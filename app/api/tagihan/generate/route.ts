@@ -11,12 +11,12 @@ const DEFAULT_AMOUNTS: Record<JenisSantri, { SPP: number; SYAHRIAH: number }> = 
   PONDOK: { SPP: 250000, SYAHRIAH: 150000 },
 };
 
-// Syahriah amounts based on jenisPondok (used when jenisPondok is PONDOK_BAWAH or SYALAF)
+// Syahriah amounts based on jenisPondok (used when jenisPondok is ALMUNIR_2 or SALAF)
 const SYAHRIAH_BY_JENIS_PONDOK: Record<JenisPondok, number> = {
-  PONDOK_ATAS: 0,       // Tidak ada syahriah
-  PONDOK_BAWAH: 150000, // Nominal standar pondok bawah
-  SYALAF: 100000,       // Nominal khusus syalaf
-  NON_PONDOK: 0,        // Tidak dipakai, pakai DEFAULT_AMOUNTS
+  ALMUNIR_1: 0,       // Tidak ada syahriah
+  ALMUNIR_2: 150000,  // Nominal standar almunir 2
+  SALAF: 100000,      // Nominal khusus salaf
+  NON_PONDOK: 0,      // Tidak dipakai, pakai DEFAULT_AMOUNTS
 };
 
 // All available JenisTagihan types
@@ -213,22 +213,22 @@ export async function POST(request: NextRequest) {
       let syahriahAmountFinal: number;
 
       switch (tingkat) {
-        case "PONDOK_ATAS":
-          // Pondok Atas → SPP saja, syahriah diskip
+        case "ALMUNIR_1":
+          // Almunir 1 → SPP saja, syahriah diskip
           sppAmountFinal = sppAmount ?? amounts.SPP;
           syahriahAmountFinal = 0;
           break;
 
-        case "PONDOK_BAWAH":
-          // Pondok Bawah → Syahriah saja, SPP diskip
+        case "ALMUNIR_2":
+          // Almunir 2 → Syahriah saja, SPP diskip
           sppAmountFinal = 0;
-          syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.PONDOK_BAWAH;
+          syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.ALMUNIR_2;
           break;
 
-        case "SYALAF":
-          // Syalaf → Syahriah saja dengan nominal khusus, SPP diskip
+        case "SALAF":
+          // Salaf → Syahriah saja dengan nominal khusus, SPP diskip
           sppAmountFinal = 0;
-          syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.SYALAF;
+          syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.SALAF;
           break;
 
         case "NON_PONDOK":
@@ -397,17 +397,17 @@ export async function GET(request: NextRequest) {
       let syahriahAmount: number;
 
       switch (tingkat) {
-        case "PONDOK_ATAS":
+        case "ALMUNIR_1":
           sppAmount = amounts.SPP;
           syahriahAmount = 0;
           break;
-        case "PONDOK_BAWAH":
+        case "ALMUNIR_2":
           sppAmount = 0;
-          syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.PONDOK_BAWAH;
+          syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.ALMUNIR_2;
           break;
-        case "SYALAF":
+        case "SALAF":
           sppAmount = 0;
-          syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.SYALAF;
+          syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.SALAF;
           break;
         case "NON_PONDOK":
         default:

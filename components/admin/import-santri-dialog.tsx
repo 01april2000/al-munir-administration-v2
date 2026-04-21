@@ -208,7 +208,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
         Beasiswa: "Tidak",
         "Jenis Beasiswa": "",
         "Jenis Santri": jenisSantriValue,
-        "Jenis Pondok": "PONDOK_ATAS",
+        "Jenis Pondok": "ALMUNIR_1",
         Email: "aisyah@example.com",
         Password: "password123",
       },
@@ -222,7 +222,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
         Beasiswa: "Ya",
         "Jenis Beasiswa": "SYAHRIAH",
         "Jenis Santri": jenisSantriValue,
-        "Jenis Pondok": "PONDOK_BAWAH",
+        "Jenis Pondok": "ALMUNIR_2",
         Email: "rizki@example.com",
         Password: "password123",
       },
@@ -365,7 +365,7 @@ export function ImportSantriDialog({ open, onOpenChange, onSuccess, defaultJenis
               {defaultJenisSantri && (
                 <li><strong>Jenis Santri</strong> - Otomatis diatur ke <strong>{defaultJenisSantri}</strong></li>
               )}
-              <li><strong>Jenis Pondok</strong> - PONDOK_ATAS, PONDOK_BAWAH, SYALAF, NON_PONDOK (default: NON_PONDOK)</li>
+              <li><strong>Jenis Pondok</strong> - ALMUNIR_1, ALMUNIR_2, SALAF, NON_PONDOK (default: NON_PONDOK)</li>
               <li><strong>Email</strong> - Email untuk login (unik)</li>
               <li><strong>Password</strong> - Password untuk login</li>
             </ul>

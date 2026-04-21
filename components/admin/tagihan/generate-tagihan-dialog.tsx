@@ -49,9 +49,9 @@ const defaultJenisSantriOptions = [
 
 const jenisPondokOptions = [
   { value: "", label: "Semua Tingkat" },
-  { value: "PONDOK_ATAS", label: "Pondok Atas" },
-  { value: "PONDOK_BAWAH", label: "Pondok Bawah" },
-  { value: "SYALAF", label: "Syalaf" },
+  { value: "ALMUNIR_1", label: "Almunir 1" },
+  { value: "ALMUNIR_2", label: "Almunir 2" },
+  { value: "SALAF", label: "Salaf" },
   { value: "NON_PONDOK", label: "Non Pondok" },
 ];
 

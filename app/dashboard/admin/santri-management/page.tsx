@@ -88,9 +88,9 @@ const jenisSantriOptions: { value: JenisSantri; label: string }[] = [
 
 const jenisPondokOptions: { value: JenisPondok; label: string }[] = [
   { value: "NON_PONDOK", label: "Non Pondok" },
-  { value: "PONDOK_ATAS", label: "Pondok Atas" },
-  { value: "PONDOK_BAWAH", label: "Pondok Bawah" },
-  { value: "SYALAF", label: "Syalaf" },
+  { value: "ALMUNIR_1", label: "Almunir 1" },
+  { value: "ALMUNIR_2", label: "Almunir 2" },
+  { value: "SALAF", label: "Salaf" },
 ];
 
 const jenisBeasiswaOptions: { value: JenisBeasiswa; label: string }[] = [

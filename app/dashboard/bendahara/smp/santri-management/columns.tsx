@@ -17,7 +17,7 @@ import {
 
 export type StatusSantri = "AKTIF" | "NON_AKTIF" | "LULUS" | "KELUAR";
 export type JenisSantri = "SMK" | "SMP" | "PONDOK";
-export type JenisPondok = "PONDOK_ATAS" | "PONDOK_BAWAH" | "SYALAF" | "NON_PONDOK";
+export type JenisPondok = "ALMUNIR_1" | "ALMUNIR_2" | "SALAF" | "NON_PONDOK";
 export type JenisBeasiswa = "FULL" | "SYAHRIAH" | "SPP" | "UANG_SAKU";
 
 export type KelasSmp = "VII_A" | "VII_B" | "VII_C" | "VIII_A" | "VIII_B" | "VIII_C" | "IX_A" | "IX_B" | "IX_C";
@@ -76,16 +76,16 @@ const jenisSantriVariants: Record<JenisSantri, "default" | "secondary" | "destru
 };
 
 const jenisPondokLabels: Record<JenisPondok, string> = {
-  PONDOK_ATAS: "Pondok Atas",
-  PONDOK_BAWAH: "Pondok Bawah",
-  SYALAF: "Syalaf",
+  ALMUNIR_1: "Almunir 1",
+  ALMUNIR_2: "Almunir 2",
+  SALAF: "Salaf",
   NON_PONDOK: "Non Pondok",
 };
 
 const jenisPondokVariants: Record<JenisPondok, "default" | "secondary" | "destructive" | "outline"> = {
-  PONDOK_ATAS: "default",
-  PONDOK_BAWAH: "secondary",
-  SYALAF: "outline",
+  ALMUNIR_1: "default",
+  ALMUNIR_2: "secondary",
+  SALAF: "outline",
   NON_PONDOK: "outline",
 };
 

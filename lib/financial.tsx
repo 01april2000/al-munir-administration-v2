@@ -36,6 +36,8 @@ export interface RecentTransaksi {
   status: string
   bulan: string | null
   tahun: number | null
+  statusUangSaku?: string | null
+  keterangan?: string | null
   santri: {
     nama: string
     nis: string

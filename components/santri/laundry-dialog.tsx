@@ -198,9 +198,31 @@ export function LaundryDialog({
             router.push(redirectUrl)
           }
         },
-        onClose: () => {
+        onClose: async () => {
           // User closed the popup without completing payment
-          // Keep pendingPayment in sessionStorage so notification can check status later
+          // Check status from Midtrans and cancel if still pending
+          try {
+            const statusResponse = await fetch("/api/payment/check-status", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: data.orderId }),
+            })
+
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json()
+              if (statusData.transactionStatus === "pending") {
+                // Clear pending payment from sessionStorage since we're cancelling
+                sessionStorage.removeItem("pendingPayment")
+                await fetch("/api/payment/cancel", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ orderId: data.orderId }),
+                })
+              }
+            }
+          } catch (error) {
+            console.error("Error handling snap close:", error)
+          }
           setLoading(false)
         },
       })

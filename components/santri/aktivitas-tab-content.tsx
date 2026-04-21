@@ -113,6 +113,8 @@ function StatusIcon({ status }: { status: string }) {
       return <Clock {...iconProps} />
     case "Belum Lunas":
       return <XCircle {...iconProps} />
+    case "Gagal":
+      return <XCircle {...iconProps} />
     case "in":
       return <ArrowDown {...iconProps} />
     case "out":

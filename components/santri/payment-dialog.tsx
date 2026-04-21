@@ -238,8 +238,30 @@ export function PaymentDialog({
           setOpen(false)
           window.location.href = buildRedirectUrl("error")
         },
-        // Callback when user closes the popup
-        onClose: () => {
+        // Callback when user closes the popup without completing payment
+        onClose: async () => {
+          // Check status from Midtrans and cancel if still pending
+          try {
+            const statusResponse = await fetch("/api/payment/check-status", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: data.orderId }),
+            })
+
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json()
+              // If still pending in Midtrans, user didn't complete payment → cancel
+              if (statusData.transactionStatus === "pending") {
+                await fetch("/api/payment/cancel", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ orderId: data.orderId }),
+                })
+              }
+            }
+          } catch (error) {
+            console.error("Error handling snap close:", error)
+          }
           setLoading(false)
         },
       })

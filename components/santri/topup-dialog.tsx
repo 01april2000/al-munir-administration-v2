@@ -172,8 +172,34 @@ export function TopupDialog({
         onError: () => {
           setError("Pembayaran gagal. Silakan coba lagi.")
         },
-        onClose: () => {
+        onClose: async () => {
           // User closed the popup without completing payment
+          // Check status from Midtrans and cancel if still pending
+          try {
+            const statusResponse = await fetch("/api/payment/check-status", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ orderId: data.orderId }),
+            })
+
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json()
+              // If still pending in Midtrans, it means user didn't complete payment
+              if (statusData.transactionStatus === "pending") {
+                await fetch("/api/payment/cancel", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ orderId: data.orderId }),
+                })
+              }
+            }
+          } catch (error) {
+            console.error("Error handling snap close:", error)
+          }
           setLoading(false)
         },
       })

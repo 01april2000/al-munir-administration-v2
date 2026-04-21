@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { StatusTagihan, StatusTransaksi, JenisTransaksi } from "@/lib/generated/prisma"
+import { StatusTagihan, StatusTransaksi, StatusUangSaku, JenisTransaksi } from "@/lib/generated/prisma"
 
 export interface TagihanSummary {
   totalUnpaid: number
@@ -64,25 +64,40 @@ export async function getTransaksiSummary(santriId: string): Promise<TransaksiSu
   })
   const transaksiIdsToExclude = transaksiWithTagihan.map(t => t.id)
 
-  // Aggregate unpaid transaksi (excluding SPP/Syahriah and those linked to tagihan)
+  // Also exclude top-up transactions (UANG_SAKU + DITAMBAH) from summary
+  // because they are not real tagihan — they are balance top-up requests
+  // that may never be completed if the user closes the Midtrans Snap popup
+  const topupTransaksi = await prisma.transaksi.findMany({
+    where: {
+      santriId,
+      jenis: JenisTransaksi.UANG_SAKU,
+      statusUangSaku: StatusUangSaku.DITAMBAH,
+    },
+    select: { id: true }
+  })
+  const topupIdsToExclude = topupTransaksi.map(t => t.id)
+
+  const allExcludedIds = [...transaksiIdsToExclude, ...topupIdsToExclude]
+
+  // Aggregate unpaid transaksi (excluding SPP/Syahriah, those linked to tagihan, and top-ups)
   const unpaid = await prisma.transaksi.aggregate({
     where: {
       santriId,
       status: { not: StatusTransaksi.LUNAS },
       jenis: { notIn: [JenisTransaksi.SPP, JenisTransaksi.SYAHRIAH] },
-      id: { notIn: transaksiIdsToExclude }
+      id: { notIn: allExcludedIds }
     },
     _sum: { jumlah: true },
     _count: true,
   })
   
-  // Aggregate paid transaksi (excluding SPP/Syahriah and those linked to tagihan)
+  // Aggregate paid transaksi (excluding SPP/Syahriah, those linked to tagihan, and top-ups)
   const paid = await prisma.transaksi.aggregate({
     where: {
       santriId,
       status: StatusTransaksi.LUNAS,
       jenis: { notIn: [JenisTransaksi.SPP, JenisTransaksi.SYAHRIAH] },
-      id: { notIn: transaksiIdsToExclude }
+      id: { notIn: allExcludedIds }
     },
     _sum: { jumlah: true },
     _count: true,

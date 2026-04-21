@@ -53,6 +53,9 @@ function StatusIcon({ status }: { status: string }) {
     case "BELUM_LUNAS":
     case "BELUM_BAYAR":
       return <XCircle {...iconProps} />
+    case "Gagal":
+    case "DITOLAK":
+      return <XCircle {...iconProps} />
     case "in":
     case "DITAMBAH":
       return <ArrowDown {...iconProps} />

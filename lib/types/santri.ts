@@ -5,7 +5,7 @@ export type SantriRole = "smk" | "smp" | "pondok"
 export interface TransactionItem {
   label: string
   amount?: string
-  status: "Lunas" | "Menunggu" | "Belum Lunas" | "in" | "out"
+  status: "Lunas" | "Menunggu" | "Belum Lunas" | "in" | "out" | "Gagal"
   date: string
   balance?: string
   tagihanId?: string

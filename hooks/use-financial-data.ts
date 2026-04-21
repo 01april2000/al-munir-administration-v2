@@ -42,7 +42,12 @@ export function useFinancialData(
 
       // Calculate summary based on selected period
       const lunasTransaksi = transaksi.filter((t: RecentTransaksi) => t.status === 'LUNAS')
-      const pendingTransaksi = transaksi.filter((t: RecentTransaksi) => t.status === 'PENDING')
+      // Exclude top-up transactions (UANG_SAKU + DITAMBAH) from pending count
+      // because they are not real tagihan — they are top-up requests that may
+      // never be completed if the user closes the Midtrans Snap popup
+      const pendingTransaksi = transaksi.filter((t: RecentTransaksi) =>
+        t.status === 'PENDING' && !(t.jenis === 'UANG_SAKU' && t.statusUangSaku === 'DITAMBAH')
+      )
       const belumBayarTransaksi = transaksi.filter((t: RecentTransaksi) => t.status === 'BELUM_BAYAR')
 
       const totalPemasukan = lunasTransaksi.reduce((sum: number, t: RecentTransaksi) => sum + t.jumlah, 0)

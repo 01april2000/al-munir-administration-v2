@@ -315,10 +315,17 @@ function processSantriData(
       // Process uang saku items for display (balance from aggregation)
       const chronologicalItems = [...items].reverse().map((t) => {
         const isIncoming = t.statusUangSaku === "DITAMBAH"
+        // Show PENDING top-up transactions as "Gagal" (failed)
+        // because they were never completed (user closed Snap popup)
+        const isPendingTopup = isIncoming && t.status === "PENDING"
         return {
-          label: t.keterangan || (isIncoming ? "Top-up Uang Saku" : "Pengambilan Uang Saku"),
+          label: isPendingTopup
+            ? `${t.keterangan || "Top-up Uang Saku"} (Gagal)`
+            : (t.keterangan || (isIncoming ? "Top-up Uang Saku" : "Pengambilan Uang Saku")),
           amount: formatCurrency(t.jumlah),
-          status: (isIncoming ? "in" : "out") as "in" | "out",
+          status: isPendingTopup
+            ? ("Gagal" as const)
+            : (isIncoming ? "in" : "out") as "in" | "out",
           date: formatDate(t.createdAt),
           transaksiId: t.id,
           rawAmount: t.jumlah,
@@ -630,10 +637,16 @@ function processAktivitasOnly(
     if (type === "uang-saku") {
       const chronologicalItems = [...items].reverse().map((t) => {
         const isIncoming = t.statusUangSaku === "DITAMBAH"
+        // Show PENDING top-up transactions as "Gagal" (failed)
+        const isPendingTopup = isIncoming && t.status === "PENDING"
         return {
-          label: t.keterangan || (isIncoming ? "Top-up Uang Saku" : "Pengambilan Uang Saku"),
+          label: isPendingTopup
+            ? `${t.keterangan || "Top-up Uang Saku"} (Gagal)`
+            : (t.keterangan || (isIncoming ? "Top-up Uang Saku" : "Pengambilan Uang Saku")),
           amount: formatCurrency(t.jumlah),
-          status: (isIncoming ? "in" : "out") as "in" | "out",
+          status: isPendingTopup
+            ? ("Gagal" as const)
+            : (isIncoming ? "in" : "out") as "in" | "out",
           date: formatDate(t.createdAt),
           transaksiId: t.id,
           rawAmount: t.jumlah,

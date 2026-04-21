@@ -75,6 +75,7 @@ const statusBadgeVariant = {
   "Belum Lunas": "destructive",
   in: "secondary",
   out: "destructive",
+  Gagal: "destructive",
 } as const
 
 const monthNames = [
@@ -180,6 +181,8 @@ function StatusIcon({ status }: { status: string }) {
       return <Clock {...iconProps} />
     case "Belum Lunas":
       return <XCircle {...iconProps} />
+    case "Gagal":
+      return <XCircle {...iconProps} />
     case "in":
       return <ArrowDown {...iconProps} />
     case "out":
@@ -192,7 +195,7 @@ function StatusIcon({ status }: { status: string }) {
 export interface TransactionItem {
   label: string
   amount?: string
-  status: "Lunas" | "Menunggu" | "Belum Lunas" | "in" | "out"
+  status: "Lunas" | "Menunggu" | "Belum Lunas" | "in" | "out" | "Gagal"
   date: string
   balance?: string
   tagihanId?: string

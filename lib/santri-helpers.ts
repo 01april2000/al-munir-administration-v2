@@ -59,6 +59,7 @@ export const statusBadgeVariant = {
   "Belum Lunas": "destructive",
   in: "secondary",
   out: "destructive",
+  Gagal: "destructive",
 } as const
 
 export const monthNames = [

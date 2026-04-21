@@ -85,6 +85,22 @@ export async function createSnapTransaction(params: {
         "mandiri_bill",
         "qris",
       ],
+      // Set expiry to 60 minutes — if not paid, Midtrans will send "expire" webhook
+      // which triggers handleFailedPayment() to clean up the transaction
+      // Format must be: yyyy-MM-dd hh:mm:ss Z (e.g. 2020-06-09 15:07:00 +0700)
+      expiry: {
+        start_time: (() => {
+          const now = new Date();
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const offset = -now.getTimezoneOffset();
+          const offsetHours = Math.floor(Math.abs(offset) / 60);
+          const offsetMins = Math.abs(offset) % 60;
+          const offsetStr = `${offset >= 0 ? '+' : '-'}${pad(offsetHours)}${pad(offsetMins)}`;
+          return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} ${offsetStr}`;
+        })(),
+        unit: "minutes",
+        duration: 60,
+      },
       // Configure webhook notification URL
       notifications: {
         payment_notification_url: webhookUrl,

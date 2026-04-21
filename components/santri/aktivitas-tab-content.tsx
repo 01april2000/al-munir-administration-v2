@@ -3,11 +3,12 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from "@/components/ui/empty"
 import {
   Receipt, Wallet, Shirt, FileCheck, Briefcase, Trophy, BookOpen, BookMarked,
-  CheckCircle2, Clock, XCircle, ArrowDown, ArrowUp, Calendar, History
+  CheckCircle2, Clock, XCircle, ArrowDown, ArrowUp, Calendar, History, Filter
 } from "lucide-react"
 import { useInfiniteAktivitas } from "@/hooks/use-infinite-scroll"
 import type { TransactionData, TransactionItem, SantriRole } from "@/lib/types/santri"
@@ -16,6 +17,73 @@ import {
   statusBadgeVariant,
 } from "@/lib/santri-helpers"
 import { AktivitasDetailDialog } from "@/components/santri/aktivitas-detail-dialog"
+
+// Time filter type
+type TimeFilter = "semua" | "hari-ini" | "kemarin" | "minggu-ini" | "bulan-ini"
+
+const timeFilterOptions: { value: TimeFilter; label: string }[] = [
+  { value: "semua", label: "Semua" },
+  { value: "hari-ini", label: "Hari Ini" },
+  { value: "kemarin", label: "Kemarin" },
+  { value: "minggu-ini", label: "Minggu Ini" },
+  { value: "bulan-ini", label: "Bulan Ini" },
+]
+
+// Indonesian month abbreviations mapping
+const indonesianMonths: Record<string, number> = {
+  "jan": 0, "feb": 1, "mar": 2, "apr": 3, "mei": 4, "jun": 5,
+  "jul": 6, "agu": 7, "sep": 8, "okt": 9, "nov": 10, "des": 11,
+}
+
+/**
+ * Parse an Indonesian-formatted date string (e.g. "21 Apr 2026") back to a Date.
+ * Returns null if parsing fails.
+ */
+function parseIndonesianDate(dateStr: string): Date | null {
+  if (!dateStr || dateStr === "-") return null
+  const parts = dateStr.trim().split(/\s+/)
+  if (parts.length !== 3) return null
+  const day = parseInt(parts[0], 10)
+  const month = indonesianMonths[parts[1].toLowerCase()]
+  const year = parseInt(parts[2], 10)
+  if (isNaN(day) || month === undefined || isNaN(year)) return null
+  return new Date(year, month, day)
+}
+
+/**
+ * Check if a given date falls within the specified time filter range.
+ * All comparisons use local time (user's timezone).
+ */
+function isDateInRange(date: Date | null, filter: TimeFilter): boolean {
+  if (filter === "semua" || !date) return true
+
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  switch (filter) {
+    case "hari-ini": {
+      return date >= today && date < new Date(today.getTime() + 86400000)
+    }
+    case "kemarin": {
+      const yesterday = new Date(today.getTime() - 86400000)
+      return date >= yesterday && date < today
+    }
+    case "minggu-ini": {
+      const dayOfWeek = today.getDay()
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      const startOfWeek = new Date(today.getTime() + mondayOffset * 86400000)
+      const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000)
+      return date >= startOfWeek && date < endOfWeek
+    }
+    case "bulan-ini": {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+      return date >= startOfMonth && date < startOfNextMonth
+    }
+    default:
+      return true
+  }
+}
 
 // Transaction icon component
 const transactionIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -101,6 +169,24 @@ export function AktivitasTabContent({
     initialHasMore,
   })
 
+  // Time filter state
+  const [activeFilter, setActiveFilter] = React.useState<TimeFilter>("semua")
+
+  // Filtered data based on selected time range
+  const filteredData = React.useMemo(() => {
+    if (activeFilter === "semua") return data
+
+    return data
+      .map((transaction) => ({
+        ...transaction,
+        items: transaction.items.filter((item) => {
+          const date = parseIndonesianDate(item.date)
+          return isDateInRange(date, activeFilter)
+        }),
+      }))
+      .filter((transaction) => transaction.items.length > 0)
+  }, [data, activeFilter])
+
   // Detail dialog state
   const [detailOpen, setDetailOpen] = React.useState(false)
   const [selectedItem, setSelectedItem] = React.useState<TransactionItem | null>(null)
@@ -136,12 +222,45 @@ export function AktivitasTabContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <History className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">Riwayat Pembayaran</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <History className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Riwayat Pembayaran</h2>
+        </div>
       </div>
+
+      {/* Time filter buttons */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+        {timeFilterOptions.map((option) => (
+          <Button
+            key={option.value}
+            variant={activeFilter === option.value ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveFilter(option.value)}
+            className="rounded-full text-xs h-8 px-3 shrink-0 transition-all"
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* Empty state when filter yields no results */}
+      {filteredData.length === 0 && !isLoading && (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Calendar />
+            </EmptyMedia>
+            <EmptyTitle>Tidak ada transaksi</EmptyTitle>
+            <EmptyDescription>
+              Tidak ada riwayat transaksi untuk filter "{timeFilterOptions.find(f => f.value === activeFilter)?.label}".
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
       
-      {data.map((transaction, idx) => (
+      {filteredData.map((transaction, idx) => (
         <Card key={`${transaction.type}-${idx}`} className="group overflow-hidden transition-all duration-300 hover:shadow-xl border-border/50 rounded-2xl">
           <CardHeader className={`border-b ${colorClasses[transaction.color as keyof typeof colorClasses]?.bg || colorClasses.blue.bg} transition-colors duration-300 px-4 py-4 md:px-6 md:py-4`}>
             <div className="flex items-center gap-3">
@@ -218,7 +337,7 @@ export function AktivitasTabContent({
       {isLoading && <LoadingSkeleton />}
       
       {/* End of list indicator */}
-      {!hasMore && data.length > 0 && (
+      {!hasMore && filteredData.length > 0 && activeFilter === "semua" && (
         <p className="text-center text-sm text-muted-foreground py-4">
           Semua riwayat telah ditampilkan
         </p>

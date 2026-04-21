@@ -10,11 +10,12 @@ import {
   CheckCircle2, Clock, XCircle, ArrowDown, ArrowUp, Calendar, History
 } from "lucide-react"
 import { useInfiniteAktivitas } from "@/hooks/use-infinite-scroll"
-import type { TransactionData, SantriRole } from "@/lib/types/santri"
+import type { TransactionData, TransactionItem, SantriRole } from "@/lib/types/santri"
 import {
   colorClasses,
   statusBadgeVariant,
 } from "@/lib/santri-helpers"
+import { AktivitasDetailDialog } from "@/components/santri/aktivitas-detail-dialog"
 
 // Transaction icon component
 const transactionIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -87,11 +88,11 @@ interface AktivitasTabContentProps {
   initialHasMore?: boolean
 }
 
-export function AktivitasTabContent({ 
-  role, 
-  initialData = [], 
-  initialCursor = null, 
-  initialHasMore = false 
+export function AktivitasTabContent({
+  role,
+  initialData = [],
+  initialCursor = null,
+  initialHasMore = false
 }: AktivitasTabContentProps) {
   const { data, isLoading, hasMore, sentinelRef } = useInfiniteAktivitas({
     role,
@@ -99,6 +100,17 @@ export function AktivitasTabContent({
     initialCursor,
     initialHasMore,
   })
+
+  // Detail dialog state
+  const [detailOpen, setDetailOpen] = React.useState(false)
+  const [selectedItem, setSelectedItem] = React.useState<TransactionItem | null>(null)
+  const [selectedTransaction, setSelectedTransaction] = React.useState<TransactionData | null>(null)
+
+  const handleItemClick = (item: TransactionItem, transaction: TransactionData) => {
+    setSelectedItem(item)
+    setSelectedTransaction(transaction)
+    setDetailOpen(true)
+  }
 
   if (data.length === 0 && !isLoading) {
     return (
@@ -151,7 +163,16 @@ export function AktivitasTabContent({
               {transaction.items.map((item, index) => (
                 <div
                   key={index}
-                  className={`group/item flex flex-col md:flex-row md:items-center justify-between p-4 md:p-4 rounded-2xl border transition-all duration-300 ${colorClasses[transaction.color as keyof typeof colorClasses]?.hover || colorClasses.blue.hover} hover:shadow-md active:scale-[0.98]`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleItemClick(item, transaction)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      handleItemClick(item, transaction)
+                    }
+                  }}
+                  className={`group/item flex flex-col md:flex-row md:items-center justify-between p-4 md:p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${colorClasses[transaction.color as keyof typeof colorClasses]?.hover || colorClasses.blue.hover} hover:shadow-md active:scale-[0.98]`}
                 >
                   <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                     <div className={`flex shrink-0 items-center justify-center p-2.5 md:p-3 ${colorClasses[transaction.color as keyof typeof colorClasses]?.bg || colorClasses.blue.bg} rounded-xl transition-all duration-300 group-hover/item:scale-110`}>
@@ -202,6 +223,14 @@ export function AktivitasTabContent({
           Semua riwayat telah ditampilkan
         </p>
       )}
+
+      {/* Detail Dialog */}
+      <AktivitasDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        item={selectedItem}
+        transaction={selectedTransaction}
+      />
     </div>
   )
 }

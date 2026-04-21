@@ -19,7 +19,6 @@ import {
   colorClasses,
   statusBadgeVariant,
   formatCurrency,
-  getMonthName,
 } from "@/lib/santri-helpers"
 
 // Transaction icon component
@@ -298,12 +297,6 @@ export function AktivitasDetailDialog({
         {!isLoading && !error && item && (
           <div className="flex flex-col">
             {/* Basic info from item */}
-            <DetailRow
-              icon={FileText}
-              label="Keterangan"
-              value={<span className="truncate">{item.label}</span>}
-            />
-
             {item.rawAmount !== undefined && item.rawAmount !== null && (
               <DetailRow
                 icon={CreditCard}
@@ -312,6 +305,23 @@ export function AktivitasDetailDialog({
               />
             )}
 
+            <DetailRow
+              icon={Info}
+              label="Status"
+              value={
+                <span className="flex items-center gap-1.5">
+                  <StatusIcon status={item.status} />
+                  {item.status === "in" ? "Masuk" : item.status === "out" ? "Keluar" : item.status}
+                </span>
+              }
+            />
+
+            <DetailRow
+              icon={FileText}
+              label="Keterangan"
+              value={<span className="truncate">{item.label}</span>}
+            />
+
             {item.balance && (
               <DetailRow
                 icon={Wallet}
@@ -319,12 +329,6 @@ export function AktivitasDetailDialog({
                 value={item.balance}
               />
             )}
-
-            <DetailRow
-              icon={Calendar}
-              label="Tanggal"
-              value={item.date}
-            />
 
             {/* Additional details from API */}
             {detail && (
@@ -349,13 +353,6 @@ export function AktivitasDetailDialog({
 
                 {isTransaksi && (
                   <>
-                    {(detail as TransaksiDetail).bulan && (detail as TransaksiDetail).tahun && (
-                      <DetailRow
-                        icon={Calendar}
-                        label="Periode"
-                        value={`${getMonthName((detail as TransaksiDetail).bulan!)} ${(detail as TransaksiDetail).tahun}`}
-                      />
-                    )}
                     {(detail as TransaksiDetail).metodePembayaran && (
                       <DetailRow
                         icon={CreditCard}
@@ -382,16 +379,6 @@ export function AktivitasDetailDialog({
 
                 {isTagihan && (
                   <>
-                    <DetailRow
-                      icon={Calendar}
-                      label="Periode"
-                      value={`${getMonthName((detail as TagihanDetail).bulan)} ${(detail as TagihanDetail).tahun}`}
-                    />
-                    <DetailRow
-                      icon={Calendar}
-                      label="Jatuh Tempo"
-                      value={formatDateString((detail as TagihanDetail).jatuhTempo)}
-                    />
                     {(detail as TagihanDetail).keterangan && (
                       <DetailRow
                         icon={Info}

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   LayoutDashboard,
   Receipt,
@@ -76,9 +77,13 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
     <aside className="hidden md:flex flex-col w-64 h-screen bg-background border-r border-border/50 fixed left-0 top-0 z-40">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-border/50">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-          <GraduationCap className="h-5 w-5 text-primary" />
-        </div>
+        <Image
+          src="/logo-almunir.png"
+          alt="Al-Munir"
+          width={40}
+          height={40}
+          className="rounded"
+        />
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-foreground">{getRoleTitle()}</span>
           <span className={cn("text-xs px-2 py-0.5 rounded-full w-fit mt-0.5", getRoleBadgeColor())}>

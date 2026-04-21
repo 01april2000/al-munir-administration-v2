@@ -1,6 +1,6 @@
 {
-  "name": "Al-Munir Santri Portal",
-  "short_name": "Santri Portal",
+  "name": "Al-Munir Payment",
+  "short_name": "Al-Munir",
   "description": "Portal santri untuk pengelolaan administrasi dan transaksi Al-Munir",
   "start_url": "/santri",
   "display": "standalone",
@@ -9,6 +9,12 @@
   "orientation": "portrait",
   "scope": "/santri",
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
@@ -29,21 +35,21 @@
       "short_name": "Pondok",
       "description": "Halaman santri pondok",
       "url": "/santri/pondok",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
     },
     {
       "name": "SMP",
       "short_name": "SMP",
       "description": "Halaman santri SMP",
       "url": "/santri/smp",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
     },
     {
       "name": "SMK",
       "short_name": "SMK",
       "description": "Halaman santri SMK",
       "url": "/santri/smk",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
     }
   ]
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   Users,
@@ -105,7 +106,13 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-between px-2 py-2">
           <div className="flex items-center gap-2">
-            <LayoutDashboard className="h-6 w-6" />
+            <Image
+              src="/logo-almunir.png"
+              alt="Al-Munir"
+              width={32}
+              height={32}
+              className="rounded"
+            />
             <span className="text-lg font-semibold">{getRoleTitle()}</span>
           </div>
           <ModeToggle />

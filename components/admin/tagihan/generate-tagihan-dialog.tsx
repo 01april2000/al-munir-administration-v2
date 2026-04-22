@@ -59,13 +59,10 @@ const defaultJenisTagihanOptions: JenisTagihanOption[] = [
   { value: "", label: "Semua Jenis" },
   // SPP dinonaktifkan sementara — lihat lib/config.ts
   { value: "SYAHRIAH", label: "Syahriah" },
-  { value: "UANG_SAKU", label: "Uang Saku" },
-  { value: "LAUNDRY", label: "Laundry" },
   { value: "UJIAN", label: "Ujian" },
   { value: "PKL", label: "PKL" },
   { value: "LKS", label: "LKS" },
   { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
-  { value: "TKA", label: "TKA" },
 ];
 
 // PKL tagihan is only for kelas XII

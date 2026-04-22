@@ -120,10 +120,10 @@ export function TagihanTabContent({
     return items
   }, [data])
 
-  // Get unpaid SPP items
-  const unpaidSPP = React.useMemo(() => {
-    return allUnpaidTagihan.filter(t => t.type === "spp")
-  }, [allUnpaidTagihan])
+  // // Get unpaid SPP items - Disabled
+  // const unpaidSPP = React.useMemo(() => {
+  //   return allUnpaidTagihan.filter(t => t.type === "spp")
+  // }, [allUnpaidTagihan])
 
   // Get unpaid Syahriah items
   const unpaidSyahriah = React.useMemo(() => {
@@ -197,17 +197,7 @@ export function TagihanTabContent({
               
               {/* Quick Select Buttons */}
               <div className="flex flex-wrap gap-2">
-                {unpaidSPP.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSelectAll("spp")}
-                    className="rounded-full text-xs"
-                  >
-                    <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                    Pilih Semua SPP ({unpaidSPP.length})
-                  </Button>
-                )}
+                {/* SPP bulk select button - Disabled */}
                 {unpaidSyahriah.length > 0 && (
                   <Button
                     variant="outline"

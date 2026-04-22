@@ -126,7 +126,7 @@ export const pondokTransactionConfig: Record<string, { title: string; color: key
 
 // Quick action configurations per role
 export const smkQuickActions = [
-  { type: "spp", title: "SPP", icon: "Receipt" },
+  // { type: "spp", title: "SPP", icon: "Receipt" }, // Disabled
   { type: "syahriah", title: "Syahriah", icon: "Receipt" },
   { type: "uang-saku", title: "Uang Saku", icon: "Wallet" },
   { type: "laundry", title: "Laundry", icon: "Shirt" },
@@ -136,7 +136,7 @@ export const smkQuickActions = [
 ] as const
 
 export const smpQuickActions = [
-  { type: "spp", title: "SPP", icon: "Receipt" },
+  // { type: "spp", title: "SPP", icon: "Receipt" }, // Disabled
   { type: "syahriah", title: "Syahriah", icon: "Receipt" },
   { type: "uang-saku", title: "Uang Saku", icon: "Wallet" },
   { type: "laundry", title: "Laundry", icon: "Shirt" },

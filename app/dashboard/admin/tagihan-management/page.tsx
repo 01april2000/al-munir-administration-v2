@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
   Card,
   CardHeader,
   CardTitle,
@@ -13,7 +21,7 @@ import {
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { columns, selectColumn, bulanOptions } from "./columns";
-import { FileText, Loader2, RefreshCw, Sparkles, Search, Receipt } from "lucide-react";
+import { FileText, Loader2, RefreshCw, Sparkles, Search, Receipt, Trash2 } from "lucide-react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -87,6 +95,11 @@ export default function TagihanManagementPage() {
   const [tagihanToDelete, setTagihanToDelete] = useState<Tagihan | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Bulk delete dialog state
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
 
   // Generate dialog state
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
@@ -265,6 +278,41 @@ export default function TagihanManagementPage() {
       setDeleteError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Bulk delete handler
+  const selectedCount = Object.keys(rowSelection).length;
+
+  const handleBulkDelete = async () => {
+    const selectedIds = Object.keys(rowSelection);
+    if (selectedIds.length === 0) return;
+
+    setBulkDeleting(true);
+    setBulkDeleteError(null);
+
+    try {
+      const response = await fetch("/api/tagihan/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete tagihan");
+      }
+
+      setRowSelection({});
+      await fetchTagihan();
+      setIsBulkDeleteDialogOpen(false);
+    } catch (err) {
+      setBulkDeleteError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -608,6 +656,19 @@ export default function TagihanManagementPage() {
             className="pl-10"
           />
         </div>
+        {selectedCount > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              setBulkDeleteError(null);
+              setIsBulkDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Hapus ({selectedCount})
+          </Button>
+        )}
         {searchQuery && (
           <div className="text-sm text-muted-foreground">
             Ditemukan {filteredData.length} hasil
@@ -676,6 +737,44 @@ export default function TagihanManagementPage() {
           </Pagination>
         </div>
       )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus Tagihan Terpilih</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Apakah Anda yakin ingin menghapus <strong>{selectedCount} tagihan</strong>?
+              Tindakan ini tidak dapat dibatalkan. Tagihan yang memiliki transaksi tidak akan dihapus.
+            </p>
+            {bulkDeleteError && (
+              <p className="mt-2 text-sm text-destructive">{bulkDeleteError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="outline" disabled={bulkDeleting} />}>
+              Batal
+            </DialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Menghapus...
+                </>
+              ) : (
+                `Hapus (${selectedCount})`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <DeleteTagihanDialog

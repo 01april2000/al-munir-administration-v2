@@ -698,6 +698,18 @@ export default function TagihanManagementPage() {
         isGenerating={generating}
         result={generateResult}
         showJenisSantriDropdown
+        infoBoxes={{
+          PKL: (
+            <>
+              <p className="font-medium">ℹ️ Keterangan PKL</p>
+              <p className="mt-1">
+                Tagihan PKL hanya akan digenerate untuk santri kelas{" "}
+                <strong>XII_RPL_A</strong>, <strong>XII_RPL_B</strong>, dan{" "}
+                <strong>XII_AKL</strong>.
+              </p>
+            </>
+          ),
+        }}
       />
 
       {/* Create Tagihan Dialog */}

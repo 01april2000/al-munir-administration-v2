@@ -473,7 +473,7 @@ export default function TagihanManagementPage() {
         title="Generate Tagihan Bulanan SMK"
         jenisTagihanOptions={smkJenisTagihanOptions}
         kelasOptions={smkKelasOptions}
-        showKelasForTypes={["UJIAN", "LKS"]}
+        showKelasForTypes={["UJIAN", "LKS", "PKL"]}
         defaultSyahriahHint="Default: Rp 300.000"
         infoBoxes={{
           PKL: (

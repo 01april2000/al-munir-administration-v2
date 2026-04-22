@@ -68,6 +68,9 @@ const defaultJenisTagihanOptions: JenisTagihanOption[] = [
   { value: "TKA", label: "TKA" },
 ];
 
+// PKL tagihan is only for kelas XII
+const PKL_ALLOWED_KELAS = ["XII_RPL_A", "XII_RPL_B", "XII_AKL"] as const;
+
 const jenisUjianOptions = [
   { value: "UTS", label: "UTS (Ujian Tengah Semester)" },
   { value: "UAS", label: "UAS (Ujian Akhir Semester)" },
@@ -94,7 +97,7 @@ export function GenerateTagihanDialog({
   title = "Generate Tagihan Bulanan",
   jenisTagihanOptions = defaultJenisTagihanOptions,
   kelasOptions = [],
-  showKelasForTypes = ["UJIAN", "LKS"],
+  showKelasForTypes = ["UJIAN", "LKS", "PKL"],
   defaultSppHint,
   defaultSyahriahHint,
   showJenisSantriDropdown = false,
@@ -135,12 +138,33 @@ export function GenerateTagihanDialog({
     }
   }, [open, jenisTagihanOptions]);
 
+  // Auto-select all PKL-allowed kelas when jenisTagihan changes to PKL
+  useEffect(() => {
+    if (jenisTagihan === "PKL") {
+      const pklKelas = kelasOptions
+        .filter((o) => PKL_ALLOWED_KELAS.includes(o.value as typeof PKL_ALLOWED_KELAS[number]))
+        .map((o) => o.value);
+      setSelectedKelas(pklKelas);
+    } else if (showKelasForTypes.includes(jenisTagihan)) {
+      // Reset kelas selection when switching away from PKL to another type that shows kelas
+      setSelectedKelas([]);
+    }
+  }, [jenisTagihan, kelasOptions, showKelasForTypes]);
+
   // Determine effective jenis santri
   const effectiveJenisSantri = fixedJenisSantri || jenisSantri || undefined;
 
   // Whether to show kelas selector
   const showKelas =
     kelasOptions.length > 0 && showKelasForTypes.includes(jenisTagihan);
+
+  // Effective kelas options: filter to only PKL-allowed kelas when jenisTagihan is PKL
+  const effectiveKelasOptions =
+    jenisTagihan === "PKL"
+      ? kelasOptions.filter((o) =>
+          PKL_ALLOWED_KELAS.includes(o.value as typeof PKL_ALLOWED_KELAS[number])
+        )
+      : kelasOptions;
 
   // Whether current tagihan type uses Syahriah amounts (SPP dinonaktifkan)
   const usesSyahriah =
@@ -359,9 +383,16 @@ export function GenerateTagihanDialog({
           {/* Show kelas selector for configured types */}
           {showKelas && (
             <div className="space-y-2">
-              <Label>Pilih Kelas</Label>
+              <Label>
+                Pilih Kelas
+                {jenisTagihan === "PKL" && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    (Hanya kelas XII untuk PKL)
+                  </span>
+                )}
+              </Label>
               <div className="grid grid-cols-3 gap-2">
-                {kelasOptions.map((option) => (
+                {effectiveKelasOptions.map((option) => (
                   <label
                     key={option.value}
                     className="flex items-center space-x-2 rounded-md border border-input p-2 cursor-pointer hover:bg-accent"
@@ -389,7 +420,7 @@ export function GenerateTagihanDialog({
                   type="button"
                   className="text-xs text-primary hover:underline"
                   onClick={() =>
-                    setSelectedKelas(kelasOptions.map((o) => o.value))
+                    setSelectedKelas(effectiveKelasOptions.map((o) => o.value))
                   }
                 >
                   Pilih Semua

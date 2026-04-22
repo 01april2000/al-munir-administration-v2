@@ -77,7 +77,6 @@ const KELAS_OPTIONS = [
 
 const JENIS_TRANSAKSI_OPTIONS = [
   { value: "", label: "Semua Jenis" },
-  { value: "SPP", label: "SPP" },
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UANG_SAKU", label: "Uang Saku" },
   { value: "LAUNDRY", label: "Laundry" },

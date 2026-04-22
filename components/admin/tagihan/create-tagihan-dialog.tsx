@@ -119,8 +119,8 @@ export function CreateTagihanDialog({
       return;
     }
 
-    // Validate semester for LKS type
-    if (jenisTransaksi === "LKS" && semesterOptions && semesterOptions.length > 0 && !semester) {
+    // Validate semester for LKS and BUKU_PENDAMPING types
+    if ((jenisTransaksi === "LKS" || jenisTransaksi === "BUKU_PENDAMPING") && semesterOptions && semesterOptions.length > 0 && !semester) {
       setLocalError("Semester wajib dipilih");
       return;
     }
@@ -133,7 +133,7 @@ export function CreateTagihanDialog({
       tahun: parseInt(tahun),
       keterangan: keterangan || undefined,
       jenisUjian: jenisTransaksi === "UJIAN" ? jenisUjian : undefined,
-      semester: jenisTransaksi === "LKS" ? semester : undefined,
+      semester: (jenisTransaksi === "LKS" || jenisTransaksi === "BUKU_PENDAMPING") ? semester : undefined,
     };
 
     await onCreate(data);
@@ -217,8 +217,8 @@ export function CreateTagihanDialog({
             </div>
           )}
 
-          {/* Show semester dropdown only for LKS type */}
-          {jenisTransaksi === "LKS" && semesterOptions && semesterOptions.length > 0 && (
+          {/* Show semester dropdown for LKS and BUKU_PENDAMPING types */}
+          {(jenisTransaksi === "LKS" || jenisTransaksi === "BUKU_PENDAMPING") && semesterOptions && semesterOptions.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="semester">Semester</Label>
               <select

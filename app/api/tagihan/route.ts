@@ -166,8 +166,8 @@ export async function POST(request: NextRequest) {
     if (jenis === "UJIAN" && jenisUjian) {
       kode = `TG-${jenisCode}-${jenisUjian}-${String(count + 1).padStart(5, "0")}`;
     }
-    // For LKS type, include semester in the kode
-    if (jenis === "LKS" && semester) {
+    // For LKS and BUKU_PENDAMPING types, include semester in the kode
+    if ((jenis === "LKS" || jenis === "BUKU_PENDAMPING") && semester) {
       kode = `TG-${jenisCode}-${semester}-${String(count + 1).padStart(5, "0")}`;
     }
     // Normalize bulan and tahun with defaults

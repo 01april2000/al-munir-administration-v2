@@ -63,6 +63,22 @@ const jenisTagihanOptions = [
   { value: "TKA", label: "TKA" },
 ];
 
+const jenisUjianOptions = [
+  { value: "UTS", label: "UTS (Ujian Tengah Semester)" },
+  { value: "UAS", label: "UAS (Ujian Akhir Semester)" },
+  { value: "UJIAN_NASIONAL", label: "Ujian Nasional" },
+  { value: "UJIAN_SEKOLAH", label: "Ujian Sekolah" },
+  { value: "UJIAN_PRAKTIK", label: "Ujian Praktik" },
+  { value: "ANBK", label: "ANBK (Asesmen Nasional Berbasis Komputer)" },
+  { value: "TKA", label: "TKA (Tes Kompetensi Akademik)" },
+  { value: "UJIAN_LAINNYA", label: "Ujian Lainnya" },
+];
+
+const semesterOptions = [
+  { value: "SEMESTER_1", label: "Semester 1 (Ganjil)" },
+  { value: "SEMESTER_2", label: "Semester 2 (Genap)" },
+];
+
 export default function TagihanManagementPage() {
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -693,6 +709,8 @@ export default function TagihanManagementPage() {
         result={createResult}
         santriList={santriList}
         onSantriListLoad={fetchSantriList}
+        jenisUjianOptions={jenisUjianOptions}
+        semesterOptions={semesterOptions}
       />
 
       {/* Cash Payment Dialog */}

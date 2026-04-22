@@ -5,17 +5,18 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 // Default amounts per jenisSantri for SPP and SYAHRIAH (can be configured later in a settings table)
+// SPP dinonaktifkan — semua SPP = 0
 const DEFAULT_AMOUNTS: Record<JenisSantri, { SPP: number; SYAHRIAH: number }> = {
-  SMK: { SPP: 250000, SYAHRIAH: 300000 },
-  SMP: { SPP: 300000, SYAHRIAH: 200000 },
-  PONDOK: { SPP: 250000, SYAHRIAH: 150000 },
+  SMK: { SPP: 0, SYAHRIAH: 550000 },
+  SMP: { SPP: 0, SYAHRIAH: 550000 },
+  PONDOK: { SPP: 0, SYAHRIAH: 150000 },
 };
 
-// Syahriah amounts based on jenisPondok (used when jenisPondok is ALMUNIR_2 or SALAF)
+// Syahriah amounts based on jenisPondok
 const SYAHRIAH_BY_JENIS_PONDOK: Record<JenisPondok, number> = {
-  ALMUNIR_1: 0,       // Tidak ada syahriah
-  ALMUNIR_2: 150000,  // Nominal standar almunir 2
-  SALAF: 100000,      // Nominal khusus salaf
+  ALMUNIR_1: 150000,  // Pondok atas
+  ALMUNIR_2: 550000,  // Pondok bawah
+  SALAF: 350000,      // Salafiyah
   NON_PONDOK: 0,      // Tidak dipakai, pakai DEFAULT_AMOUNTS
 };
 
@@ -212,27 +213,27 @@ export async function POST(request: NextRequest) {
 
       switch (tingkat) {
         case "ALMUNIR_1":
-          // Almunir 1 → SPP saja, syahriah diskip
-          sppAmountFinal = sppAmount ?? amounts.SPP;
-          syahriahAmountFinal = 0;
+          // Pondok atas → Syahriah Rp.150.000
+          sppAmountFinal = 0;
+          syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.ALMUNIR_1;
           break;
 
         case "ALMUNIR_2":
-          // Almunir 2 → Syahriah saja, SPP diskip
+          // Pondok bawah → Syahriah Rp.550.000
           sppAmountFinal = 0;
           syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.ALMUNIR_2;
           break;
 
         case "SALAF":
-          // Salaf → Syahriah saja dengan nominal khusus, SPP diskip
+          // Salaf → Syahriah Rp.350.000
           sppAmountFinal = 0;
           syahriahAmountFinal = syahriahAmount ?? SYAHRIAH_BY_JENIS_PONDOK.SALAF;
           break;
 
         case "NON_PONDOK":
         default:
-          // Non-pondok → SPP + Syahriah normal
-          sppAmountFinal = sppAmount ?? amounts.SPP;
+          // Non-pondok → Syahriah berdasarkan jenisSantri (SMK/SMP: 550.000)
+          sppAmountFinal = 0;
           syahriahAmountFinal = syahriahAmount ?? amounts.SYAHRIAH;
           break;
       }
@@ -379,34 +380,29 @@ export async function GET(request: NextRequest) {
 
       switch (tingkat) {
         case "ALMUNIR_1":
-          sppAmount = amounts.SPP;
-          syahriahAmount = 0;
+          // Pondok atas → Syahriah Rp.150.000
+          sppAmount = 0;
+          syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.ALMUNIR_1;
           break;
         case "ALMUNIR_2":
+          // Pondok bawah → Syahriah Rp.550.000
           sppAmount = 0;
           syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.ALMUNIR_2;
           break;
         case "SALAF":
+          // Salaf → Syahriah Rp.350.000
           sppAmount = 0;
           syahriahAmount = SYAHRIAH_BY_JENIS_PONDOK.SALAF;
           break;
         case "NON_PONDOK":
         default:
-          sppAmount = amounts.SPP;
+          // Non-pondok → Syahriah berdasarkan jenisSantri
+          sppAmount = 0;
           syahriahAmount = amounts.SYAHRIAH;
           break;
       }
 
-      // SPP
-      const skipSPP = santri.beasiswa &&
-        (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SPP");
-      if (!skipSPP && sppAmount > 0) {
-        tagihanData.push({
-          kode: `SPP-${santri.nis}-${bulan}-${tahun}`,
-          santriId: santri.id, jenis: "SPP", bulan, tahun,
-          jumlah: sppAmount, status: "BELUM_LUNAS", jatuhTempo,
-        });
-      }
+      // SPP dinonaktifkan — tidak digenerate di cron
 
       // SYAHRIAH
       const skipSyahriah = santri.beasiswa &&

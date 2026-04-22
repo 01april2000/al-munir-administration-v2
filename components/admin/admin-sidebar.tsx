@@ -37,10 +37,10 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const isTransaksiPath = pathname === "/dashboard/admin/transaksi"
-  const activeTab = searchParams.get("tab") || "SPP"
+  const activeTab = searchParams.get("tab") || "SYAHRIAH"
   
-  // Only open dropdown if on transaksi path AND on SPP, SYAHRIAH, PKL, UJIAN, BUKU_PENDAMPING, or LKS tab
-  const isTransaksiSubmenuActive = isTransaksiPath && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL" || activeTab === "UJIAN" || activeTab === "BUKU_PENDAMPING" || activeTab === "LKS")
+  // Only open dropdown if on transaksi path AND on SYAHRIAH, PKL, UJIAN, BUKU_PENDAMPING, or LKS tab
+  const isTransaksiSubmenuActive = isTransaksiPath && (activeTab === "SYAHRIAH" || activeTab === "PKL" || activeTab === "UJIAN" || activeTab === "BUKU_PENDAMPING" || activeTab === "LKS")
   const [isTransaksiOpen, setIsTransaksiOpen] = React.useState(isTransaksiSubmenuActive)
 
   React.useEffect(() => {
@@ -147,7 +147,7 @@ export function AdminSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTransaksiOpen(!isTransaksiOpen)}
-                  isActive={isTransaksiOpen && (activeTab === "SPP" || activeTab === "SYAHRIAH" || activeTab === "PKL" || activeTab === "UJIAN" || activeTab === "BUKU_PENDAMPING" || activeTab === "LKS")}
+                  isActive={isTransaksiOpen && (activeTab === "SYAHRIAH" || activeTab === "PKL" || activeTab === "UJIAN" || activeTab === "BUKU_PENDAMPING" || activeTab === "LKS")}
                 >
                   {isTransaksiOpen ? (
                     <ChevronDown className="h-4 w-4" />
@@ -158,16 +158,7 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
                 {isTransaksiOpen && (
                   <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        isActive={isTransaksiPath && activeTab === "SPP"}
-                        render={
-                          <Link href="/dashboard/admin/transaksi?tab=SPP">
-                            <span>SPP</span>
-                          </Link>
-                        }
-                      />
-                    </SidebarMenuSubItem>
+                    {/* SPP dinonaktifkan sementara — lihat lib/config.ts */}
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         isActive={isTransaksiPath && activeTab === "SYAHRIAH"}

@@ -52,7 +52,7 @@ const jenisSantriOptions = [
 
 const jenisTagihanOptions = [
   { value: "", label: "Semua Jenis" },
-  { value: "SPP", label: "SPP" },
+  // SPP dinonaktifkan sementara — lihat lib/config.ts
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UANG_SAKU", label: "Uang Saku" },
   { value: "LAUNDRY", label: "Laundry" },
@@ -419,7 +419,7 @@ export default function TagihanManagementPage() {
         <div>
           <h1 className="text-2xl font-bold">Manajemen Tagihan</h1>
           <p className="text-muted-foreground">
-            Kelola tagihan bulanan santri (SPP & Syahriah)
+            Kelola tagihan bulanan santri
           </p>
         </div>
         <div className="flex gap-2">

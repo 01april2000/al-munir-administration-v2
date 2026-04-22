@@ -19,9 +19,9 @@ const SYAHRIAH_BY_JENIS_PONDOK: Record<JenisPondok, number> = {
   NON_PONDOK: 0,      // Tidak dipakai, pakai DEFAULT_AMOUNTS
 };
 
-// All available JenisTagihan types
+// All available JenisTagihan types (SPP dinonaktifkan sementara — lihat lib/config.ts)
 const ALL_JENIS_TAGIHAN: JenisTagihan[] = [
-  "SPP", "SYAHRIAH", "UANG_SAKU", "LAUNDRY",
+  "SYAHRIAH", "UANG_SAKU", "LAUNDRY",
   "UJIAN", "PKL", "LKS", "BUKU_PENDAMPING", "TKA"
 ];
 
@@ -105,10 +105,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For non-SPP/SYAHRIAH types, customAmount is required
+    // For non-SYAHRIAH types, customAmount is required
     const isOtherTagihanType = jenisTagihan &&
       jenisTagihan !== "ALL" &&
-      jenisTagihan !== "SPP" &&
       jenisTagihan !== "SYAHRIAH";
     
     if (isOtherTagihanType && (!customAmount || customAmount <= 0)) {
@@ -183,9 +182,8 @@ export async function POST(request: NextRequest) {
     const bulanIndex = bulanList.indexOf(bulan);
     const jatuhTempo = new Date(tahun, bulanIndex, 15);
 
-    // Determine which tagihan types to generate
+    // Determine which tagihan types to generate (SPP dinonaktifkan sementara)
     const generateAll = !jenisTagihan || jenisTagihan === "ALL";
-    const generateSPP = generateAll || jenisTagihan === "SPP";
     const generateSyahriah = generateAll || jenisTagihan === "SYAHRIAH";
     
     // For other tagihan types (UJIAN, PKL, LKS, etc.)
@@ -239,25 +237,8 @@ export async function POST(request: NextRequest) {
           break;
       }
 
-      // Generate SPP tagihan
-      if (generateSPP) {
-        // Skip if santri has full or SPP scholarship
-        const skipSPP = santri.beasiswa &&
-          (santri.jenisBeasiswa === "FULL" || santri.jenisBeasiswa === "SPP");
-
-        if (!skipSPP && sppAmountFinal > 0) {
-          tagihanData.push({
-            kode: `SPP-${santri.nis}-${bulan}-${tahun}`,
-            santriId: santri.id,
-            jenis: "SPP",
-            bulan,
-            tahun,
-            jumlah: sppAmountFinal,
-            status: "BELUM_LUNAS",
-            jatuhTempo,
-          });
-        }
-      }
+      // SPP tagihan generation dinonaktifkan sementara — lihat lib/config.ts
+      // if (generateSPP) { ... }
 
       // Generate SYAHRIAH tagihan
       if (generateSyahriah) {

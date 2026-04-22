@@ -57,7 +57,7 @@ const jenisPondokOptions = [
 
 const defaultJenisTagihanOptions: JenisTagihanOption[] = [
   { value: "", label: "Semua Jenis" },
-  { value: "SPP", label: "SPP" },
+  // SPP dinonaktifkan sementara — lihat lib/config.ts
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UANG_SAKU", label: "Uang Saku" },
   { value: "LAUNDRY", label: "Laundry" },
@@ -142,24 +142,22 @@ export function GenerateTagihanDialog({
   const showKelas =
     kelasOptions.length > 0 && showKelasForTypes.includes(jenisTagihan);
 
-  // Whether current tagihan type uses SPP/Syahriah amounts
-  const usesSppSyahriah =
+  // Whether current tagihan type uses Syahriah amounts (SPP dinonaktifkan)
+  const usesSyahriah =
     !jenisTagihan ||
     jenisTagihan === "ALL" ||
-    jenisTagihan === "SPP" ||
     jenisTagihan === "SYAHRIAH";
 
   // Whether current tagihan type uses custom amount
   const usesCustomAmount =
     jenisTagihan &&
     jenisTagihan !== "ALL" &&
-    jenisTagihan !== "SPP" &&
     jenisTagihan !== "SYAHRIAH";
 
   const handleGenerate = async () => {
     setLocalError(null);
 
-    // Validate custom amount for non-SPP/SYAHRIAH types
+    // Validate custom amount for non-SYAHRIAH types
     if (usesCustomAmount && (!customAmount || parseInt(customAmount) <= 0)) {
       setLocalError(`Jumlah untuk tagihan ${jenisTagihan} wajib diisi`);
       return;
@@ -294,7 +292,7 @@ export function GenerateTagihanDialog({
                 ))}
               </select>
               <p className="text-xs text-muted-foreground">
-                Filter berdasarkan tingkat pondok. Pondok Atas → SPP saja, Pondok Bawah/Syalaf → Syahriah saja.
+                Filter berdasarkan tingkat pondok. Pondok Bawah/Salaf → Syahriah saja.
               </p>
             </div>
           )}
@@ -408,28 +406,9 @@ export function GenerateTagihanDialog({
             </div>
           )}
 
-          {/* Show SPP/Syahriah fields only for ALL, SPP, or SYAHRIAH */}
-          {usesSppSyahriah && (
-            <div className="grid grid-cols-2 gap-4">
-              {(jenisTagihan === "ALL" ||
-                jenisTagihan === "SPP" ||
-                !jenisTagihan) && (
-                <div className="space-y-2">
-                  <Label htmlFor="spp-amount">Jumlah SPP (Opsional)</Label>
-                  <Input
-                    id="spp-amount"
-                    type="number"
-                    placeholder="Default per jenis santri"
-                    value={sppAmount}
-                    onChange={(e) => setSppAmount(e.target.value)}
-                  />
-                  {defaultSppHint && (
-                    <p className="text-xs text-muted-foreground">
-                      {defaultSppHint}
-                    </p>
-                  )}
-                </div>
-              )}
+          {/* Show Syahriah field only for ALL or SYAHRIAH */}
+          {usesSyahriah && (
+            <div className="grid grid-cols-1 gap-4">
               {(jenisTagihan === "ALL" ||
                 jenisTagihan === "SYAHRIAH" ||
                 !jenisTagihan) && (

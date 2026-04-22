@@ -19,7 +19,7 @@ import {
 } from "@/lib/types/tagihan-dialogs";
 
 const defaultJenisTransaksiOptions = [
-  { value: "SPP", label: "SPP" },
+  // SPP dinonaktifkan sementara — lihat lib/config.ts
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UANG_SAKU", label: "Uang Saku" },
   { value: "LAUNDRY", label: "Laundry" },
@@ -66,7 +66,7 @@ export function CreateTagihanDialog({
 }: CreateTagihanDialogProps) {
   const [santriSearch, setSantriSearch] = useState("");
   const [selectedSantriId, setSelectedSantriId] = useState("");
-  const [jenisTransaksi, setJenisTransaksi] = useState("SPP");
+  const [jenisTransaksi, setJenisTransaksi] = useState("SYAHRIAH");
   const [jumlah, setJumlah] = useState("");
   const [bulan, setBulan] = useState(bulanList[currentMonthIndex]);
   const [tahun, setTahun] = useState(currentYear.toString());
@@ -82,7 +82,7 @@ export function CreateTagihanDialog({
       // Reset form
       setSantriSearch("");
       setSelectedSantriId("");
-      setJenisTransaksi("SPP");
+      setJenisTransaksi("SYAHRIAH");
       setJumlah("");
       setBulan(bulanList[currentMonthIndex]);
       setTahun(currentYear.toString());

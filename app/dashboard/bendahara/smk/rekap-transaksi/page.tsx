@@ -65,10 +65,9 @@ const KELAS_SMK_OPTIONS = [
   { value: "XII_AKL", label: "Kelas XII AKL" },
 ]
 
-// SMK-specific jenis transaksi options
+// SMK-specific jenis transaksi options (SPP dinonaktifkan sementara — lihat lib/config.ts)
 const JENIS_TRANSAKSI_SMK_OPTIONS = [
   { value: "", label: "Semua Jenis" },
-  { value: "SPP", label: "SPP" },
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UJIAN", label: "Ujian" },
   { value: "PKL", label: "PKL" },

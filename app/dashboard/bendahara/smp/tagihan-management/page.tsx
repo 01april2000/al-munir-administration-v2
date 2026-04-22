@@ -46,15 +46,14 @@ const statusOptions = [
 ];
 
 const smpJenisTagihanOptions: JenisTagihanOption[] = [
-  { value: "ALL", label: "SPP & Syahriah" },
-  { value: "SPP", label: "SPP saja" },
-  { value: "SYAHRIAH", label: "Syahriah saja" },
+  { value: "ALL", label: "Semua Jenis" },
+  { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UJIAN", label: "Ujian" },
   { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
 ];
 
 const smpJenisTransaksiOptions: JenisTransaksiOption[] = [
-  { value: "SPP", label: "SPP" },
+  // SPP dinonaktifkan sementara — lihat lib/config.ts
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UJIAN", label: "Ujian" },
   { value: "BUKU_PENDAMPING", label: "Buku Pendamping" },
@@ -298,7 +297,7 @@ export default function TagihanManagementPage() {
         <div>
           <h1 className="text-2xl font-bold">Manajemen Tagihan SMP</h1>
           <p className="text-muted-foreground">
-            Kelola tagihan bulanan santri SMP (SPP & Syahriah)
+            Kelola tagihan bulanan santri SMP
           </p>
         </div>
         <div className="flex gap-2">
@@ -476,7 +475,6 @@ export default function TagihanManagementPage() {
         jenisTagihanOptions={smpJenisTagihanOptions}
         kelasOptions={smpKelasOptions}
         showKelasForTypes={["UJIAN"]}
-        defaultSppHint="Default: Rp 300.000"
         defaultSyahriahHint="Default: Rp 200.000"
       />
 

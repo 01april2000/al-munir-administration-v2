@@ -32,7 +32,7 @@ import {
 } from "@/lib/types/tagihan-dialogs";
 
 const smkJenisTransaksiOptions: JenisTransaksiOption[] = [
-  { value: "SPP", label: "SPP" },
+  // SPP dinonaktifkan sementara — lihat lib/config.ts
   { value: "SYAHRIAH", label: "Syahriah" },
   { value: "UJIAN", label: "Ujian" },
   { value: "PKL", label: "PKL" },
@@ -40,9 +40,8 @@ const smkJenisTransaksiOptions: JenisTransaksiOption[] = [
 ];
 
 const smkJenisTagihanOptions: JenisTagihanOption[] = [
-  { value: "ALL", label: "SPP & Syahriah" },
-  { value: "SPP", label: "SPP saja" },
-  { value: "SYAHRIAH", label: "Syahriah saja" },
+  { value: "ALL", label: "Semua Jenis" },
+  { value: "SYAHRIAH", label: "Syahriah" },
   { value: "PKL", label: "PKL" },
   { value: "LKS", label: "LKS" },
   { value: "UJIAN", label: "Ujian" },
@@ -306,7 +305,7 @@ export default function TagihanManagementPage() {
         <div>
           <h1 className="text-2xl font-bold">Manajemen Tagihan SMK</h1>
           <p className="text-muted-foreground">
-            Kelola tagihan bulanan santri SMK (SPP & Syahriah)
+            Kelola tagihan bulanan santri SMK
           </p>
         </div>
         <div className="flex gap-2">
@@ -425,7 +424,6 @@ export default function TagihanManagementPage() {
                 onChange={(e) => setFilterJenis(e.target.value)}
               >
                 <option value="">Semua Jenis</option>
-                <option value="SPP">SPP</option>
                 <option value="SYAHRIAH">Syahriah</option>
                 <option value="PKL">PKL</option>
                 <option value="LKS">LKS</option>
@@ -476,7 +474,6 @@ export default function TagihanManagementPage() {
         jenisTagihanOptions={smkJenisTagihanOptions}
         kelasOptions={smkKelasOptions}
         showKelasForTypes={["UJIAN", "LKS"]}
-        defaultSppHint="Default: Rp 250.000"
         defaultSyahriahHint="Default: Rp 300.000"
         infoBoxes={{
           PKL: (

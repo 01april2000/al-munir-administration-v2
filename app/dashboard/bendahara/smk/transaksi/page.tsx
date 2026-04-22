@@ -5,11 +5,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
-// Define SMK-specific transaction types
-type JenisTransaksiSMK = "SPP" | "SYAHRIAH" | "LKS" | "PKL" | "UJIAN";
+// Define SMK-specific transaction types (SPP dinonaktifkan sementara — lihat lib/config.ts)
+type JenisTransaksiSMK = "SYAHRIAH" | "LKS" | "PKL" | "UJIAN";
 
 const transaksiTabs: { value: JenisTransaksiSMK; label: string; description: string }[] = [
-  { value: "SPP", label: "SPP", description: "Kelola pembayaran SPP siswa SMK" },
   { value: "SYAHRIAH", label: "Syahriah", description: "Kelola pembayaran syahriah siswa SMK" },
   { value: "LKS", label: "LKS", description: "Kelola pembayaran LKS siswa SMK" },
   { value: "PKL", label: "PKL", description: "Kelola pembayaran PKL siswa SMK" },
@@ -23,10 +22,10 @@ function TransaksiPageContent() {
   const router = useRouter();
   const tabParam = searchParams.get("tab");
   
-  // Validate tab param, default to SPP if invalid or missing
+  // Validate tab param, default to SYAHRIAH if invalid or missing
   const activeTab: JenisTransaksiSMK = validTabs.includes(tabParam as JenisTransaksiSMK)
     ? (tabParam as JenisTransaksiSMK)
-    : "SPP";
+    : "SYAHRIAH";
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());

@@ -68,7 +68,7 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
     switch (role) {
       case "smk":
         return [
-          { href: "spp", label: "SPP", icon: Receipt },
+          // SPP dinonaktifkan sementara — lihat lib/config.ts
           { href: "syahriah", label: "Syahriah", icon: Receipt },
           { href: "ujian", label: "Ujian", icon: FileCheck },
           { href: "pkl", label: "PKL", icon: Briefcase },
@@ -76,7 +76,7 @@ export function BendaharaSidebar({ role }: BendaharaSidebarProps) {
         ]
       case "smp":
         return [
-          { href: "spp", label: "SPP", icon: Receipt },
+          // SPP dinonaktifkan sementara — lihat lib/config.ts
           { href: "syahriah", label: "Syahriah", icon: Receipt },
           { href: "ujian", label: "Ujian", icon: FileCheck },
           { href: "buku-pendamping", label: "Buku Pendamping", icon: BookOpen },

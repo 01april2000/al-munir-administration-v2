@@ -23,7 +23,7 @@ export default function BendaharaPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-slate-600">
-                  Akses ke panel keuangan SMK untuk mengelola SPP, pembayaran, dan laporan keuangan.
+                  Akses ke panel keuangan SMK untuk mengelola pembayaran, dan laporan keuangan.
                 </div>
               </CardContent>
             </Card>
@@ -37,7 +37,7 @@ export default function BendaharaPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-slate-600">
-                  Akses ke panel keuangan SMP untuk mengelola SPP, pembayaran, dan laporan keuangan.
+                  Akses ke panel keuangan SMP untuk mengelola pembayaran, dan laporan keuangan.
                 </div>
               </CardContent>
             </Card>

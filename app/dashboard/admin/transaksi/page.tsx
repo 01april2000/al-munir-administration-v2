@@ -8,7 +8,7 @@ import { JenisTransaksi } from "@/lib/types/transaksi";
 import { Loader2 } from "lucide-react";
 
 const transaksiTabs: { value: JenisTransaksi; label: string; description: string }[] = [
-  { value: "SPP", label: "SPP", description: "Kelola pembayaran SPP santri" },
+  // SPP dinonaktifkan sementara — lihat lib/config.ts
   { value: "SYAHRIAH", label: "Syahriah", description: "Kelola pembayaran syahriah santri" },
   { value: "PKL", label: "PKL", description: "Kelola pembayaran PKL santri" },
   { value: "UJIAN", label: "Ujian", description: "Kelola pembayaran ujian santri" },
@@ -25,10 +25,10 @@ function TransaksiPageContent() {
   const router = useRouter();
   const tabParam = searchParams.get("tab");
   
-  // Validate tab param, default to SPP if invalid or missing
+  // Validate tab param, default to SYAHRIAH if invalid or missing
   const activeTab: JenisTransaksi = validTabs.includes(tabParam as JenisTransaksi)
     ? (tabParam as JenisTransaksi)
-    : "SPP";
+    : "SYAHRIAH";
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());

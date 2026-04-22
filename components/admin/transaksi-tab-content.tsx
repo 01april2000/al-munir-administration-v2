@@ -55,6 +55,8 @@ interface Santri {
   asrama: string;
   jenisSantri: string;
   saldo: number;
+  saldoUangSaku: number;
+  saldoTagihan: number;
 }
 
 interface TransaksiTabContentProps {
@@ -864,7 +866,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
                       <div>
                         <div className="font-medium">{santri.nama}</div>
                         <div className="text-xs text-muted-foreground">
-                          {santri.nis} • {santri.kelas} • Saldo: {formatCurrency(santri.saldo)}
+                          {santri.nis} • {santri.kelas} • {formData.targetSaldo === "SALDO_TAGIHAN" ? `Saldo Tagihan: ${formatCurrency(santri.saldoTagihan)}` : `Saldo Uang Saku: ${formatCurrency(santri.saldoUangSaku)}`}
                         </div>
                       </div>
                       {formData.santriId === santri.id && (
@@ -884,7 +886,7 @@ export function TransaksiTabContent({ jenis, title, description }: TransaksiTabC
                 </span>
                 <span className="text-green-600 dark:text-green-400"> - </span>
                 <span className="text-green-600 dark:text-green-400">
-                  {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas}) - Saldo: {formatCurrency(getSelectedSantriInfo()?.saldo || 0)}
+                  {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas}) - {formData.targetSaldo === "SALDO_TAGIHAN" ? `Saldo Tagihan: ${formatCurrency(getSelectedSantriInfo()?.saldoTagihan || 0)}` : `Saldo Uang Saku: ${formatCurrency(getSelectedSantriInfo()?.saldoUangSaku || 0)}`}
                 </span>
               </div>
             )}

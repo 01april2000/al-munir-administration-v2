@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
         jenisSantri: true,
         jenisPondok: true,
         userId: true,
+        saldoUangSaku: true,
+        saldoTagihan: true,
         user: {
           select: {
             id: true,

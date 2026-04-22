@@ -21,9 +21,10 @@ import { DataTable } from "@/components/ui/data-table";
 import {
   formatCurrency,
   STATUS_UANG_SAKU_OPTIONS,
+  STATUS_TRANSAKSI_OPTIONS,
 } from "@/app/dashboard/admin/transaksi/columns";
 import { Transaksi } from "@/lib/types/transaksi";
-import { Plus, RefreshCw, Loader2, FileText, ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
+import { Plus, RefreshCw, Loader2, FileText, ArrowDownCircle, ArrowUpCircle, Wallet, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
@@ -35,6 +36,12 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
+// Options for target saldo selection
+const TARGET_SALDO_OPTIONS = [
+  { value: "SALDO_UANG_SAKU", label: "Saldo Uang Saku" },
+  { value: "SALDO_TAGIHAN", label: "Saldo Tagihan" },
+] as const;
+
 interface Santri {
   id: string;
   nis: string;
@@ -43,12 +50,16 @@ interface Santri {
   asrama: string;
   jenisSantri: string;
   saldo: number;
+  saldoUangSaku: number;
+  saldoTagihan: number;
 }
 
 interface FormData {
   santriId: string;
   jumlah: string;
   statusUangSaku: string;
+  status: string;
+  targetSaldo: string;
   keterangan: string;
   tanggalBayar: string;
 }
@@ -78,6 +89,8 @@ export function BendaharaTransaksiUangSaku() {
     santriId: "",
     jumlah: "",
     statusUangSaku: "DITAMBAH",
+    status: "LUNAS",
+    targetSaldo: "SALDO_UANG_SAKU",
     keterangan: "",
     tanggalBayar: "",
   });
@@ -88,6 +101,7 @@ export function BendaharaTransaksiUangSaku() {
   const [loadingSantri, setLoadingSantri] = useState(false);
   const [showSantriDropdown, setShowSantriDropdown] = useState(false);
   const santriDropdownRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch santri for dropdown (all santri: SMK, SMP, and PONDOK)
   const fetchSantri = useCallback(async (search: string = "") => {
@@ -95,7 +109,7 @@ export function BendaharaTransaksiUangSaku() {
       setLoadingSantri(true);
       const params = new URLSearchParams();
       if (search) params.append("search", search);
-      params.append("limit", "50");
+      params.append("limit", "20");
 
       const response = await fetch(`/api/santri?${params.toString()}`);
       if (response.ok) {
@@ -108,6 +122,35 @@ export function BendaharaTransaksiUangSaku() {
       setLoadingSantri(false);
     }
   }, []);
+
+  // Handle santri search with debounce
+  const handleSantriSearch = useCallback((value: string) => {
+    setSantriSearch(value);
+    setShowSantriDropdown(true);
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchSantri(value);
+    }, 300);
+  }, [fetchSantri]);
+
+  // Handle santri selection
+  const handleSelectSantri = useCallback((santri: Santri) => {
+    handleFormChange("santriId", santri.id);
+    setSantriSearch(`${santri.nama} - ${santri.nis}`);
+    setShowSantriDropdown(false);
+  }, []);
+
+  // Get selected santri info for display
+  const getSelectedSantriInfo = useCallback(() => {
+    if (!formData.santriId) return null;
+    return santriList.find(s => s.id === formData.santriId);
+  }, [formData.santriId, santriList]);
 
   // Fetch transaksi
   const fetchTransaksi = useCallback(async () => {
@@ -167,6 +210,8 @@ export function BendaharaTransaksiUangSaku() {
       santriId: "",
       jumlah: "",
       statusUangSaku: "DITAMBAH",
+      status: "LUNAS",
+      targetSaldo: "SALDO_UANG_SAKU",
       keterangan: "",
       tanggalBayar: "",
     });
@@ -176,8 +221,16 @@ export function BendaharaTransaksiUangSaku() {
 
   // Open dialog for "Ambil Saldo" (withdraw balance)
   const openAmbilSaldoDialog = () => {
-    resetForm();
-    setFormData((prev) => ({ ...prev, statusUangSaku: "DIAMBIL" }));
+    const defaultData: FormData = {
+      santriId: "",
+      jumlah: "",
+      statusUangSaku: "DIAMBIL",
+      status: "LUNAS",
+      targetSaldo: "SALDO_UANG_SAKU",
+      keterangan: "",
+      tanggalBayar: "",
+    };
+    setFormData(defaultData);
     setSantriSearch("");
     setIsAmbilSaldoDialog(true);
     setIsAddDialogOpen(true);
@@ -187,8 +240,7 @@ export function BendaharaTransaksiUangSaku() {
   const buildRequestBody = (data: FormData, isEdit: boolean = false) => {
     const base: Record<string, unknown> = {
       jumlah: parseInt(data.jumlah),
-      statusUangSaku: data.statusUangSaku,
-      keterangan: data.keterangan || null,
+      status: data.status,
       tanggalBayar: data.tanggalBayar || null,
     };
 
@@ -196,6 +248,10 @@ export function BendaharaTransaksiUangSaku() {
       base.santriId = data.santriId;
       base.jenis = "UANG_SAKU";
     }
+
+    base.statusUangSaku = data.statusUangSaku;
+    base.targetSaldo = data.targetSaldo;
+    base.keterangan = data.keterangan || null;
 
     return base;
   };
@@ -293,6 +349,8 @@ export function BendaharaTransaksiUangSaku() {
       santriId: transaksi.santriId,
       jumlah: transaksi.jumlah.toString(),
       statusUangSaku: transaksi.statusUangSaku || "DITAMBAH",
+      status: transaksi.status || "LUNAS",
+      targetSaldo: "SALDO_UANG_SAKU",
       keterangan: transaksi.keterangan || "",
       tanggalBayar: transaksi.tanggalBayar
         ? new Date(transaksi.tanggalBayar).toISOString().split("T")[0]
@@ -606,71 +664,102 @@ export function BendaharaTransaksiUangSaku() {
             <DialogTitle>{isAmbilSaldoDialog ? "Ambil Saldo" : "Tambah Transaksi Uang Saku"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div>
+            {/* Santri search */}
+            <div className="relative" ref={santriDropdownRef}>
               <Label htmlFor="santri">Santri</Label>
-              <div className="relative" ref={santriDropdownRef}>
+              <div className="relative">
                 <Input
                   id="santri-search"
-                  placeholder="Ketik nama santri..."
+                  placeholder="Ketik nama atau NIS santri..."
                   value={santriSearch}
-                  onChange={(e) => {
-                    setSantriSearch(e.target.value);
-                    // Only show dropdown when user types (at least 1 character)
-                    if (e.target.value.length > 0) {
-                      fetchSantri(e.target.value);
-                      setShowSantriDropdown(true);
-                    } else {
-                      setShowSantriDropdown(false);
-                    }
-                  }}
-                  autoComplete="off"
+                  onChange={(e) => handleSantriSearch(e.target.value)}
+                  className={formData.santriId ? "border-green-500 pr-10" : ""}
                 />
                 {loadingSantri && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </div>
                 )}
-                {/* Autocomplete Dropdown */}
-                {showSantriDropdown && santriList.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
-                    {santriList.map((santri) => (
-                      <div
-                        key={santri.id}
-                        className="flex flex-col px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => {
-                          handleFormChange("santriId", santri.id);
-                          setSantriSearch(`${santri.nama} - ${santri.nis}`);
-                          setShowSantriDropdown(false);
-                        }}
-                      >
-                        <span className="font-medium">{santri.nama}</span>
-                        <span className="text-xs text-muted-foreground">
-                          NIS: {santri.nis} | {santri.jenisSantri} | Saldo: {formatCurrency(santri.saldo)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* No results message */}
-                {showSantriDropdown && !loadingSantri && santriSearch.length > 0 && santriList.length === 0 && (
-                  <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-md p-3 text-sm text-muted-foreground">
-                    Tidak ada santri ditemukan
+                {formData.santriId && !loadingSantri && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                    <Check className="h-4 w-4" />
                   </div>
                 )}
               </div>
-              {/* Hidden input for form validation */}
-              <input type="hidden" value={formData.santriId} />
+
+              {/* Autocomplete Dropdown */}
+              {showSantriDropdown && santriSearch.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
+                  {loadingSantri ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : santriList.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                      {santriSearch ? "Tidak ada santri ditemukan" : "Ketik untuk mencari santri..."}
+                    </div>
+                  ) : (
+                    santriList.map((santri) => (
+                      <div
+                        key={santri.id}
+                        className={`px-4 py-2 cursor-pointer hover:bg-accent flex items-center justify-between ${
+                          formData.santriId === santri.id ? "bg-accent" : ""
+                        }`}
+                        onClick={() => handleSelectSantri(santri)}
+                      >
+                        <div>
+                          <div className="font-medium">{santri.nama}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {santri.nis} • {santri.kelas} • {formData.targetSaldo === "SALDO_TAGIHAN" ? `Saldo Tagihan: ${formatCurrency(santri.saldoTagihan)}` : `Saldo Uang Saku: ${formatCurrency(santri.saldoUangSaku)}`}
+                          </div>
+                        </div>
+                        {formData.santriId === santri.id && (
+                          <Check className="h-4 w-4 text-green-500" />
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Selected santri info */}
+              {formData.santriId && getSelectedSantriInfo() && (
+                <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-sm">
+                  <span className="font-medium text-green-700 dark:text-green-300">
+                    {getSelectedSantriInfo()?.nama}
+                  </span>
+                  <span className="text-green-600 dark:text-green-400"> - </span>
+                  <span className="text-green-600 dark:text-green-400">
+                    {getSelectedSantriInfo()?.nis} ({getSelectedSantriInfo()?.kelas}) - {formData.targetSaldo === "SALDO_TAGIHAN" ? `Saldo Tagihan: ${formatCurrency(getSelectedSantriInfo()?.saldoTagihan || 0)}` : `Saldo Uang Saku: ${formatCurrency(getSelectedSantriInfo()?.saldoUangSaku || 0)}`}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="statusUangSaku">Jenis Transaksi</Label>
+                <Label htmlFor="status-uang-saku">Jenis Transaksi</Label>
                 <select
-                  id="statusUangSaku"
+                  id="status-uang-saku"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   value={formData.statusUangSaku}
                   onChange={(e) => handleFormChange("statusUangSaku", e.target.value)}
                 >
                   {STATUS_UANG_SAKU_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="target-saldo">Target Saldo</Label>
+                <select
+                  id="target-saldo"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={formData.targetSaldo}
+                  onChange={(e) => handleFormChange("targetSaldo", e.target.value)}
+                >
+                  {TARGET_SALDO_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -688,22 +777,39 @@ export function BendaharaTransaksiUangSaku() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <select
+                  id="status"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={formData.status}
+                  onChange={(e) => handleFormChange("status", e.target.value)}
+                >
+                  {STATUS_TRANSAKSI_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="tanggalBayar">Tanggal</Label>
+                <Input
+                  id="tanggalBayar"
+                  type="date"
+                  value={formData.tanggalBayar}
+                  onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
+                />
+              </div>
+            </div>
             <div>
               <Label htmlFor="keterangan">Keterangan</Label>
               <Input
                 id="keterangan"
                 value={formData.keterangan}
                 onChange={(e) => handleFormChange("keterangan", e.target.value)}
-                placeholder="Keterangan transaksi (opsional)"
-              />
-            </div>
-            <div>
-              <Label htmlFor="tanggalBayar">Tanggal</Label>
-              <Input
-                id="tanggalBayar"
-                type="date"
-                value={formData.tanggalBayar}
-                onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
+                placeholder="Keterangan (opsional)"
               />
             </div>
           </div>
@@ -737,7 +843,7 @@ export function BendaharaTransaksiUangSaku() {
                 <strong>{selectedTransaksi.santri.nama}</strong> ({selectedTransaksi.santri.nis})
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="edit-statusUangSaku">Jenis Transaksi</Label>
                 <select
@@ -747,6 +853,21 @@ export function BendaharaTransaksiUangSaku() {
                   onChange={(e) => handleFormChange("statusUangSaku", e.target.value)}
                 >
                   {STATUS_UANG_SAKU_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="edit-targetSaldo">Target Saldo</Label>
+                <select
+                  id="edit-targetSaldo"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={formData.targetSaldo}
+                  onChange={(e) => handleFormChange("targetSaldo", e.target.value)}
+                >
+                  {TARGET_SALDO_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -764,6 +885,32 @@ export function BendaharaTransaksiUangSaku() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <select
+                  id="edit-status"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={formData.status}
+                  onChange={(e) => handleFormChange("status", e.target.value)}
+                >
+                  {STATUS_TRANSAKSI_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="edit-tanggalBayar">Tanggal</Label>
+                <Input
+                  id="edit-tanggalBayar"
+                  type="date"
+                  value={formData.tanggalBayar}
+                  onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
+                />
+              </div>
+            </div>
             <div>
               <Label htmlFor="edit-keterangan">Keterangan</Label>
               <Input
@@ -771,15 +918,6 @@ export function BendaharaTransaksiUangSaku() {
                 value={formData.keterangan}
                 onChange={(e) => handleFormChange("keterangan", e.target.value)}
                 placeholder="Keterangan transaksi (opsional)"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-tanggalBayar">Tanggal</Label>
-              <Input
-                id="edit-tanggalBayar"
-                type="date"
-                value={formData.tanggalBayar}
-                onChange={(e) => handleFormChange("tanggalBayar", e.target.value)}
               />
             </div>
           </div>

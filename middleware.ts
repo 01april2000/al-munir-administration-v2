@@ -100,8 +100,30 @@ export async function middleware(request: NextRequest) {
   // Get user role and jenisSantri from session
   const userRole = session.user?.role as Role;
   const jenisSantri = session.user?.jenisSantri as JenisSantri | null | undefined;
+  const twoFactorEnabled = (session.user as Record<string, unknown>)?.twoFactorEnabled as boolean;
 
-  logger.log("User role:", userRole, "jenisSantri:", jenisSantri);
+  logger.log("User role:", userRole, "jenisSantri:", jenisSantri, "2FA:", twoFactorEnabled);
+
+  // Check if admin/bendahara needs 2FA setup
+  const rolesRequiring2FA: string[] = ["ADMIN", "BENDAHARA_SMK", "BENDAHARA_SMP", "BENDAHARA_PONDOK"];
+  const requires2FA = rolesRequiring2FA.includes(userRole);
+
+  if (requires2FA && !twoFactorEnabled) {
+    // Allow access to security settings page so they can set up 2FA
+    const securityPaths = [
+      "/dashboard/admin/security",
+      "/dashboard/bendahara/smk/security",
+      "/dashboard/bendahara/smp/security",
+      "/dashboard/bendahara/pondok/security",
+    ];
+
+    if (!securityPaths.some((p) => pathname.startsWith(p))) {
+      // Redirect to security page based on role
+      const securityPath = getDefaultPath(userRole, jenisSantri) + "/security";
+      logger.log("2FA not enabled, redirecting to:", securityPath);
+      return NextResponse.redirect(new URL(securityPath, request.url));
+    }
+  }
 
   // If user is on root path "/" or "/santri", redirect to their default page
   // For SANTRI role, /santri should redirect to specific jenisSantri page

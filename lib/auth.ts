@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
+import { twoFactor } from "better-auth/plugins";
 import { prisma } from "./prisma";
 
 export const auth = betterAuth({
@@ -42,6 +43,15 @@ export const auth = betterAuth({
     admin({
       adminRole: "ADMIN",
       defaultRole: "SANTRI",
+    }),
+    twoFactor({
+      issuer: "Al-Munir Administration",
+      totpOptions: {
+        digits: 6,
+        period: 30,
+      },
+      twoFactorCookieMaxAge: 600, // 10 minutes to complete 2FA
+      trustDeviceMaxAge: 30 * 24 * 60 * 60, // 30 days trust device
     }),
   ],
 });

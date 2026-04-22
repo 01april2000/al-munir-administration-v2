@@ -85,9 +85,18 @@ export function AuthCard() {
         return;
       }
 
+      // If 2FA is required, the twoFactorClient plugin will redirect to /auth/verify-2fa
+      // In that case, result.data may not have a user object
+      const resultData = result?.data as { user?: { role?: string; jenisSantri?: string | null } } | undefined;
+      if (!resultData?.user) {
+        // Likely a 2FA redirect — plugin handles it, just stop here
+        setLoading(false);
+        return;
+      }
+
       // The signIn result contains the user data
       // Redirect directly to the appropriate dashboard based on role
-      const user = (result as { user?: { role?: string; jenisSantri?: string | null } }).user;
+      const user = resultData.user;
       
       if (user?.role === "ADMIN") {
         window.location.href = "/dashboard/admin";

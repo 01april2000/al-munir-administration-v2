@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Shield } from "lucide-react";
 
 interface UserInfoProps {
   showDetails?: boolean;
@@ -32,6 +32,21 @@ const roleColors: Record<Role, string> = {
   BENDAHARA_PONDOK: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   SANTRI: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
 };
+
+function getSecurityPath(role: Role): string {
+  switch (role) {
+    case "ADMIN":
+      return "/dashboard/admin/security";
+    case "BENDAHARA_SMK":
+      return "/dashboard/bendahara/smk/security";
+    case "BENDAHARA_SMP":
+      return "/dashboard/bendahara/smp/security";
+    case "BENDAHARA_PONDOK":
+      return "/dashboard/bendahara/pondok/security";
+    default:
+      return "/dashboard/admin/security";
+  }
+}
 
 export function UserInfo({ showDetails = false }: UserInfoProps) {
   const { data: session, isPending } = useSession();
@@ -110,6 +125,21 @@ export function UserInfo({ showDetails = false }: UserInfoProps) {
               {roleLabel}
             </span>
           </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            {role !== "SANTRI" && (
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => { window.location.href = getSecurityPath(role); }}
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Keamanan
+                {!((user as Record<string, unknown>)?.twoFactorEnabled) && (
+                  <span className="ml-auto text-xs text-yellow-600 dark:text-yellow-400">Setup 2FA</span>
+                )}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
